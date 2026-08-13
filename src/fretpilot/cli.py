@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from fretpilot import __version__
+from fretpilot.analysis import analyze_guitar_track
 from fretpilot.guitar import optimize_fingering
 from fretpilot.midi import load_midi
 from fretpilot.midi.models import NormalizedTimeline, NormalizedTrack
@@ -33,6 +34,15 @@ def _add_track_argument(parser: argparse.ArgumentParser) -> None:
         "--track",
         type=int,
         help="Zero-based MIDI track index. Defaults to the first track containing notes.",
+    )
+
+
+def _add_max_fret_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--max-fret",
+        type=int,
+        default=24,
+        help="Highest allowed fret (default: 24)",
     )
 
 
@@ -66,13 +76,17 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     fingering_parser.add_argument("midi_file", type=Path, help="Path to a .mid/.midi file")
     _add_track_argument(fingering_parser)
-    fingering_parser.add_argument(
-        "--max-fret",
-        type=int,
-        default=24,
-        help="Highest allowed fret (default: 24)",
-    )
+    _add_max_fret_argument(fingering_parser)
     _add_json_output_arguments(fingering_parser)
+
+    analyze_parser = subparsers.add_parser(
+        "analyze",
+        help="Run rhythm, fingering, and articulation analysis on a guitar track",
+    )
+    analyze_parser.add_argument("midi_file", type=Path, help="Path to a .mid/.midi file")
+    _add_track_argument(analyze_parser)
+    _add_max_fret_argument(analyze_parser)
+    _add_json_output_arguments(analyze_parser)
 
     return parser
 
@@ -111,6 +125,11 @@ def _select_track(timeline: NormalizedTimeline, track_index: int | None) -> Norm
     return track
 
 
+def _validate_max_fret(max_fret: int) -> None:
+    if max_fret < 0:
+        raise SystemExit("--max-fret must be zero or greater.")
+
+
 def _run_inspect(args: argparse.Namespace) -> int:
     timeline = load_midi(args.midi_file)
     _emit_json(timeline.to_dict(), args.output, args.compact)
@@ -126,12 +145,19 @@ def _run_rhythm(args: argparse.Namespace) -> int:
 
 
 def _run_fingering(args: argparse.Namespace) -> int:
-    if args.max_fret < 0:
-        raise SystemExit("--max-fret must be zero or greater.")
-
+    _validate_max_fret(args.max_fret)
     timeline = load_midi(args.midi_file)
     track = _select_track(timeline, args.track)
     result = optimize_fingering(track, max_fret=args.max_fret)
+    _emit_json(result.to_dict(), args.output, args.compact)
+    return 0
+
+
+def _run_analyze(args: argparse.Namespace) -> int:
+    _validate_max_fret(args.max_fret)
+    timeline = load_midi(args.midi_file)
+    track = _select_track(timeline, args.track)
+    result = analyze_guitar_track(track, max_fret=args.max_fret)
     _emit_json(result.to_dict(), args.output, args.compact)
     return 0
 
@@ -146,6 +172,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_rhythm(args)
     if args.command == "fingering":
         return _run_fingering(args)
+    if args.command == "analyze":
+        return _run_analyze(args)
 
     parser.error(f"Unknown command: {args.command}")
     return 2
