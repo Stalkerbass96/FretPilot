@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from fretpilot.articulation import ArticulationPlan, plan_articulations
@@ -11,6 +11,7 @@ from fretpilot.midi.models import NormalizedTrack
 from fretpilot.rhythm import RhythmAnalysis, analyze_track_rhythm
 
 if TYPE_CHECKING:
+    from fretpilot.analysis.section_contexts import SectionContextAnalysis
     from fretpilot.knowledge.playing_contexts import PlayingContext
 
 
@@ -22,6 +23,9 @@ class GuitarTrackAnalysis:
     fingering: FingeringResult
     articulations: ArticulationPlan
     playing_context: PlayingContext | None = None
+    # A section-aware analysis keeps time-varying musical contexts here.  The
+    # legacy/single-context path leaves the list empty, preserving compatibility.
+    section_contexts: list[SectionContextAnalysis] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -39,6 +43,10 @@ def analyze_guitar_track(
     compatible. When supplied, its fingering preferences rank physically valid
     string/fret candidates, while articulation preferences confidence-weight
     only techniques that pass deterministic eligibility rules.
+
+    This function intentionally represents one context across the whole track.
+    Use ``analyze_guitar_stream_section_aware`` when a stream may change role or
+    style over time.
     """
 
     rhythm = analyze_track_rhythm(track)
