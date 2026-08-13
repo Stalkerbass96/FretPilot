@@ -10,9 +10,11 @@ The arpeggio pass intentionally models a common guitar reality that pure
 note-by-note optimization misses: a guitarist often preserves a movable shape
 across adjacent strings instead of chasing the globally lowest fret.
 
-All physical candidates remain deterministic. Optional ``FingeringPreferences``
+All physical candidates remain deterministic. Optional fingering preferences
 only rank valid alternatives, so style/role knowledge can influence choices
-without bypassing fretboard constraints.
+without bypassing fretboard constraints. The guitar engine consumes a small
+structural preference interface instead of importing the knowledge package,
+which keeps the dependency direction one-way and avoids classifier cycles.
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 from itertools import product
+from typing import Protocol
 
 from fretpilot.guitar.instrument import STANDARD_TUNING, GuitarTuning, candidate_positions
 from fretpilot.guitar.models import (
@@ -28,11 +31,33 @@ from fretpilot.guitar.models import (
     FingeringResult,
     FretPosition,
 )
-from fretpilot.knowledge.playing_contexts import FingeringPreferences
 from fretpilot.midi.models import NormalizedNote, NormalizedTrack
 
 
-_NEUTRAL_PREFERENCES = FingeringPreferences()
+class FingeringPreferenceView(Protocol):
+    adjacent_string_arpeggio: float
+    same_string_legato: float
+    hand_position_stability: float
+    shape_reuse: float
+    open_string_usage: float
+    low_register_bias: float
+    compact_chord_voicing: float
+    wide_interval_position_shift: float
+
+
+@dataclass(frozen=True, slots=True)
+class _NeutralFingeringPreferences:
+    adjacent_string_arpeggio: float = 1.0
+    same_string_legato: float = 1.0
+    hand_position_stability: float = 1.0
+    shape_reuse: float = 1.0
+    open_string_usage: float = 1.0
+    low_register_bias: float = 1.0
+    compact_chord_voicing: float = 1.0
+    wide_interval_position_shift: float = 1.0
+
+
+_NEUTRAL_PREFERENCES = _NeutralFingeringPreferences()
 
 
 @dataclass(slots=True)
@@ -56,7 +81,7 @@ class _ArpeggioShape:
 
 def _position_cost(
     position: FretPosition,
-    preferences: FingeringPreferences,
+    preferences: FingeringPreferenceView,
 ) -> float:
     # Lower positions are a weak preference only. Stronger musical structure
     # such as a movable riff shape is allowed to override this.
@@ -74,7 +99,7 @@ def _position_cost(
 def _transition_cost(
     previous: FretPosition,
     current: FretPosition,
-    preferences: FingeringPreferences,
+    preferences: FingeringPreferenceView,
 ) -> float:
     fret_distance = abs(current.fret - previous.fret)
     string_distance = abs(current.string - previous.string)
@@ -129,7 +154,7 @@ def _transition_cost(
 
 def _optimize_segment(
     items: list[_SegmentItem],
-    preferences: FingeringPreferences,
+    preferences: FingeringPreferenceView,
 ) -> tuple[dict[int, tuple[FretPosition, float]], float]:
     if not items:
         return {}, 0.0
@@ -277,11 +302,20 @@ def _enumerate_adjacent_string_shapes(
 def _arpeggio_shape_cost(
     shape: _ArpeggioShape,
     previous_shape: _ArpeggioShape | None,
-    preferences: FingeringPreferences,
+    preferences: FingeringPreferenceView,
 ) -> float:
-    cost = sum(_position_cost(
-        FretPosition(string=string, fret=fret, pitch=pitch), preferences
-    ) for string, fret, pitch in zip(shape.strings, shape.frets, shape.pitches, strict=True))
+    cost = sum(
+        _position_cost(
+            FretPosition(string=string, fret=fret, pitch=pitch),
+            preferences,
+        )
+        for string, fret, pitch in zip(
+            shape.strings,
+            shape.frets,
+            shape.pitches,
+            strict=True,
+        )
+    )
 
     # Preserve the old neutral 1.8 open-string penalty for movable arpeggio
     # cells, then modulate it with explicit open-string preference.
@@ -337,7 +371,7 @@ def _repair_arpeggio_shapes(
     *,
     tuning: GuitarTuning,
     max_fret: int,
-    preferences: FingeringPreferences,
+    preferences: FingeringPreferenceView,
 ) -> None:
     previous_shape: _ArpeggioShape | None = None
 
@@ -382,7 +416,7 @@ def _repair_arpeggio_shapes(
 def _shape_cost(
     chosen: list[tuple[_SegmentItem, FretPosition]],
     melodic_assignments: dict[int, tuple[FretPosition, float]],
-    preferences: FingeringPreferences,
+    preferences: FingeringPreferenceView,
 ) -> float:
     cost = 0.0
     frets: list[int] = []
@@ -416,7 +450,7 @@ def _shape_cost(
 def _solve_chord_shape(
     items: list[_SegmentItem],
     melodic_assignments: dict[int, tuple[FretPosition, float]],
-    preferences: FingeringPreferences,
+    preferences: FingeringPreferenceView,
 ) -> dict[int, tuple[FretPosition, float]] | None:
     """Choose one distinct string per simultaneous note."""
     if len(items) > 6:
@@ -476,7 +510,7 @@ def _repair_simultaneous_chords(
     tuning: GuitarTuning,
     max_fret: int,
     diagnostics: list[FingeringDiagnostic],
-    preferences: FingeringPreferences,
+    preferences: FingeringPreferenceView,
 ) -> None:
     onset_groups: dict[int, list[int]] = defaultdict(list)
     for note_index, note in enumerate(track.notes):
@@ -533,7 +567,7 @@ def optimize_fingering(
     *,
     tuning: GuitarTuning = STANDARD_TUNING,
     max_fret: int = 24,
-    preferences: FingeringPreferences | None = None,
+    preferences: FingeringPreferenceView | None = None,
 ) -> FingeringResult:
     """Assign playable string/fret positions to melodic, riff and chord material.
 
