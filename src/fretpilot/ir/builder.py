@@ -106,8 +106,6 @@ def _normalize_ringing_overlaps(
     ordered_onsets = sorted(onset_groups)
     normalized = list(prepared)
 
-    # First make successive attacks sequential in written notation. Sustained
-    # source timing is retained in PerformanceTiming and represented as let ring.
     for onset_index, onset in enumerate(ordered_onsets[:-1]):
         next_onset = ordered_onsets[onset_index + 1]
         available_duration = next_onset - onset
@@ -121,9 +119,6 @@ def _normalize_ringing_overlaps(
                 reason="clip_written_duration_at_next_attack",
             )
 
-    # Guitar Pro represents a same-onset chord most reliably when all notes in
-    # the beat share one written duration. Never extend a shorter source note;
-    # instead shorten longer members and preserve their ring in performance data.
     for onset in ordered_onsets:
         indices = onset_groups[onset]
         if len(indices) < 2:
@@ -448,6 +443,11 @@ def build_guitar_ir(
         tuning=tuning,
         fret_count=analysis.fingering.max_fret,
         measures=measures,
+        playing_context=(
+            analysis.playing_context.to_dict()
+            if analysis.playing_context is not None
+            else None
+        ),
     )
 
     return GuitarProjectIR(
