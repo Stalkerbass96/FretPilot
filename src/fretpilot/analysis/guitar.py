@@ -37,8 +37,8 @@ def analyze_guitar_track(
 
     ``playing_context`` is optional so existing callers remain backward-
     compatible. When supplied, its fingering preferences rank physically valid
-    string/fret candidates. Articulation context is intentionally left for
-    GK-004 so this change does not silently alter technique inference yet.
+    string/fret candidates, while articulation preferences confidence-weight
+    only techniques that pass deterministic eligibility rules.
     """
 
     rhythm = analyze_track_rhythm(track)
@@ -47,7 +47,13 @@ def analyze_guitar_track(
         max_fret=max_fret,
         preferences=playing_context.fingering if playing_context is not None else None,
     )
-    articulations = plan_articulations(track, fingering)
+    articulations = plan_articulations(
+        track,
+        fingering,
+        preferences=(
+            playing_context.articulation if playing_context is not None else None
+        ),
+    )
 
     return GuitarTrackAnalysis(
         track_index=track.index,
