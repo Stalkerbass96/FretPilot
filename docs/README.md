@@ -11,6 +11,14 @@ This page is the navigation entry point for product, architecture, and active de
 - [`ROADMAP.md`](ROADMAP.md) — overall implementation phases and current priorities.
 - [`MUSIC_IR.md`](MUSIC_IR.md) — planned canonical Guitar IR.
 
+## Active project: guitar playing knowledge
+
+This project manages the maintainable bridge between style/behavior understanding and realistic guitar choices:
+
+- [`projects/guitar-playing-knowledge/README.md`](projects/guitar-playing-knowledge/README.md) — project architecture, role/style/technique composition, and current scope.
+- [`projects/guitar-playing-knowledge/BACKLOG.md`](projects/guitar-playing-knowledge/BACKLOG.md) — stable `GK-xxx` work items for style-aware fingering, articulation, phrase context, and learning infrastructure.
+- [`projects/guitar-playing-knowledge/LEARNING_PIPELINE.md`](projects/guitar-playing-knowledge/LEARNING_PIPELINE.md) — controlled provenance, quality, feature extraction, evaluation, and knowledge-promotion workflow for future self-learning.
+
 ## Active project: track identification
 
 The detailed instrument-stream and guitar-track identification work is managed as a separate project:
