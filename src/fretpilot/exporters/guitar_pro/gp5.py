@@ -14,6 +14,7 @@ from typing import Iterable
 
 import guitarpro as gp
 
+from fretpilot.exporters.guitar_pro.markers import section_marker_titles
 from fretpilot.ir.models import GuitarMeasure, GuitarNoteEvent, GuitarProjectIR
 
 
@@ -328,6 +329,7 @@ def _configure_song(project: GuitarProjectIR) -> gp.Song:
         for index, pitch in enumerate(reversed(ir_track.tuning))
     ]
 
+    marker_titles = section_marker_titles(ir_track.section_contexts)
     start = gp.Duration.quarterTime
     for ir_measure, header in zip(
         ir_track.measures,
@@ -340,6 +342,9 @@ def _configure_song(project: GuitarProjectIR) -> gp.Song:
             numerator=ir_measure.numerator,
             denominator=gp.Duration(value=ir_measure.denominator),
         )
+        marker_title = marker_titles.get(ir_measure.number)
+        if marker_title:
+            header.marker = gp.Marker(title=marker_title)
         start = header.end
 
     return song
