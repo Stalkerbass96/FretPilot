@@ -1,320 +1,247 @@
 # FretPilot Roadmap
 
-## Current focus
+## Current milestone
 
-The current runnable vertical slice is:
+FretPilot now has a complete CLI prototype path for both target outputs:
 
 ```text
 MIDI
-→ NormalizedTimeline with program metadata
+→ NormalizedTimeline
 → InstrumentStream resolution
 → layered guitar detection
 → selected guitar stream
-→ rhythm-grid analysis
-→ guitar fingering
-→ basic articulation planning
-→ measure-aware Guitar IR
-→ JSON with score timing, source timing, ties and change log
+→ rhythm repair suggestions
+→ fingering
+→ articulation planning
+→ Guitar IR
+├──→ Guitar Pro 5 export
+└──→ Ample Guitar SC 4.x performance MIDI
 ```
 
-Track identification will continue as a separate incremental project. The main prototype priority is now a **minimal GP5 exporter** that converts Guitar IR into a file Guitar Pro can open. After GP5 round-trip validation, the next prototype output is Ample Guitar performance MIDI.
+Track identification remains an incremental project under:
 
-## Phase 0 — Product definition
+```text
+docs/projects/track-identification/
+GitHub Issue #1
+```
 
-Goal: lock product boundaries before implementation.
+It is no longer the main blocker. The active priority is **prototype validation and output quality**.
 
-- [x] define V0.1 target user and problem
-- [x] define score vs performance outputs
-- [x] define architecture boundaries
-- [x] define canonical Guitar IR direction
-- [ ] collect 10–20 representative MIDI test files
-- [ ] define objective/subjective evaluation rubric
+## Prototype status
 
-## Phase 1 — MIDI foundation
+### Input and stream selection
 
-Goal: load real-world MIDI reliably and produce normalized timelines.
+- [x] Standard MIDI import
+- [x] Type 0 and Type 1 support
+- [x] physical Track / Channel / active Program preservation
+- [x] logical `InstrumentStream` resolution
+- [x] three-layer guitar candidate ranking
+- [x] explicit `--stream-id` selection
+- [x] multiple-guitar ambiguity handling
 
-- [x] MIDI parser
-- [x] tempo map
-- [x] time-signature map
-- [x] physical track listing
-- [x] preserve MIDI channel
-- [x] preserve program changes and program active at note-on
-- [x] preserve optional instrument name
-- [x] note-on/note-off normalization
-- [ ] malformed/hanging-note repair policy
-- [x] measure coordinate conversion in Guitar IR
-- [x] beat coordinate conversion
-- [x] JSON debug dump
-- [x] parser diagnostics
+### Musical processing
 
-Acceptance test:
-
-> A MIDI file can be imported without losing physical track, channel, program, or musical timing information.
-
-**Status:** Core V0 implemented; representative real-world MIDI corpus still needed.
-
-## Phase 1.5 — Instrument stream resolution and guitar detection
-
-Goal: find guitar material reliably even when MIDI metadata is missing or wrong.
-
-- [x] resolve logical streams by physical track + channel + active program
-- [x] Layer 1 track-name keyword evidence
-- [x] Layer 2 channel/program/instrument-name evidence
-- [x] Layer 3 deterministic note-behavior evidence
-- [x] separate probability, confidence, per-layer reasons, and raw metrics
-- [x] exclude General MIDI percussion channel
-- [x] rank multiple guitar candidates
-- [x] require explicit selection when multiple likely guitars exist
-- [x] route rhythm/fingering/analysis through `--stream-id`
-- [ ] labeled instrument-detection regression corpus
-- [ ] precision/recall evaluation and threshold calibration
-- [ ] stronger physical chord-voicing feasibility
-- [ ] alternate-tuning-aware behavior analysis
-- [ ] support program changes that represent intentional articulations rather than instrument changes
-
-Acceptance test:
-
-> Type-0 and Type-1 MIDI files produce correctly separated logical streams, and likely guitar streams rank above bass, drums, and unrelated instruments without blindly trusting metadata.
-
-**Status:** Explainable three-layer V0 implemented. Continued work is tracked under `docs/projects/track-identification/` and GitHub Issue #1.
-
-## Phase 1.6 — Guitar behavior and style knowledge library
-
-Goal: describe the role and performance behavior of guitar sections after guitar identity is established.
-
-Initial profiles:
-
-- [x] Solo / Lead
-- [x] Riff
-- [x] Strumming / Chord Rhythm
-- [x] Breakdown / Heavy Low Riff
-- [x] Jazz Comping
-
-Infrastructure:
-
-- [x] versioned rule/profile registry
-- [x] keep Layer 4 separate from instrument identity
-- [x] expose matched and missing features
-- [ ] phrase/section segmentation
-- [ ] repeated-pattern similarity
-- [ ] strum timing and direction features
-- [ ] power-chord and chord-extension features
-- [ ] palm-mute and accent likelihood
-- [ ] tonal/scale vocabulary
-- [ ] labeled role/style corpus
-- [ ] profile calibration and learned ranking model
-
-Acceptance test:
-
-> A single guitar stream can be segmented and labeled with changing roles such as riff → strumming → solo, with explanations and confidence per region.
-
-**Status:** Whole-stream experimental profile registry implemented. This is no longer blocking the first GP5 prototype.
-
-## Phase 2 — Rhythm repair and notation timing
-
-Goal: generate readable symbolic timing while preserving source performance timing.
-
-- [x] candidate quantization grids
-- [x] note-start scoring
-- [x] basic note-duration grid spelling
-- [ ] explicit rest events
-- [x] cross-measure note splitting and ties
-- [ ] phrase segmentation and phrase consistency
-- [x] basic triplet detection
-- [x] per-note confidence values
-- [x] source/target onset deltas
-- [x] transformation/change log
-- [ ] dotted-note spelling objects
-- [ ] swing interpretation
-- [ ] mixed-grid / tuplet handling
-
-Acceptance test:
-
-> Typical generated/extracted guitar MIDI becomes materially easier to read while the original source timing remains available.
-
-**Status:** Onset repair, basic duration spelling, measure coordinates, ties, and source/performance separation are implemented in Guitar IR V0.1. Rests and advanced notation spelling remain.
-
-## Phase 3 — Guitar fingering engine
-
-Goal: assign physically plausible strings/frets at phrase level.
-
-- [x] standard-tuning fretboard model
-- [x] pitch → string/fret candidate generator
-- [x] configurable max fret
-- [x] transition cost model
-- [x] dynamic-programming optimizer
-- [x] lead/riff same-string preference where musically justified
-- [x] impossible-note diagnostics
-- [x] carry string/fret assignments into Guitar IR
-- [ ] polyphonic/chord fingering constraints
-- [ ] alternate tunings
-
-Acceptance test:
-
-> Monophonic lead/riff MIDI exports with no impossible fingerings and substantially fewer awkward jumps than naive lowest-fret assignment.
-
-**Status:** Monophonic lead/riff V0 implemented and connected to Guitar IR.
-
-## Phase 4 — Basic articulation engine
-
-Goal: add useful guitar technique without over-articulating.
-
-Initial set:
-
-- [ ] explicit pick/stroke planning
-- [x] hammer-on
-- [x] pull-off
-- [x] slide
-- [ ] legato slide distinction
-- [x] vibrato
-- [ ] palm mute
-- [ ] natural harmonic
-- [ ] bend
-
-Additional work:
-
-- [x] keep articulation vocabulary independent from plugin keyswitches
-- [x] carry generic articulations into Guitar IR
-- [ ] phrase/style context
-- [ ] confidence calibration
-- [ ] optional AI ranking of ambiguous candidates
-
-Acceptance test:
-
-> Added articulations are physically valid and improve a majority of reference phrases in blind listening/review.
-
-**Status:** Conservative deterministic V0 implemented for hammer-on, pull-off, slide, and vibrato.
-
-## Phase 5 — Guitar IR builder + Guitar Pro exporter
-
-Goal: produce an editable readable score from the canonical representation.
+- [x] onset-grid analysis
+- [x] basic duration grid spelling
+- [x] source timing kept separate from score timing
+- [x] measure coordinates
+- [x] cross-measure ties
+- [x] standard six-string fingering
+- [x] hammer-on, pull-off, slide, and vibrato inference
+- [x] ringing-overlap normalization
+- [x] unequal same-onset chord-duration normalization
+- [x] `let_ring` intent and transformation log
 
 ### Guitar IR
 
-- [x] schema-versioned data models
-- [x] build current analysis results into Guitar IR schema v0.1
-- [x] transformation/change log
-- [x] measures and one score voice
-- [x] note events and source-note provenance
-- [x] cross-measure ties
-- [x] string + fret
-- [x] basic articulations
-- [x] tempo / time-signature maps
+- [x] schema version `0.1`
+- [x] tempo and time-signature maps
+- [x] measures and score events
+- [x] source/performance timing
+- [x] string/fret assignment
+- [x] generic articulation vocabulary
+- [x] confidence and warnings
 - [x] CLI `fretpilot build-ir`
-- [x] regression tests for score/performance timing separation
 
-### Guitar Pro
+### Guitar Pro 5
 
-- [x] evaluate PyGuitarPro as the first GP5 writing library
-- [ ] add optional PyGuitarPro dependency
-- [ ] Guitar IR → PyGuitarPro model adapter
-- [ ] represent silent gaps as GP rests
-- [ ] map supported durations and tuplets
-- [ ] map ties, string/fret, hammer/pull, slide, and vibrato
-- [ ] write `.gp5`
-- [ ] parse generated `.gp5` back as an automated round-trip test
-- [ ] open and inspect generated output in Guitar Pro
+- [x] PyGuitarPro dependency
+- [x] Guitar IR adapter
+- [x] generated rests
+- [x] straight, dotted, and triplet duration decomposition
+- [x] string/fret mapping
+- [x] ties
+- [x] single-note let ring
+- [x] hammer-on / pull-off
+- [x] slide
+- [x] vibrato
+- [x] `.gp5` writing
+- [x] automated write-and-parse round trip
+- [x] CLI `fretpilot export-gp5`
+- [ ] visual inspection in Guitar Pro
+- [ ] real-song golden output review
+- [ ] safe representation for partial let-ring markings inside chords
+- [ ] true two-voice notation
 
-Acceptance test:
+### Ample Guitar SC 4.x
 
-> Export opens cleanly in Guitar Pro and matches the canonical score representation for the supported V0.1 subset.
+- [x] versioned `ample-guitar-sc-v4` profile
+- [x] documented raw-MIDI keyswitch mapping
+- [x] original source timing and velocity rendering
+- [x] Sustain state
+- [x] Hammer-On / Pull-Off keyswitch
+- [x] Legato Slide keyswitch
+- [x] required legato note overlap
+- [x] Natural Harmonic / Palm Mute / Slide In-Out mapping when present in IR
+- [x] tempo and time-signature tracks
+- [x] MIDI parse-back event-order test
+- [x] CLI `fretpilot export-ample-sc`
+- [ ] manual DAW test with Ample Guitar SC 4.x
+- [ ] vibrato rendering
+- [ ] bend curves
+- [ ] pick direction and accent shaping
 
-**Status:** Guitar IR V0.1 is runnable. Minimal GP5 export is the active prototype milestone.
+## Active Phase — Prototype validation
 
-## Phase 6 — Ample Guitar adapter
+The next work should be completed in this order.
 
-Goal: turn Guitar IR into convincing Ample-compatible MIDI.
+### PV-001 — Real output package
 
-- [ ] choose first supported Ample Guitar product/version
-- [ ] document articulation mapping
-- [ ] keyswitch mapping
-- [ ] velocity rules
-- [ ] overlap / legato rules
-- [ ] performance timing renderer
-- [ ] reference DAW test project
-
-Acceptance test:
-
-> FretPilot-rendered MIDI sounds clearly more guitar-like than raw source MIDI using the supported Ample setup.
-
-## Phase 7 — AI-assisted ambiguity resolution
-
-Goal: use an external reasoning model only where it adds measurable value.
-
-- [ ] provider interface
-- [ ] structured phrase context schema
-- [ ] strict structured output
-- [ ] deterministic validation
-- [ ] fallback with AI disabled
-- [ ] compare AI-assisted decisions against rule-only baseline
-
-Potential providers:
-
-- OpenAI
-- DeepSeek
-- others via adapter
-
-Acceptance test:
-
-> AI improves selected ambiguous cases without making core processing dependent on provider availability.
-
-## Phase 8 — MVP application
-
-Goal: expose the pipeline as a simple product.
-
-Initial user flow:
+For one selected real MIDI file and each likely guitar stream, generate:
 
 ```text
-Upload MIDI
-→ Detect instrument streams
-→ Select guitar stream
-→ Humanize Guitar
-→ Review changes / warnings
-→ Download GP5
-→ Download Ample MIDI
+<stream-id>.analysis.json
+<stream-id>.guitar-ir.json
+<stream-id>.gp5
+<stream-id>.ample-sc.mid
+<stream-id>.report.json
 ```
 
-- [x] CLI skeleton and JSON inspection
-- [x] layered stream detection command
-- [x] stream-aware end-to-end analysis command
-- [x] measure-aware Guitar IR command
-- [ ] minimal GP5 download/output
-- [ ] Ample MIDI download/output
-- [ ] API service
-- [ ] simple web UI
-- [ ] processing report
-- [ ] low-confidence measure list
+The report must include warnings, unsupported features, note counts, changes, and confidence summaries.
 
-## Dataset / testing strategy
+Acceptance:
 
-Before optimizing algorithms, maintain a curated regression set covering:
+> A user can inspect every candidate guitar part without manually reconstructing CLI commands.
 
-Instrument identity:
+### PV-002 — Guitar Pro visual review
 
-- type-0 full arrangement with many channels
-- type-1 one-instrument-per-track arrangement
-- correct guitar metadata
-- incorrect guitar metadata
-- missing program metadata
-- bass guitar vs six-string guitar
-- piano/synth parts that are guitar-playable
-- drums and percussion
+Open generated `.gp5` files in Guitar Pro and review:
 
-Guitar notation/performance:
+- measure alignment;
+- rests;
+- note values;
+- ties;
+- string/fret choices;
+- chord grouping;
+- let-ring markings;
+- excessive articulations;
+- unreadable measures.
 
-- slow melodic lead
-- fast scalar lead
-- repeated riffs
-- strummed chords
-- power-chord breakdowns
-- jazz comping
-- sections that change role
-- triplets and syncopation
-- noisy note lengths and imperfect note-on timing
-- notes crossing barlines
-- silent gaps requiring rests
-- articulation-friendly phrases
-- phrases where articulation should remain minimal
+Record issues by measure and stream ID instead of changing heuristics from memory.
 
-Every engine change should be evaluated against this set.
+Acceptance:
+
+> At least one complete real guitar stream is readable as an editable first draft.
+
+### PV-003 — Ample SC listening review
+
+Load generated MIDI into a DAW with Ample Guitar SC 4.x and review:
+
+- note range and octave;
+- Sustain state;
+- Hammer/Pull triggering;
+- Legato Slide triggering;
+- note overlap;
+- hanging notes;
+- timing against the original MIDI;
+- excessive or missing legato.
+
+Acceptance:
+
+> The exported MIDI plays from beginning to end without broken keyswitch state or hanging notes, and selected legato passages trigger correctly.
+
+### PV-004 — Processing report
+
+Add a single machine-readable and human-readable report containing:
+
+- selected stream metadata;
+- guitar probability and evidence;
+- rhythm grid;
+- repaired onset/duration counts;
+- let-ring conversions;
+- unplayable notes;
+- articulation counts;
+- GP5 warnings;
+- Ample warnings;
+- low-confidence measures.
+
+Acceptance:
+
+> A user can understand what FretPilot changed and where manual review is needed.
+
+### PV-005 — Batch command
+
+Add a command such as:
+
+```bash
+fretpilot prototype song.mid --all-likely-guitars -o output-directory
+```
+
+It should generate the complete output package for all likely guitar streams.
+
+Acceptance:
+
+> The test MIDI with several guitar candidates can be processed in one command.
+
+## Quality work after validation
+
+### Notation quality
+
+- [ ] true two-voice separation
+- [ ] sustained bass plus upper melody
+- [ ] chord-voicing feasibility
+- [ ] explicit tuplets and dotted-note spelling in Guitar IR
+- [ ] swing interpretation
+- [ ] phrase/section segmentation
+- [ ] section-dependent quantization grids
+
+### Guitar performance
+
+- [ ] bend detection and rendering
+- [ ] vibrato controller/keyswitch strategy
+- [ ] palm-mute inference
+- [ ] pick-direction planning
+- [ ] accent and velocity shaping
+- [ ] strum timing and direction
+- [ ] position/string forcing for supported Ample products
+
+### Product application
+
+- [ ] processing service/API
+- [ ] upload UI
+- [ ] guitar-stream selection UI
+- [ ] score/change preview
+- [ ] downloadable output package
+- [ ] user correction capture
+
+### Track identification
+
+Continue through the dedicated backlog without blocking output validation:
+
+- labeled regression corpus;
+- precision/recall/F1 evaluation;
+- centralized configuration;
+- alternate tunings and extended-range guitars;
+- section-level behavior profiles;
+- user override and correction data.
+
+## Release definition: Prototype 0.1
+
+Prototype 0.1 is ready for external hands-on testing when:
+
+1. the full CLI pipeline is green in CI;
+2. one real multi-track MIDI can generate output packages for all likely guitars;
+3. at least one generated GP5 has been opened and visually reviewed;
+4. at least one generated Ample SC MIDI has been played through the plugin;
+5. known unsupported cases appear as warnings rather than silent corruption;
+6. the README contains exact reproducible commands.
