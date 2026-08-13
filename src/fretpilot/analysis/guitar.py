@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fretpilot.articulation import ArticulationPlan, plan_articulations
 from fretpilot.guitar import FingeringResult, optimize_fingering
-from fretpilot.knowledge import PlayingContext
 from fretpilot.midi.models import NormalizedTrack
 from fretpilot.rhythm import RhythmAnalysis, analyze_track_rhythm
+
+if TYPE_CHECKING:
+    from fretpilot.knowledge.playing_contexts import PlayingContext
 
 
 @dataclass(slots=True)
