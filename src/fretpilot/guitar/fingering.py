@@ -1,14 +1,21 @@
 """Phrase-level guitar fingering optimization.
 
-The V0 engine uses dynamic programming for melodic continuity and a local chord
-shape solver for simultaneous notes. This keeps lead/riff paths coherent while
-ensuring that a written chord never assigns two different frets to one string.
+The engine combines three deterministic passes:
+
+1. melodic dynamic programming for local continuity;
+2. movable arpeggio/riff-shape repair for repeated stacked-interval figures;
+3. simultaneous-chord repair that enforces one distinct string per note.
+
+The arpeggio pass intentionally models a common guitar reality that pure
+note-by-note optimization misses: a guitarist often preserves a movable shape
+across adjacent strings instead of chasing the globally lowest fret.
 """
 
 from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
+from itertools import product
 
 from fretpilot.guitar.instrument import STANDARD_TUNING, GuitarTuning, candidate_positions
 from fretpilot.guitar.models import (
@@ -27,27 +34,60 @@ class _SegmentItem:
     positions: list[FretPosition]
 
 
+@dataclass(frozen=True, slots=True)
+class _ArpeggioShape:
+    note_indices: tuple[int, ...]
+    strings: tuple[int, ...]
+    frets: tuple[int, ...]
+    pitches: tuple[int, ...]
+
+    @property
+    def fret_center(self) -> float:
+        return sum(self.frets) / len(self.frets)
+
+
 def _position_cost(position: FretPosition) -> float:
-    # Prefer lower positions very slightly, without overriding phrase continuity.
+    # Lower positions are a weak preference only. Stronger musical structure
+    # such as a movable riff shape is allowed to override this.
     return position.fret * 0.015
 
 
 def _transition_cost(previous: FretPosition, current: FretPosition) -> float:
     fret_distance = abs(current.fret - previous.fret)
     string_distance = abs(current.string - previous.string)
+    pitch_interval = abs(current.pitch - previous.pitch)
 
-    # V0 is tuned for lead/riff material. String changes therefore cost more
-    # than a modest same-string hand movement because staying on a string keeps
-    # hammer-on, pull-off and slide possibilities available to the articulation
-    # stage. Chord groups are corrected by a separate distinct-string solver.
-    cost = fret_distance * 0.32 + string_distance * 1.45
+    # Stepwise melodic material can legitimately stay on one string for
+    # hammer-ons, pull-offs and slides.
+    if pitch_interval <= 4:
+        cost = fret_distance * 0.32 + string_distance * 1.45
+        if fret_distance > 5:
+            cost += (fret_distance - 5) * 0.45
+        if previous.string == current.string:
+            cost -= 0.25
+        return max(0.0, cost)
 
+    # Fourth/fifth-like motion is frequently an arpeggio across neighbouring
+    # strings. Penalize "one-string ladders" such as 9 -> 16 -> 23, which are
+    # mathematically playable but rarely sensible for a repeating guitar riff.
+    if 5 <= pitch_interval <= 9:
+        cost = fret_distance * 0.42 + string_distance * 0.75
+        if previous.string == current.string:
+            cost += 2.0
+        elif string_distance == 1:
+            cost -= 0.55
+        elif string_distance > 1:
+            cost += (string_distance - 1) * 0.85
+        if fret_distance > 5:
+            cost += (fret_distance - 5) * 0.35
+        return max(0.0, cost)
+
+    # Large melodic leaps should not force the whole phrase onto one string.
+    cost = fret_distance * 0.38 + string_distance * 0.9
+    if previous.string == current.string:
+        cost += 1.4
     if fret_distance > 5:
         cost += (fret_distance - 5) * 0.45
-
-    if previous.string == current.string:
-        cost -= 0.25
-
     return max(0.0, cost)
 
 
@@ -113,6 +153,185 @@ def _optimize_segment(
     return result, total_cost
 
 
+def _lowest_note_per_onset(track: NormalizedTrack) -> list[int]:
+    """Return the lowest-pitch note index for each unique source onset."""
+    onset_groups: dict[int, list[int]] = defaultdict(list)
+    for note_index, note in enumerate(track.notes):
+        onset_groups[note.start_tick].append(note_index)
+
+    anchors: list[int] = []
+    for start_tick in sorted(onset_groups):
+        indices = onset_groups[start_tick]
+        anchors.append(min(indices, key=lambda index: (track.notes[index].pitch, index)))
+    return anchors
+
+
+def _detect_arpeggio_runs(track: NormalizedTrack) -> list[list[int]]:
+    """Detect short ascending stacked-interval figures.
+
+    V0.2 intentionally targets a narrow but common riff/arpeggio pattern:
+    at least three consecutive onset anchors, rising by 5-9 semitones per note
+    with no long timing gap. A descending/reset interval ends the run.
+    """
+    anchors = _lowest_note_per_onset(track)
+    if len(anchors) < 3:
+        return []
+
+    runs: list[list[int]] = []
+    current: list[int] = [anchors[0]]
+
+    for previous_index, current_index in zip(anchors, anchors[1:], strict=False):
+        previous = track.notes[previous_index]
+        current_note = track.notes[current_index]
+        interval = current_note.pitch - previous.pitch
+        gap = current_note.start_beat - previous.start_beat
+
+        if 5 <= interval <= 9 and 0 < gap <= 1.25:
+            current.append(current_index)
+            continue
+
+        if len(current) >= 3:
+            runs.append(current)
+        current = [current_index]
+
+    if len(current) >= 3:
+        runs.append(current)
+
+    return runs
+
+
+def _enumerate_adjacent_string_shapes(
+    track: NormalizedTrack,
+    note_indices: list[int],
+    *,
+    tuning: GuitarTuning,
+    max_fret: int,
+) -> list[_ArpeggioShape]:
+    candidates_per_note: list[list[FretPosition]] = []
+    for note_index in note_indices:
+        positions = candidate_positions(
+            track.notes[note_index].pitch,
+            tuning=tuning,
+            max_fret=max_fret,
+        )
+        if not positions:
+            return []
+        candidates_per_note.append(positions)
+
+    shapes: list[_ArpeggioShape] = []
+    for combination in product(*candidates_per_note):
+        # For an ascending stacked-interval run, a natural guitar shape moves
+        # one physical string toward the treble side for each next note.
+        if not all(
+            current.string == previous.string - 1
+            for previous, current in zip(combination, combination[1:], strict=False)
+        ):
+            continue
+
+        shapes.append(
+            _ArpeggioShape(
+                note_indices=tuple(note_indices),
+                strings=tuple(position.string for position in combination),
+                frets=tuple(position.fret for position in combination),
+                pitches=tuple(position.pitch for position in combination),
+            )
+        )
+    return shapes
+
+
+def _arpeggio_shape_cost(
+    shape: _ArpeggioShape,
+    previous_shape: _ArpeggioShape | None,
+) -> float:
+    # Keep the basic weak low-position preference.
+    cost = sum(fret * 0.015 for fret in shape.frets)
+
+    # Open strings are not intrinsically bad, but in a repeating movable riff
+    # they change timbre and destroy the reusable hand shape. A strong local
+    # penalty keeps closed shapes such as E5-A7-D9 ahead of A0-D2-G4.
+    cost += sum(1.8 for fret in shape.frets if fret == 0)
+
+    fret_span = max(shape.frets) - min(shape.frets)
+    cost += fret_span * 0.08
+    if fret_span > 5:
+        cost += (fret_span - 5) * 0.8
+
+    if previous_shape is None or len(previous_shape.frets) != len(shape.frets):
+        return cost
+
+    # Repeated arpeggio cells should preserve the same physical string set when
+    # possible. This models a guitarist moving a reusable grip rather than
+    # re-solving every chord independently.
+    if shape.strings == previous_shape.strings:
+        cost -= 0.9
+
+    string_offsets = tuple(
+        current - previous
+        for previous, current in zip(
+            previous_shape.strings,
+            shape.strings,
+            strict=True,
+        )
+    )
+    if len(set(string_offsets)) == 1:
+        cost -= 0.25
+
+    fret_offsets = tuple(
+        current - previous
+        for previous, current in zip(
+            previous_shape.frets,
+            shape.frets,
+            strict=True,
+        )
+    )
+    if len(set(fret_offsets)) == 1:
+        cost -= 0.25
+
+    # Prefer moving a known shape a few frets over collapsing suddenly into a
+    # very different position only because a lower-fret duplicate exists.
+    cost += abs(shape.fret_center - previous_shape.fret_center) * 0.10
+    return cost
+
+
+def _repair_arpeggio_shapes(
+    track: NormalizedTrack,
+    assignments: dict[int, tuple[FretPosition, float]],
+    *,
+    tuning: GuitarTuning,
+    max_fret: int,
+) -> None:
+    previous_shape: _ArpeggioShape | None = None
+
+    for note_indices in _detect_arpeggio_runs(track):
+        shapes = _enumerate_adjacent_string_shapes(
+            track,
+            note_indices,
+            tuning=tuning,
+            max_fret=max_fret,
+        )
+        if not shapes:
+            previous_shape = None
+            continue
+
+        selected = min(
+            shapes,
+            key=lambda shape: _arpeggio_shape_cost(shape, previous_shape),
+        )
+        selected_cost = _arpeggio_shape_cost(selected, previous_shape)
+
+        for note_index, string, fret, pitch in zip(
+            selected.note_indices,
+            selected.strings,
+            selected.frets,
+            selected.pitches,
+            strict=True,
+        ):
+            position = FretPosition(string=string, fret=fret, pitch=pitch)
+            assignments[note_index] = (position, selected_cost)
+
+        previous_shape = selected
+
+
 def _shape_cost(
     chosen: list[tuple[_SegmentItem, FretPosition]],
     melodic_assignments: dict[int, tuple[FretPosition, float]],
@@ -149,17 +368,10 @@ def _solve_chord_shape(
     items: list[_SegmentItem],
     melodic_assignments: dict[int, tuple[FretPosition, float]],
 ) -> dict[int, tuple[FretPosition, float]] | None:
-    """Choose one distinct string per simultaneous note.
-
-    The search space is bounded by six guitar strings and typical chord sizes,
-    so a deterministic backtracking search is sufficient for V0.1.
-    """
-
+    """Choose one distinct string per simultaneous note."""
     if len(items) > 6:
         return None
 
-    # Notes with fewer possible strings are placed first to prune impossible
-    # combinations early. The final mapping still uses source note indices.
     ordered = sorted(items, key=lambda item: (len(item.positions), item.note.pitch))
     best_cost = float("inf")
     best: list[tuple[_SegmentItem, FretPosition]] | None = None
@@ -182,9 +394,7 @@ def _solve_chord_shape(
         positions = sorted(
             item.positions,
             key=lambda position: (
-                0
-                if original is not None and position == original[0]
-                else 1,
+                0 if original is not None and position == original[0] else 1,
                 position.fret,
                 position.string,
             ),
@@ -272,13 +482,13 @@ def optimize_fingering(
     tuning: GuitarTuning = STANDARD_TUNING,
     max_fret: int = 24,
 ) -> FingeringResult:
-    """Assign playable string/fret positions to melodic and chord material.
+    """Assign playable string/fret positions to melodic, riff and chord material.
 
-    The first pass optimizes phrase continuity. The second pass treats notes with
-    the same source onset as a chord and enforces one distinct guitar string per
-    note. Unplayable notes remain visible with ``string=None`` and ``fret=None``.
+    Pass 1 optimizes local melodic continuity.
+    Pass 2 repairs stacked-interval arpeggio/riff cells into reusable adjacent-
+    string shapes.
+    Pass 3 enforces one distinct guitar string per simultaneous note.
     """
-
     diagnostics: list[FingeringDiagnostic] = []
     assignments: dict[int, tuple[FretPosition, float]] = {}
     total_cost = 0.0
@@ -319,6 +529,13 @@ def optimize_fingering(
         )
 
     flush_segment()
+
+    _repair_arpeggio_shapes(
+        track,
+        assignments,
+        tuning=tuning,
+        max_fret=max_fret,
+    )
     _repair_simultaneous_chords(
         track,
         assignments,
