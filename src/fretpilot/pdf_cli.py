@@ -13,6 +13,7 @@ from fretpilot.exporters.pdf_score import export_score_pdf
 from fretpilot.ir import build_guitar_ir
 from fretpilot.midi import load_midi
 from fretpilot.midi.models import NormalizedTimeline, NormalizedTrack
+from fretpilot.rewrite import DEFAULT_MIDI_FIDELITY, rewrite_instrument_stream
 
 
 def _select_source(
@@ -69,6 +70,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     source.add_argument("--stream-id")
     source.add_argument("--track", type=int)
     parser.add_argument("--max-fret", type=int, default=24)
+    parser.add_argument(
+        "--midi-fidelity",
+        type=float,
+        default=None,
+        metavar="0..1",
+        help=(
+            "Balance source fidelity against guitar reasonableness: 1 preserves "
+            f"MIDI exactly, 0 permits the most rewriting (default: {DEFAULT_MIDI_FIDELITY})"
+        ),
+    )
     parser.add_argument("--measures-per-system", type=int, default=4)
     parser.add_argument("--systems-per-page", type=int, default=5)
     parser.add_argument("-o", "--output", type=Path, required=True)
@@ -77,19 +88,54 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.max_fret < 0:
         raise SystemExit("--max-fret must be zero or greater.")
+    midi_fidelity = (
+        DEFAULT_MIDI_FIDELITY
+        if args.midi_fidelity is None
+        else args.midi_fidelity
+    )
+    if not 0.0 <= midi_fidelity <= 1.0:
+        raise SystemExit("--midi-fidelity must be between 0.0 and 1.0.")
 
     timeline = load_midi(args.midi_file)
-    track, stream_id = _select_source(
-        timeline,
-        stream_id=args.stream_id,
-        track_index=args.track,
-    )
+    rewrite = None
+    if args.track is None:
+        selected_track, stream_id = _select_source(
+            timeline,
+            stream_id=args.stream_id,
+            track_index=None,
+        )
+        stream = next(
+            item
+            for item in resolve_instrument_streams(timeline)
+            if item.stream_id == stream_id
+        )
+        rewrite = rewrite_instrument_stream(
+            stream,
+            midi_fidelity=midi_fidelity,
+            max_fret=args.max_fret,
+            ticks_per_beat=timeline.ticks_per_beat,
+        )
+        track = rewrite.stream.as_track()
+    else:
+        track, stream_id = _select_source(
+            timeline,
+            stream_id=args.stream_id,
+            track_index=args.track,
+        )
+        if args.midi_fidelity is not None and midi_fidelity != 1.0:
+            raise SystemExit(
+                "Note rewriting requires --stream-id; use --midi-fidelity 1 "
+                "with legacy --track."
+            )
     analysis = analyze_guitar_track(track, max_fret=args.max_fret)
     project = build_guitar_ir(
         timeline,
         track,
         analysis,
         source_stream_id=stream_id,
+        source_note_indices=(rewrite.source_note_indices if rewrite is not None else None),
+        source_note_origins=(rewrite.source_note_origins if rewrite is not None else None),
+        rewrite_changes=(rewrite.changes if rewrite is not None else ()),
     )
     result = export_score_pdf(
         project,

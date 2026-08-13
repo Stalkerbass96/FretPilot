@@ -23,6 +23,7 @@ from fretpilot.midi import load_midi
 from fretpilot.midi.models import NormalizedTimeline, NormalizedTrack
 from fretpilot.prototype import generate_prototype_package
 from fretpilot.rhythm import analyze_track_rhythm
+from fretpilot.rewrite import DEFAULT_MIDI_FIDELITY, rewrite_instrument_stream
 
 
 def _add_json_output_arguments(parser: argparse.ArgumentParser) -> None:
@@ -61,6 +62,19 @@ def _add_max_fret_argument(parser: argparse.ArgumentParser) -> None:
         type=int,
         default=24,
         help="Highest allowed fret (default: 24)",
+    )
+
+
+def _add_midi_fidelity_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--midi-fidelity",
+        type=float,
+        default=None,
+        metavar="0..1",
+        help=(
+            "Balance source fidelity against guitar reasonableness: 1 preserves "
+            f"MIDI exactly, 0 permits the most rewriting (default: {DEFAULT_MIDI_FIDELITY})"
+        ),
     )
 
 
@@ -171,6 +185,7 @@ def _build_parser() -> argparse.ArgumentParser:
     ir_parser.add_argument("midi_file", type=Path, help="Path to a .mid/.midi file")
     _add_source_selector(ir_parser)
     _add_max_fret_argument(ir_parser)
+    _add_midi_fidelity_argument(ir_parser)
     _add_json_output_arguments(ir_parser)
 
     gp5_parser = subparsers.add_parser(
@@ -180,6 +195,7 @@ def _build_parser() -> argparse.ArgumentParser:
     gp5_parser.add_argument("midi_file", type=Path, help="Path to a .mid/.midi file")
     _add_source_selector(gp5_parser)
     _add_max_fret_argument(gp5_parser)
+    _add_midi_fidelity_argument(gp5_parser)
     _add_file_export_arguments(gp5_parser, help_text="Destination .gp5 file")
 
     ample_parser = subparsers.add_parser(
@@ -189,6 +205,7 @@ def _build_parser() -> argparse.ArgumentParser:
     ample_parser.add_argument("midi_file", type=Path, help="Path to a .mid/.midi file")
     _add_source_selector(ample_parser)
     _add_max_fret_argument(ample_parser)
+    _add_midi_fidelity_argument(ample_parser)
     _add_file_export_arguments(
         ample_parser,
         help_text="Destination Ample Guitar performance .mid file",
@@ -217,6 +234,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Generate a package for every likely_guitar candidate",
     )
     _add_max_fret_argument(prototype_parser)
+    _add_midi_fidelity_argument(prototype_parser)
     prototype_parser.add_argument(
         "-o",
         "--output-directory",
@@ -317,20 +335,51 @@ def _validate_max_fret(max_fret: int) -> None:
         raise SystemExit("--max-fret must be zero or greater.")
 
 
+def _validate_midi_fidelity(midi_fidelity: float) -> None:
+    if not 0.0 <= midi_fidelity <= 1.0:
+        raise SystemExit("--midi-fidelity must be between 0.0 and 1.0.")
+
+
 def _build_project(args: argparse.Namespace):
     _validate_max_fret(args.max_fret)
-    timeline = load_midi(args.midi_file)
-    track, stream_id = _select_analysis_source(
-        timeline,
-        track_index=args.track,
-        stream_id=args.stream_id,
+    midi_fidelity = (
+        DEFAULT_MIDI_FIDELITY
+        if args.midi_fidelity is None
+        else args.midi_fidelity
     )
+    _validate_midi_fidelity(midi_fidelity)
+    timeline = load_midi(args.midi_file)
+    rewrite = None
+    if args.track is None:
+        stream = _select_instrument_stream(timeline, stream_id=args.stream_id)
+        stream_id = stream.stream_id
+        rewrite = rewrite_instrument_stream(
+            stream,
+            midi_fidelity=midi_fidelity,
+            max_fret=args.max_fret,
+            ticks_per_beat=timeline.ticks_per_beat,
+        )
+        track = rewrite.stream.as_track()
+    else:
+        track, stream_id = _select_analysis_source(
+            timeline,
+            track_index=args.track,
+            stream_id=args.stream_id,
+        )
+        if args.midi_fidelity is not None and midi_fidelity != 1.0:
+            raise SystemExit(
+                "Note rewriting requires a logical InstrumentStream. Use --stream-id, "
+                "or use --midi-fidelity 1 with legacy --track."
+            )
     analysis = analyze_guitar_track(track, max_fret=args.max_fret)
     project = build_guitar_ir(
         timeline,
         track,
         analysis,
         source_stream_id=stream_id,
+        source_note_indices=(rewrite.source_note_indices if rewrite is not None else None),
+        source_note_origins=(rewrite.source_note_origins if rewrite is not None else None),
+        rewrite_changes=(rewrite.changes if rewrite is not None else ()),
     )
     return project
 
@@ -442,6 +491,11 @@ def _run_prototype(args: argparse.Namespace) -> int:
             stream_id=args.stream_id,
             all_likely_guitars=args.all_likely_guitars,
             max_fret=args.max_fret,
+            midi_fidelity=(
+                DEFAULT_MIDI_FIDELITY
+                if args.midi_fidelity is None
+                else args.midi_fidelity
+            ),
             compact_json=args.compact,
         )
     except ValueError as exc:

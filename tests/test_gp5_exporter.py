@@ -92,3 +92,36 @@ def test_gp5_export_round_trips_supported_subset(tmp_path: Path) -> None:
         for beat in second_voice.beats
         for note in beat.notes
     )
+
+
+def test_gp5_round_trips_humanized_notes_that_quantize_to_a_chord(tmp_path: Path) -> None:
+    track = NormalizedTrack(
+        index=0,
+        name="Humanized chord",
+        notes=[
+            _note(pitch=57, start_beat=0.0, duration_beats=0.5),
+            _note(pitch=59, start_beat=0.02, duration_beats=0.5),
+        ],
+    )
+    timeline = NormalizedTimeline(
+        source="humanized-chord.mid",
+        midi_type=1,
+        ticks_per_beat=480,
+        tempo_events=[TempoEvent(tick=0, beat=0.0, bpm=120.0)],
+        time_signature_events=[
+            TimeSignatureEvent(tick=0, beat=0.0, numerator=4, denominator=4)
+        ],
+        tracks=[track],
+    )
+    project = build_guitar_ir(timeline, track, analyze_guitar_track(track))
+    output = tmp_path / "humanized-chord.gp5"
+
+    export_gp5(project, output)
+    parsed = gp.parse(output)
+
+    chord = next(
+        beat
+        for beat in parsed.tracks[0].measures[0].voices[0].beats
+        if len(beat.notes) == 2
+    )
+    assert len({note.string for note in chord.notes}) == 2

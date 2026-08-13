@@ -67,3 +67,19 @@ def test_analysis_threads_explicit_playing_context_into_result() -> None:
     assert serialized["role_scores"] == {"solo": 1.0}
     assert serialized["knowledge_version"] == context.knowledge_version
     assert all(note.playable for note in analysis.fingering.notes)
+
+
+def test_quantized_chord_onset_uses_distinct_strings() -> None:
+    # Humanized attacks with different source ticks can become one score chord.
+    # The physical string constraint must follow that quantized score onset.
+    track = _track(
+        [57, 59],
+        onsets=[0.0, 0.02],
+        durations=[0.5, 0.5],
+    )
+
+    analysis = analyze_guitar_track(track)
+
+    strings = [item.string for item in analysis.fingering.notes]
+    assert all(string is not None for string in strings)
+    assert len(set(strings)) == 2

@@ -546,6 +546,11 @@ def _repair_simultaneous_chords(
         shape = _solve_chord_shape(items, assignments, preferences)
         if shape is None:
             first_index = note_indices[0]
+            # A source-tick chord or a quantized score chord that cannot use
+            # distinct strings is physically unplayable. Do not retain the
+            # melodic pass's same-string assignments as if they were valid.
+            for note_index in note_indices:
+                assignments.pop(note_index, None)
             diagnostics.append(
                 FingeringDiagnostic(
                     code="unplayable_chord_shape",

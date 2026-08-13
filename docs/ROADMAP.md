@@ -12,6 +12,7 @@ MIDI
 → InstrumentStream resolution
 → layered guitar detection
 → selected guitar stream
+→ adjustable source-note rationalization (`midi_fidelity`)
 → rhythm / notation repair
 → section segmentation
 → per-section behavior profiles
@@ -76,6 +77,7 @@ Long-term architecture:
 - [x] measure-aware section segmentation (`GK-010` baseline)
 - [x] section behavior → PlayingContext (`GK-011` experimental baseline)
 - [x] per-section fingering/articulation execution + global note-index remapping (`GK-015` baseline)
+- [x] adjustable MIDI-fidelity vs guitar-reasonableness note rewrite (`GK-016` baseline)
 - [ ] explicit hand-position state and cross-section continuity (`GK-013`)
 - [ ] reusable explicit shape-memory layer (`GK-012`)
 - [ ] left-hand finger/barre assignment (`GK-014`)

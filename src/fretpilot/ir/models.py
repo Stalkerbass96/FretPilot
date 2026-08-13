@@ -79,6 +79,10 @@ class GuitarNoteEvent:
     fingering: IRFingering
     articulations: list[IRArticulation] = field(default_factory=list)
     confidence: NoteConfidence | None = None
+    # ``source_note_index`` remains stable across preprocessing. Synthetic
+    # notes receive an index after the original source-note range and are
+    # explicitly marked here rather than masquerading as MIDI input.
+    source_note_origin: str = "midi"
 
 
 @dataclass(slots=True)

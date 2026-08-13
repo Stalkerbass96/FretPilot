@@ -200,6 +200,45 @@ Current behavior:
 - support stable `section_id`-keyed context overrides for future user corrections;
 - one-command prototype generation uses this path and reports section contexts.
 
+### GK-016 — source-note rationalization continuum
+
+Status: **implemented deterministic baseline**
+
+FretPilot now has an explainable rewrite stage between logical stream selection
+and section-aware guitar analysis:
+
+```text
+InstrumentStream
+→ confidence-gated note rewrite
+→ rewritten InstrumentStream + source mapping + change log
+→ section / fingering / articulation analysis
+```
+
+The public control is `midi_fidelity` in the inclusive range `0..1`:
+
+- `1.0` is an exact note passthrough;
+- lower values admit progressively lower-confidence musical repairs;
+- the default `0.35` favors guitar reasonableness while remaining conservative.
+
+The V0 deterministic baseline may:
+
+- octave-shift pitches that lie outside the configured standard-guitar range;
+- repair high-confidence isolated octave-register outliers;
+- delete exact duplicate notes and short isolated spike notes;
+- insert a missing note only inside a strongly evidenced repeated-pulse pattern.
+
+Every edit records operation, before/after state, confidence, reason, stable
+source-note identity, and MIDI/synthetic origin. Synthetic identities start
+after the original note-index range. Rewrites run before fingering and
+articulation so downstream intelligence sees the musically revised material.
+
+Future work:
+
+- harmony/key/chord-conditioned pitch alternatives rather than octave-only repair;
+- motif-aware insertion/deletion across longer phrases;
+- jointly score note edits, fingering, and articulation alternatives;
+- human review controls and regression-corpus calibration for threshold values.
+
 ## P2 — expand style knowledge
 
 ### GK-020 — metal family

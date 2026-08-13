@@ -103,6 +103,7 @@ output/
 ├── manifest.json
 ├── t0_ch2_p27/
 │   ├── t0_ch2_p27.analysis.json
+│   ├── t0_ch2_p27.rewrite.json
 │   ├── t0_ch2_p27.guitar-ir.json
 │   ├── t0_ch2_p27.gp5
 │   ├── t0_ch2_p27.ample-sc.mid
@@ -128,6 +129,23 @@ fretpilot analyze song.mid --stream-id t0:ch2:p27 -o analysis.json
 fretpilot build-ir song.mid --stream-id t0:ch2:p27 -o guitar-ir.json
 ```
 
+Score and performance output commands use an adjustable MIDI-fidelity
+continuum. `1` preserves source notes exactly; `0` permits the most
+confidence-gated rewriting. The default is `0.35`, favoring a reasonable,
+playable guitar result:
+
+```bash
+fretpilot prototype song.mid \
+  --stream-id t0:ch2:p27 \
+  --midi-fidelity 0.35 \
+  -o output/
+```
+
+Rewriting currently covers high-confidence guitar-range/octave repairs, exact
+duplicates, isolated short spike notes, and strongly evidenced missing repeated
+pulses. Every change is recorded in `*.rewrite.json`; synthetic notes receive
+an explicit origin and a stable identity after the original source-note range.
+
 Export individual files:
 
 ```bash
@@ -147,6 +165,7 @@ Each prototype stream report contains:
 - stream and detection evidence;
 - guitar probability and confidence;
 - selected rhythm grid;
+- MIDI-fidelity setting and note-rewrite counts;
 - low-confidence rhythm notes;
 - unplayable fingering notes;
 - articulation counts;

@@ -23,6 +23,7 @@ MIDI
 → InstrumentStream resolution
 → layered guitar detection
 → selected guitar stream
+→ confidence-gated source-note rewrite (`midi_fidelity`, default 0.35)
 → rhythm / notation analysis
 → section segmentation
 → per-section behavior profiles
@@ -49,6 +50,8 @@ Implemented and covered by tests/CI:
 - logical `InstrumentStream` resolution;
 - three-layer guitar identity ranking;
 - separate experimental Layer-4 guitar behavior profiles;
+- adjustable MIDI-fidelity vs guitar-reasonableness note rewriting, with stable
+  source mapping and an explainable per-edit report;
 - rhythm grid analysis and basic notation repair;
 - measure coordinates and cross-measure ties;
 - source/performance timing kept separate from score timing;

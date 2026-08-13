@@ -203,6 +203,15 @@ def _populate_measure(
         total_duration = durations.pop()
         segments = _split_duration_ticks(total_duration)
 
+        strings = [event.fingering.string for event in events]
+        playable_strings = [string for string in strings if string is not None]
+        if len(playable_strings) != len(set(playable_strings)):
+            raise UnsupportedGuitarIR(
+                "Same-onset chord notes must use distinct strings; duplicate "
+                f"string assignment in measure {ir_measure.number}, beat "
+                f"{start_in_measure:g}."
+            )
+
         # PyGuitarPro 0.11 can emit an unreadable GP5 when only some notes in a
         # chord beat carry the let-ring flag. Keep the musical intent in Guitar
         # IR, omit the unsafe partial flag in GP5, and report the downgrade.
@@ -378,6 +387,15 @@ def export_gp5(project: GuitarProjectIR, output: str | Path) -> GP5ExportResult:
     _apply_linked_effects(all_events, note_lookup, warnings)
 
     gp.write(song, destination, version=(5, 1, 0))
+    try:
+        gp.parse(destination)
+    except (gp.GPException, OSError, ValueError) as exc:
+        # Never report a file as successful merely because the writer returned.
+        # PyGuitarPro can serialize a few invalid chord/effect combinations.
+        destination.unlink(missing_ok=True)
+        raise UnsupportedGuitarIR(
+            f"Generated GP5 failed parse-back validation: {exc}"
+        ) from exc
     return GP5ExportResult(
         path=str(destination),
         measure_count=len(ir_track.measures),
