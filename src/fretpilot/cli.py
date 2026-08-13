@@ -16,6 +16,7 @@ from fretpilot.guitar import optimize_fingering
 from fretpilot.ir import build_guitar_ir
 from fretpilot.midi import load_midi
 from fretpilot.midi.models import NormalizedTimeline, NormalizedTrack
+from fretpilot.prototype import generate_prototype_package
 from fretpilot.rhythm import analyze_track_rhythm
 
 
@@ -154,6 +155,42 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_file_export_arguments(
         ample_parser,
         help_text="Destination Ample Guitar performance .mid file",
+    )
+
+    prototype_parser = subparsers.add_parser(
+        "prototype",
+        help=(
+            "Generate analysis, Guitar IR, GP5, Ample MIDI, reports, and a "
+            "manifest for one or all likely guitar streams"
+        ),
+    )
+    prototype_parser.add_argument(
+        "midi_file",
+        type=Path,
+        help="Path to a .mid/.midi file",
+    )
+    prototype_selection = prototype_parser.add_mutually_exclusive_group()
+    prototype_selection.add_argument(
+        "--stream-id",
+        help="Generate the package for one explicit logical InstrumentStream",
+    )
+    prototype_selection.add_argument(
+        "--all-likely-guitars",
+        action="store_true",
+        help="Generate a package for every likely_guitar candidate",
+    )
+    _add_max_fret_argument(prototype_parser)
+    prototype_parser.add_argument(
+        "-o",
+        "--output-directory",
+        type=Path,
+        required=True,
+        help="Directory that will receive per-stream output folders and manifest.json",
+    )
+    prototype_parser.add_argument(
+        "--compact",
+        action="store_true",
+        help="Write compact JSON package files and print a compact manifest",
     )
 
     return parser
@@ -323,6 +360,23 @@ def _run_export_ample_sc(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_prototype(args: argparse.Namespace) -> int:
+    timeline = load_midi(args.midi_file)
+    try:
+        manifest = generate_prototype_package(
+            timeline,
+            args.output_directory,
+            stream_id=args.stream_id,
+            all_likely_guitars=args.all_likely_guitars,
+            max_fret=args.max_fret,
+            compact_json=args.compact,
+        )
+    except ValueError as exc:
+        raise SystemExit(f"Prototype package generation failed: {exc}") from exc
+    _emit_json(manifest.to_dict(), None, args.compact)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
@@ -343,6 +397,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_export_gp5(args)
     if args.command == "export-ample-sc":
         return _run_export_ample_sc(args)
+    if args.command == "prototype":
+        return _run_prototype(args)
 
     parser.error(f"Unknown command: {args.command}")
     return 2
