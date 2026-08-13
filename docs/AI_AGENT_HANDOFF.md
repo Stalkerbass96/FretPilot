@@ -1,91 +1,106 @@
-# FretPilot AI Agent Handoff
+# FretPilot AI / Codex Handoff
 
-> Last consolidated: 2026-08-13
+> Consolidated: 2026-08-13
 >
-> Purpose: let a new AI agent understand the current product, architecture, task ownership, and safe next steps in roughly 10 minutes without reconstructing historical chat context.
+> This is the authoritative short handoff for an AI coding agent. Read `AGENTS.md` first, then this file. Detailed design lives in the specialized project docs linked below.
 
-## 1. Product in one paragraph
+## 1. Product goal
 
-FretPilot converts imperfect or AI-generated MIDI into **guitar-aware notation** and **virtual-guitar performance data**. The engine must preserve source MIDI truth, infer/select guitar streams, repair notation timing, choose guitarist-like string/fret paths, plan generic guitar articulations, build a canonical Guitar IR, then render score/performance outputs. The current prototype targets PDF/TAB + GP5 for score review and Ample Guitar SC MIDI for performance. Long term, both guitar-playing knowledge and virtual-instrument adapter knowledge are versioned/evolvable assets.
+FretPilot converts imperfect or AI-generated MIDI into two guitar-aware outputs:
 
-## 2. Current runtime pipeline
+1. **human-readable guitar notation/TAB**;
+2. **performance MIDI for virtual guitar instruments**.
+
+The engine must preserve source MIDI truth, infer/select guitar streams, infer musical behavior over time, choose guitarist-like string/fret/articulation decisions, build a canonical Guitar IR, then render score and performance outputs.
+
+Current target scope is standard-tuned 6-string guitar. Current performance target is Ample Guitar SC 4.x, but the architecture must support more guitar instruments later.
+
+## 2. Current runtime path — implemented baseline
 
 ```text
 MIDI
-  ↓
-NormalizedTimeline
-  ↓
-InstrumentStream resolution
-  ↓
-Layers 1–3 guitar identity evidence
-  ↓
-selected guitar stream
-  ↓
-rhythm / notation repair
-  ↓
-fingering + guitar-shape planning
-  ↓
-articulation planning
-  ↓
-GuitarTrackAnalysis
-  ↓
-Canonical Guitar IR
-  ├── PDF/TAB preview
-  ├── GP5
-  └── performance adapter
-         └── Ample Guitar SC 4.x today
+→ NormalizedTimeline
+→ InstrumentStream resolution
+→ layered guitar detection
+→ selected guitar stream
+→ rhythm / notation analysis
+→ section segmentation
+→ per-section behavior profiles
+→ per-section PlayingContext
+→ per-section fingering
+→ per-section articulation
+→ remap local indices to original source_note_index
+→ merged GuitarTrackAnalysis
+→ canonical Guitar IR
+├──→ PDF/TAB preview
+├──→ GP5
+└──→ performance adapter
+       └── Ample Guitar SC 4.x today
 ```
 
-## 3. What exists now
+The one-command prototype package now uses the **section-aware path by default**.
 
-Before changing code, verify against `docs/ROADMAP.md` and tests, but the current baseline includes:
+## 3. Important current capabilities
 
-- Standard MIDI Type 0 / Type 1 parsing;
-- preservation of Track / Channel / Program / original ticks;
+Implemented and covered by tests/CI:
+
+- MIDI Type 0 / Type 1 parsing;
+- preservation of physical Track / Channel / Program / original ticks and timing;
 - logical `InstrumentStream` resolution;
-- explainable three-layer guitar candidate ranking;
-- rhythm grid analysis and basic notation-duration repair;
+- three-layer guitar identity ranking;
+- separate experimental Layer-4 guitar behavior profiles;
+- rhythm grid analysis and basic notation repair;
 - measure coordinates and cross-measure ties;
+- source/performance timing kept separate from score timing;
 - standard six-string fretboard candidate generation;
 - phrase-level fingering baseline;
-- movable riff/arpeggio shape repair baseline;
+- movable riff/arpeggio shape repair;
 - simultaneous chord distinct-string solving;
+- context-aware fingering soft costs;
 - hammer-on / pull-off / slide / vibrato inference;
+- context-aware articulation confidence weighting;
+- section segmentation using measure windows + behavior feature change distance;
+- independent `PlayingContext` per section;
+- section-aware fingering/articulation execution and global note-index remapping;
+- stable `section_id`-keyed context override hook for future user corrections;
 - canonical Guitar IR v0.1;
-- PDF/TAB review renderer (still not musician-quality engraving);
-- GP5 exporter with automated write/parse round-trip validation;
-- Ample Guitar SC 4.x MIDI renderer;
-- initial composable `PlayingContext` knowledge model;
+- GP5 write + parse-back validation;
+- Ample Guitar SC MIDI renderer;
+- PDF/TAB renderer exists, but engraving quality is not yet musician-grade;
 - generic `VirtualGuitarInstrumentProfile` schema skeleton;
-- batch prototype packaging for likely guitar streams.
+- multi-guitar one-command prototype package.
 
-## 4. Current product priority
+The last code-level product regression for section-aware prototype packaging passed CI. Always verify current HEAD CI before merging new changes.
 
-Do **not** block Prototype 0.1 on perfect track identification, internet learning, every guitar style, or every virtual instrument.
+## 4. Current known limitations
 
-Near-term order:
+Do not mistake these for implemented features:
 
-1. **Readable score/TAB output and real-song review** (`PV-*`).
-2. **Thread PlayingContext into fingering/articulation** (`GK-002`, `GK-003`, `GK-004`).
-3. **Phrase/Section context** so role/style can change over time (`GK-010/011`, coordinated with `TI-040/041`).
-4. **Review/correction records** so human feedback becomes future evaluation data (`SE-020/021`, `TI-052`).
-5. **Keep Track identification improving incrementally** (`TI-*`) without making it the prototype blocker.
-6. **Generalize Ample into the virtual-instrument adapter architecture** (`VI-002` onward) after preserving current Ample behavior.
-7. Build larger offline learning/self-evolution infrastructure only after useful real evaluation data exists.
+- Section behavior labels are still hand-authored experimental rules, not calibrated truth.
+- Section boundaries currently act as hard phrase/hand-position reset points.
+- No explicit persistent hand-position state yet.
+- No left-hand finger numbers / barre / thumb-over planning.
+- `PerformancePreferences` exist in PlayingContext but do not yet drive a generic performance plan.
+- Full section-context provenance is not yet persisted as a first-class Guitar IR contract everywhere.
+- PDF/TAB is still primarily a review renderer, not Guitar Pro / Songsterr-quality engraving.
+- No true two-voice notation yet.
+- Bend/vibrato performance rendering is incomplete.
+- Ample is the only implemented virtual-guitar target.
+- Track identification is useful but intentionally not treated as finished.
 
-## 5. Task ownership
+## 5. Task families
 
-Use the existing task family instead of inventing duplicate work.
+Use existing prefixes rather than creating duplicate work:
 
 ```text
-PV-*  prototype/output validation and immediate user-facing quality
+PV-*  prototype/output validation and immediate musician-facing quality
 TI-*  InstrumentStream / guitar-track identification
-GK-*  guitarist-like playing knowledge, role/style/phrase, fingering learning
-VI-*  virtual-guitar product knowledge, adapter capabilities, compatibility
-SE-*  cross-project reproducibility, feedback, evaluation, snapshot governance
+GK-*  guitarist-like playing knowledge, style, phrasing, fingering, articulation
+VI-*  virtual-guitar product knowledge, capabilities, adapters, compatibility
+SE-*  evaluation, feedback, reproducibility, knowledge/model evolution governance
 ```
 
-Canonical backlogs:
+Detailed backlogs:
 
 ```text
 docs/ROADMAP.md
@@ -96,33 +111,51 @@ docs/projects/virtual-guitar-instruments/BACKLOG.md
 docs/projects/system-evolution/BACKLOG.md
 ```
 
-## 6. The four long-term knowledge assets
+## 6. Core architectural boundaries — do not violate
 
-### A. Instrument / Track knowledge (`TI-*`)
+### Instrument identity vs playing behavior
 
-Answers:
+```text
+Layers 1–3 = is this likely guitar?
+Layer 4 / PlayingContext = what kind of guitar behavior/style is happening?
+```
 
-> Which logical stream is guitar, and how confident are we?
+Layer 4 must not override instrument identity.
 
-Evidence may include metadata, program/channel information, note behavior, guitar feasibility, chord/strum behavior, and later learned classification.
+### Guitar knowledge vs plugin knowledge
 
-### B. Guitar Playing Knowledge (`GK-*`)
+```text
+GK = how a real guitarist would likely play
+VI = how a target software instrument must be controlled
+```
 
-Answers:
+Do not put Ample keyswitches, CCs, state-machine rules, or product limitations into Guitar Playing Knowledge or canonical Guitar IR.
 
-> If this is guitar, how would a real guitarist most likely play it?
+### Hard constraints vs soft knowledge
 
-Includes:
+Physical fretboard/playability/file-format validity are hard deterministic constraints.
 
-- string/fret ranking;
-- hand position and shift planning;
-- shape/voicing memory;
-- left-hand fingering;
-- role/style-conditioned choices;
-- articulation priors;
-- performance feel.
+Style/role/knowledge/ML systems may rank valid alternatives but must not bypass physical constraints.
 
-Important dimensions remain composable:
+### Score vs performance
+
+Score timing and source/performance timing are separate representations. Do not destroy original performance timing to make notation cleaner.
+
+### Runtime vs learning
+
+Runtime uses approved/versioned knowledge and adapter profiles. Internet/user data may feed an offline candidate/evaluation/promotion loop later; runtime must not silently self-modify while processing a song.
+
+## 7. Canonical long-term knowledge domains
+
+### TI — Instrument / Track Knowledge
+
+Answers: **which logical stream is guitar?**
+
+### GK — Guitar Playing Knowledge
+
+Answers: **how would a real guitarist likely play this section?**
+
+Composable dimensions stay separate:
 
 ```text
 role: solo / riff / strumming / comping / ...
@@ -130,173 +163,175 @@ style: metal / rock / jazz / blues / ...
 technique family: legato / arpeggio / sweep / fingerstyle / ...
 ```
 
-Do not flatten these into one label.
+### VI — Virtual Guitar Instrument Knowledge
 
-### C. Virtual Guitar Instrument Knowledge (`VI-*`)
+Answers: **how must a particular plugin/version be controlled to realize canonical guitar intent?**
 
-Answers:
+### SE — Evaluation / Learning Knowledge
 
-> How must a particular software guitar be controlled to realize canonical guitar intent?
+Answers: **did a new heuristic/profile/model/adapter actually improve the system, and can it be reproduced/rolled back?**
 
-Examples:
+## 8. Recommended next work for Codex
 
-- keyswitch / CC / program mappings;
-- latch/reset state semantics;
-- legato overlap and preroll;
-- bend/vibrato capability;
-- string/position forcing;
-- picking/strumming controls;
-- product/version limitations.
+If the user does not specify another task, prefer one of these in order.
 
-Critical boundary:
+### A. `GK-013` — Hand-position state
+
+**Highest-value music-engine task.**
+
+Current section-aware execution solves each section independently. Add an explicit hand-position state / transition layer so weak boundaries can preserve position and strong musical boundaries can allow deliberate repositioning.
+
+Acceptance direction:
+
+- represent hand center/span/state explicitly;
+- estimate section-entry and section-exit hand positions;
+- carry state across weak boundaries when cheaper/more natural;
+- allow resets/shifts at strong phrase/style boundaries;
+- record shift cost/reason for explainability;
+- preserve current physical constraints;
+- keep existing Message-in-a-Bottle movable-arpeggio regression green;
+- add tests where identical note material produces different section-boundary behavior under different contexts.
+
+Primary files:
 
 ```text
-GK = how a guitarist plays
-VI = how a plugin is controlled
+src/fretpilot/analysis/section_aware.py
+src/fretpilot/guitar/fingering.py
+src/fretpilot/guitar/models.py
+src/fretpilot/knowledge/playing_contexts.py
+tests/test_section_aware_analysis.py
 ```
 
-Never change canonical guitar intent just because one plugin cannot express it. Use capability negotiation, approximation, fallback, or warnings.
+### B. Generic Performance Plan — finish `GK-002`
 
-### D. Evaluation / Learning knowledge (`SE-*` + specialized projects)
+`PerformancePreferences` currently exist but do not affect a canonical performance-intent layer.
 
-Answers:
-
-> Did a new heuristic, knowledge profile, model, or adapter mapping actually improve the system?
-
-Includes golden reviews, labeled fixtures, user corrections, benchmark identity, source provenance, candidate-vs-production comparison, and knowledge/profile promotion.
-
-## 7. Stable engine vs evolvable intelligence
-
-### Keep deterministic / schema-versioned
-
-- raw MIDI parsing and preservation;
-- physical fretboard constraints;
-- impossible fingering rejection;
-- Guitar IR contracts;
-- file-format correctness;
-- target control protocol facts once verified;
-- output validation.
-
-### Allowed to evolve with evidence/data
-
-- guitar identity ranking;
-- phrase/section boundaries;
-- role/style inference;
-- fingering ranking among physically valid candidates;
-- shape selection;
-- articulation ranking;
-- timing/velocity/strum feel;
-- expressive virtual-instrument calibration.
-
-Learned systems **rank valid alternatives**. They do not bypass hard constraints.
-
-## 8. Runtime Plane vs Learning Plane
-
-Runtime must be reproducible and must not silently learn from arbitrary web pages.
+Target flow:
 
 ```text
-Runtime Plane
-source + engine/config + approved knowledge/profile versions
-→ deterministic/validated result
+Guitar IR / section PlayingContext
+→ generic PerformancePlan
+→ target capability negotiation
+→ Ample / future adapter
 ```
 
-Future learning happens offline:
+The generic plan may describe timing feel, accent, overlap, pick/strum intent, etc. Product-specific keyswitch/CC translation stays in `VI-*`.
+
+Do not let Ample-specific behavior define the generic model.
+
+### C. `PV-002` — musician-readable PDF/TAB
+
+The renderer exists but output is not yet comparable to normal playable TAB.
+
+Focus on:
+
+- rhythmic stems/beams;
+- proportional musical spacing;
+- rests/ties/slides/let-ring notation;
+- readable measure/system layout;
+- section-aware phrase spacing;
+- visual golden fixtures.
+
+Do not solve engraving by changing musical analysis merely to make the page prettier.
+
+### D. `VI-002` — migrate Ample profile to generic VI schema
+
+Preserve current Ample output exactly while moving static product knowledge into the provider-neutral profile schema. Add conformance tests before adding a second product.
+
+## 9. Files to inspect first
+
+### Section-aware playing path
 
 ```text
-eligible/permissioned sources + user corrections + golden reviews
-→ provenance/license gate
-→ quality + normalization + deduplication
-→ feature extraction / training
-→ candidate knowledge/profile
-→ offline evaluation / shadow comparison
-→ approval
-→ versioned production snapshot/profile
+src/fretpilot/analysis/guitar.py
+src/fretpilot/analysis/sections.py
+src/fretpilot/analysis/section_contexts.py
+src/fretpilot/analysis/section_aware.py
+src/fretpilot/knowledge/playing_contexts.py
+src/fretpilot/guitar/fingering.py
+src/fretpilot/articulation/planner.py
+src/fretpilot/ir/models.py
+src/fretpilot/ir/builder.py
+src/fretpilot/prototype.py
 ```
 
-Public availability is not automatically permission to crawl, store, redistribute, or train on content. Preserve provenance and permitted use.
-
-## 9. Canonical boundaries that must not be violated
-
-1. A physical MIDI Track is not necessarily one instrument.
-2. Always preserve source Track, Channel, Program, ticks, and original note timing.
-3. Track/instrument metadata is evidence, not absolute truth.
-4. Layers 1–3 decide likely guitar identity; Layer 4 / PlayingContext describes behavior/style.
-5. Guitar Playing Knowledge is a soft prior; fretboard physics is a hard constraint.
-6. Product-specific keyswitch/CC data must not enter Guitar IR or guitar-playing knowledge.
-7. Score timing and performance timing are separate representations.
-8. Multiple likely guitar streams must not be silently collapsed into one.
-9. Unsupported target capabilities must be reported explicitly.
-10. Runtime uses pinned/approved knowledge and instrument profiles; new learning does not silently mutate production behavior.
-
-## 10. First files to inspect by task
-
-### Score / PDF / notation
+### Tests most relevant to the current music-intelligence path
 
 ```text
-src/fretpilot/ir/
-src/fretpilot/rhythm/
-src/fretpilot/exporters/
-docs/MUSIC_IR.md
+tests/test_guitar_analysis.py
+tests/test_section_segmentation.py
+tests/test_section_aware_analysis.py
+tests/test_guitar_fingering.py
+tests/test_guitar_ir_builder.py
+tests/test_prototype_package.py
+```
+
+### Product / architecture docs
+
+```text
 docs/ROADMAP.md
-```
-
-### Fingering / style / guitar behavior
-
-```text
-src/fretpilot/guitar/
-src/fretpilot/knowledge/
-src/fretpilot/articulation/
-docs/projects/guitar-playing-knowledge/
-```
-
-### Track identification
-
-```text
-src/fretpilot/midi/
-src/fretpilot/detection/
-docs/projects/track-identification/
-```
-
-### Virtual guitar adapters
-
-```text
-src/fretpilot/virtual_instruments/
-src/fretpilot/exporters/ample_guitar/
-docs/projects/virtual-guitar-instruments/
-```
-
-### Self-evolution / evaluation
-
-```text
 docs/LONG_TERM_ARCHITECTURE.md
-docs/projects/system-evolution/
-docs/projects/guitar-playing-knowledge/LEARNING_PIPELINE.md
+docs/projects/guitar-playing-knowledge/BACKLOG.md
+docs/projects/virtual-guitar-instruments/BACKLOG.md
 ```
 
-## 11. Required agent workflow
+## 10. Current prototype command
 
-For any nontrivial change:
+```bash
+fretpilot prototype song.mid \
+  --all-likely-guitars \
+  -o output/
+```
 
-1. Read this handoff plus the specialized project README/backlog.
-2. Pick an existing stable task ID where possible.
-3. Inspect current implementation and relevant tests; do not trust docs alone.
-4. Preserve current public behavior unless the task intentionally changes it.
-5. Add/update regression tests before changing scoring, fingering, knowledge, or adapter mappings.
-6. Run the full test suite / CI.
-7. Update the narrowest relevant STATUS/BACKLOG/algorithm doc.
-8. Record evidence for claims such as "more accurate", "more guitarist-like", or "verified plugin behavior".
+Each selected stream receives analysis, Guitar IR, GP5 when supported, Ample MIDI, and a processing report. Analysis/report now include section-context summaries.
 
-## 12. Recommended next-agent starting point
+For section diagnostics:
 
-If no more specific user request exists, start with the smallest high-value task that improves the current prototype rather than expanding the long-term learning system.
+```bash
+fretpilot sections song.mid \
+  --stream-id t0:ch2:p27
+```
 
-Preferred candidates:
+## 11. Required coding-agent workflow
+
+For every nontrivial change:
+
+1. Read `AGENTS.md`, this handoff, and the narrow relevant backlog.
+2. Inspect current code/tests before assuming docs are exact implementation truth.
+3. Reuse a stable task ID where possible.
+4. Add/update regression tests before changing scoring, fingering, knowledge, or adapter mappings.
+5. Preserve source timing and global `source_note_index` identity through section/local processing.
+6. Preserve neutral/default behavior unless the task explicitly changes it.
+7. Run the full test suite / CI.
+8. Update only the narrow authoritative docs that changed.
+9. Do not claim improved accuracy or guitarist-likeness without evidence/golden review.
+10. Do not broaden scope into track-identification perfection or web-learning infrastructure unless explicitly requested.
+
+## 12. Product priority summary
+
+Short term:
 
 ```text
-PV: improve musician-readable PDF/TAB using existing Guitar IR
-GK-002: thread PlayingContext through analysis without changing neutral output
-GK-003: make fingering costs knowledge-aware while preserving golden regressions
-VI-002: migrate Ample static knowledge to the generic profile schema without changing render output
+better musician-readable output
++ better guitarist-like execution
++ useful human review/correction
 ```
 
-Do not start broad crawling/training infrastructure until review/correction/evaluation data is mature enough to measure improvement.
+Medium term:
+
+```text
+hand/shape knowledge
++ generic performance intent
++ multi-plugin adapter architecture
+```
+
+Long term:
+
+```text
+versioned Guitar Playing Knowledge
++ versioned Virtual Instrument Knowledge
++ licensed/approved learning data
++ evaluation / candidate / promotion loop
+```
+
+The long-term learning system must not block useful Prototype 0.1 iteration.
