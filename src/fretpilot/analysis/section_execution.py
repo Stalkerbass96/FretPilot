@@ -5,11 +5,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Mapping
 
 from fretpilot.analysis.guitar import GuitarTrackAnalysis
-from fretpilot.analysis.section_contexts import (
-    SectionContextAnalysis,
-    analyze_section_contexts,
-)
+from fretpilot.analysis.section_contexts import SectionContextAnalysis
 from fretpilot.analysis.sections import segment_instrument_stream
+from fretpilot.analysis.style_contexts import analyze_style_aware_section_contexts
 from fretpilot.articulation.models import ArticulationDecision, ArticulationPlan
 from fretpilot.articulation.planner import plan_articulations
 from fretpilot.detection.models import InstrumentStream
@@ -253,7 +251,7 @@ def analyze_guitar_stream_section_aware(
     context_overrides: Mapping[str, PlayingContext] | None = None,
     carry_boundary_strength_max: float = _DEFAULT_CARRY_BOUNDARY_STRENGTH_MAX,
 ) -> GuitarTrackAnalysis:
-    """Derive time-varying contexts and execute one guitar stream."""
+    """Derive style-aware time-varying contexts and execute one guitar stream."""
 
     segmentation = segment_instrument_stream(
         timeline,
@@ -261,8 +259,9 @@ def analyze_guitar_stream_section_aware(
         window_measures=window_measures,
         change_threshold=change_threshold,
     )
-    section_contexts = analyze_section_contexts(
+    section_contexts = analyze_style_aware_section_contexts(
         segmentation,
+        stream,
         minimum_behavior_score=minimum_behavior_score,
     )
     return analyze_guitar_track_by_sections(
