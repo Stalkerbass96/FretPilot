@@ -100,13 +100,15 @@ silently.
 - [x] per-section fingering/articulation execution + global note-index remapping (`GK-015` baseline)
 - [x] adjustable MIDI-fidelity vs guitar-reasonableness note rewrite (`GK-016` baseline)
 - [x] explicit hand-position state and cross-section continuity (`GK-013` baseline)
-- [ ] reusable explicit shape-memory layer (`GK-012`)
+- [~] reusable explicit shape-memory layer (`GK-012`: candidate knowledge representation only)
+- [x] versioned knowledge entry/snapshot/provenance baseline (`GK-035` / `SE-030` partial)
+- [x] knowledge snapshot and used-entry provenance in IR/reports
 - [ ] left-hand finger/barre assignment (`GK-014`)
 - [ ] generic Performance Plan consumes `PerformancePreferences` (`GK-005` / remaining `GK-002`)
 
 ### Guitar IR
 
-- [x] schema version `0.1`
+- [x] schema version `0.2` (adds pinned knowledge provenance)
 - [x] tempo / time-signature maps
 - [x] measures and score events
 - [x] source/performance timing

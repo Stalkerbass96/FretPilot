@@ -10,6 +10,7 @@ This page is the navigation entry point for product, architecture, and active de
 - [`PRODUCT.md`](PRODUCT.md) — product definition, scope, and target user.
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — current module boundaries and executable architecture.
 - [`LONG_TERM_ARCHITECTURE.md`](LONG_TERM_ARCHITECTURE.md) — stable vs evolvable modules, Runtime/Learning planes, knowledge assets, and self-evolution architecture.
+- [`KNOWLEDGE_BASE.md`](KNOWLEDGE_BASE.md) — unified knowledge-entry, snapshot, provenance, lifecycle, and runtime traceability contract.
 - [`ROADMAP.md`](ROADMAP.md) — prototype phases and current product priorities.
 - [`MUSIC_IR.md`](MUSIC_IR.md) — canonical Guitar IR contract.
 - [`FRONTEND_DESIGN_SYSTEM.md`](FRONTEND_DESIGN_SYSTEM.md) — product frontend

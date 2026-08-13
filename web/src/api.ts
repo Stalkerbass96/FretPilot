@@ -38,6 +38,7 @@ export type ConversionJob = {
     gp5: boolean;
     ample_sc_midi: boolean;
   };
+  knowledge_snapshot_version: string;
   error: string | null;
   created_at: string;
   completed_at: string | null;

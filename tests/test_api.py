@@ -63,6 +63,7 @@ def test_job_runs_real_engine_and_exposes_selected_downloads(tmp_path: Path) -> 
         assert job["status"] == "completed", job.get("error")
         assert job["source_filename"] == "riff.mid"
         assert job["midi_fidelity"] == 0.35
+        assert job["knowledge_snapshot_version"] == "2026.08.0"
         assert len(job["streams"]) == 1
 
         artifacts = job["streams"][0]["artifacts"]

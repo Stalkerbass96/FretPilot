@@ -71,7 +71,7 @@ def test_builder_splits_cross_measure_note_with_ties() -> None:
         source_stream_id="t0:ch0:p27",
     )
 
-    assert project.schema_version == "0.1"
+    assert project.schema_version == "0.2"
     assert project.tracks[0].source_stream_id == "t0:ch0:p27"
     assert project.tracks[0].playing_context is None
     assert len(project.tracks[0].measures) == 2
@@ -146,6 +146,13 @@ def test_builder_preserves_playing_context_metadata() -> None:
     assert ir_context["role_scores"] == {"solo": 0.9}
     assert ir_context["style_scores"] == {"metal": 0.8}
     assert ir_context["knowledge_version"] == context.knowledge_version
+    assert ir_context["knowledge_entry_ids"] == [
+        "gk.profile.solo",
+        "gk.profile.metal",
+    ]
+    assert project.knowledge is not None
+    assert project.knowledge.snapshot_version == context.knowledge_version
+    assert project.knowledge.entry_ids == context.knowledge_entry_ids
 
 
 def test_voice_two_note_can_ring_while_voice_one_continues() -> None:

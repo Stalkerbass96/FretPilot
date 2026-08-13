@@ -68,13 +68,16 @@ Implemented and covered by tests/CI:
 - explicit section entry/exit hand-position state, weak-boundary continuity,
   strong-boundary resets, and explainable shift records;
 - stable `section_id`-keyed context override hook for future user corrections;
-- canonical Guitar IR v0.1;
+- canonical Guitar IR v0.2 with project-level knowledge provenance;
 - GP5 write + parse-back validation;
 - safe unequal-chord voice separation and two-voice GP5 output;
 - Ample Guitar SC MIDI renderer;
 - PDF/TAB renderer supports independent V1/V2 rhythm rows and voice-aware
   pagination, but engraving quality is not yet musician-grade;
 - generic `VirtualGuitarInstrumentProfile` schema skeleton;
+- pinned versioned Knowledge Snapshot/registry with profile provenance;
+- candidate reusable shape-library representation;
+- knowledge snapshot and used-entry IDs in Guitar IR/reports;
 - multi-guitar one-command prototype package including PDF review output.
 - responsive React/TypeScript frontend and `Quiet Studio 0.1` design-system
   baseline with local file/output preferences and browser-validated layouts.
@@ -91,15 +94,16 @@ Do not mistake these for implemented features:
   against reviewed real-song fingerings.
 - No left-hand finger numbers / barre / thumb-over planning.
 - `PerformancePreferences` exist in PlayingContext but do not yet drive a generic performance plan.
-- Full section-context provenance is not yet persisted as a first-class Guitar IR contract everywhere.
+- Knowledge snapshot and used profile IDs are persisted, but stable
+  region-to-individual-decision provenance is not yet complete.
 - PDF/TAB is still primarily a review renderer, not Guitar Pro / Songsterr-quality engraving.
 - Two-voice notation currently covers safe unequal chord releases in GP5 and
   PDF/TAB; general contrapuntal voice separation remains incomplete.
 - Bend/vibrato performance rendering is incomplete.
 - Ample is the only implemented virtual-guitar target.
 - Track identification is useful but intentionally not treated as finished.
-- The frontend is a functional interaction/visual baseline, but is not yet
-  connected to a Python API, real job execution, or persistent storage.
+- The frontend is connected to a local Python job API, but project/job metadata
+  is not yet persistent across server restarts.
 
 ## 5. Task families
 

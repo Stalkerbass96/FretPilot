@@ -112,6 +112,17 @@ through opaque artifact IDs. Jobs and artifacts are process-local in V0.1; set
 The visual language, tokens, accessibility contract, and research sources are
 documented in [`docs/FRONTEND_DESIGN_SYSTEM.md`](docs/FRONTEND_DESIGN_SYSTEM.md).
 
+### Knowledge snapshot
+
+Runtime musical preferences are loaded from the pinned, packaged knowledge
+snapshot `2026.08.0`. Playing contexts, Guitar IR, prototype reports,
+manifests, and API jobs preserve the snapshot identity; contexts and IR also
+record the exact approved profile entries used. Candidate shape prototypes are
+catalogued but do not affect fingering until they pass separate evaluation.
+
+See [`docs/KNOWLEDGE_BASE.md`](docs/KNOWLEDGE_BASE.md) for the entry schema,
+domain boundaries, provenance rules, and candidate-to-approved workflow.
+
 ### One-command prototype package
 
 For every likely guitar stream:
@@ -213,7 +224,7 @@ Each prototype stream report contains:
 - PDF, GP5, and Ample output status;
 - warnings and whether manual review is required.
 
-## Guitar IR V0.1
+## Guitar IR V0.2
 
 Current IR includes:
 
@@ -227,6 +238,7 @@ Current IR includes:
 - cross-measure ties
 - `let_ring` intent
 - transformation/change log
+- pinned knowledge snapshot and used-entry provenance
 
 ## GP5 prototype
 

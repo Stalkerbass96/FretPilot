@@ -154,7 +154,7 @@ Important limitation:
 
 ### GK-012 — shape memory
 
-Status: **not started**
+Status: **knowledge representation baseline implemented; execution not started**
 
 Represent reusable fretboard shape prototypes independent of absolute root fret.
 
@@ -165,6 +165,11 @@ Examples:
 - octave shape;
 - triad inversion;
 - jazz shell voicing.
+
+The pinned knowledge asset now includes candidate relative string/fret
+prototypes for power chord, octave, sus2 arpeggio, and compact triad inversion.
+They are intentionally not consumed by fingering until matching, transposition,
+boundary handling, and golden evaluation are implemented.
 
 ### GK-013 — hand-position state
 
@@ -296,7 +301,11 @@ Score structural validity, fretboard validity, notation consistency, metadata qu
 
 ### GK-035 — knowledge snapshot format
 
-Version learned profiles separately from application code.
+Status: **built-in runtime format baseline implemented**
+
+The `KnowledgeEntry` / `KnowledgeSnapshot` contracts and packaged JSON asset
+version learned profiles separately from application code. External snapshot
+selection, candidate release reports, and learned aggregate schemas remain.
 
 ### GK-036 — candidate/evaluation/promotion workflow
 

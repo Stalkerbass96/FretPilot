@@ -179,14 +179,22 @@ Hard playability is deterministic. Which valid path is most guitarist-like is a 
 
 ### `knowledge`
 
-**Implemented initial versioned guitar-playing knowledge layer.**
+**Implemented initial unified knowledge snapshot and guitar-playing layer.**
 
 Current components include:
 
 - behavior profiles (`solo`, `riff`, `strumming`, `breakdown`, `jazz_comping`);
+- shared `KnowledgeEntry`, provenance, evaluation, snapshot, and registry contracts;
+- pinned built-in snapshot `2026.08.0` loaded from a packaged JSON asset;
 - composable `PlayingContext` dimensions;
 - role/style/technique profiles;
 - fingering, articulation, and performance preferences.
+- candidate reusable power-chord, octave, sus2-arpeggio, and triad shapes.
+
+Guitar IR, processing reports, manifests, and API jobs record the pinned
+snapshot version; contexts and Guitar IR also record the exact profile entry
+IDs used. Candidate shapes are catalogued but do not influence runtime ranking
+until separately evaluated and approved for GK-012 execution.
 
 Important distinction:
 
@@ -201,6 +209,8 @@ These dimensions compose instead of being flattened into one genre label.
 This module describes guitarist behavior and musical preferences. It must not contain vendor-specific virtual-instrument controls.
 
 Detailed work lives under `projects/guitar-playing-knowledge/` (`GK-*`).
+The common contract and update workflow are documented in
+[`KNOWLEDGE_BASE.md`](KNOWLEDGE_BASE.md).
 
 ### `articulation`
 
