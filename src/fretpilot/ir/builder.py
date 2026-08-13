@@ -48,6 +48,7 @@ class _NotatedNote:
     start_beat: float
     duration_beats: float
     rhythm_confidence: float
+    voice: int = 1
     let_ring_inferred: bool = False
     pre_overlap_duration_beats: float | None = None
     overlap_reasons: tuple[str, ...] = ()
@@ -88,7 +89,7 @@ def _clip_notated_duration(
 def _normalize_ringing_overlaps(
     prepared: list[_NotatedNote],
 ) -> list[_NotatedNote]:
-    """Create readable one-voice score timing while preserving performance.
+    """Create readable timing independently inside each notation voice.
 
     Two common guitar-MIDI patterns are normalized:
 
@@ -99,43 +100,109 @@ def _normalize_ringing_overlaps(
     the affected note ``let_ring``. Original source timing remains available to
     performance renderers such as the Ample Guitar adapter.
 
-    True independent polyphony still belongs to the later voice-separation
-    stage and is not silently flattened here.
+    Chord members promoted to voice 2 are normalized only against other voice-2
+    events, so a sustained tone can coexist with continuing voice-1 material.
     """
 
+    normalized = list(prepared)
+    for voice in (1, 2):
+        onset_groups: dict[float, list[int]] = defaultdict(list)
+        for index, item in enumerate(normalized):
+            if item.voice == voice:
+                onset_groups[round(item.start_beat, 9)].append(index)
+
+        ordered_onsets = sorted(onset_groups)
+        for onset_index, onset in enumerate(ordered_onsets[:-1]):
+            next_onset = ordered_onsets[onset_index + 1]
+            available_duration = next_onset - onset
+            if available_duration <= _EPSILON:
+                continue
+
+            for note_index in onset_groups[onset]:
+                normalized[note_index] = _clip_notated_duration(
+                    normalized[note_index],
+                    duration_beats=available_duration,
+                    reason="clip_written_duration_at_next_attack",
+                )
+
+        for onset in ordered_onsets:
+            indices = onset_groups[onset]
+            if len(indices) < 2:
+                continue
+            common_duration = min(
+                normalized[index].duration_beats for index in indices
+            )
+            for note_index in indices:
+                normalized[note_index] = _clip_notated_duration(
+                    normalized[note_index],
+                    duration_beats=common_duration,
+                    reason="normalize_same_onset_chord_duration",
+                )
+
+    return normalized
+
+
+def _assign_chord_release_voices(
+    prepared: list[_NotatedNote],
+    analysis: GuitarTrackAnalysis,
+    *,
+    minimum_duration_difference: float,
+) -> list[_NotatedNote]:
+    """Promote safe unequal chord releases to an independent second voice.
+
+    V0 intentionally handles only a high-confidence case: one quantized chord
+    onset with exactly two duration classes. The longer class may enter voice 2
+    when that voice is free and none of its strings is attacked again before
+    the sustained duration ends. Other overlaps retain the established
+    let-ring normalization path.
+    """
+
+    fingering_by_index = {
+        item.note_index: item for item in analysis.fingering.notes
+    }
     onset_groups: dict[float, list[int]] = defaultdict(list)
     for index, item in enumerate(prepared):
         onset_groups[round(item.start_beat, 9)].append(index)
 
-    ordered_onsets = sorted(onset_groups)
-    normalized = list(prepared)
-
-    for onset_index, onset in enumerate(ordered_onsets[:-1]):
-        next_onset = ordered_onsets[onset_index + 1]
-        available_duration = next_onset - onset
-        if available_duration <= _EPSILON:
-            continue
-
-        for note_index in onset_groups[onset]:
-            normalized[note_index] = _clip_notated_duration(
-                normalized[note_index],
-                duration_beats=available_duration,
-                reason="clip_written_duration_at_next_attack",
-            )
-
-    for onset in ordered_onsets:
+    assigned = list(prepared)
+    voice_two_available_at = float("-inf")
+    for onset in sorted(onset_groups):
         indices = onset_groups[onset]
-        if len(indices) < 2:
+        if len(indices) < 2 or onset < voice_two_available_at - _EPSILON:
             continue
-        common_duration = min(normalized[index].duration_beats for index in indices)
-        for note_index in indices:
-            normalized[note_index] = _clip_notated_duration(
-                normalized[note_index],
-                duration_beats=common_duration,
-                reason="normalize_same_onset_chord_duration",
-            )
+        durations = sorted({assigned[index].duration_beats for index in indices})
+        if len(durations) != 2:
+            continue
+        short_duration, long_duration = durations
+        if long_duration - short_duration < minimum_duration_difference - _EPSILON:
+            continue
 
-    return normalized
+        longer_indices = [
+            index
+            for index in indices
+            if abs(assigned[index].duration_beats - long_duration) <= _EPSILON
+        ]
+        sustained_strings = {
+            fingering_by_index[assigned[index].source_index].string
+            for index in longer_indices
+        }
+        if None in sustained_strings:
+            continue
+        sustained_end = onset + long_duration
+        string_reused = any(
+            later.start_beat > onset + _EPSILON
+            and later.start_beat < sustained_end - _EPSILON
+            and fingering_by_index[later.source_index].string in sustained_strings
+            for later in assigned
+        )
+        if string_reused:
+            continue
+
+        for index in longer_indices:
+            assigned[index] = replace(assigned[index], voice=2)
+        voice_two_available_at = sustained_end
+
+    return assigned
 
 
 def _prepare_notated_notes(
@@ -159,7 +226,12 @@ def _prepare_notated_notes(
             )
         )
 
-    return _normalize_ringing_overlaps(prepared)
+    voiced = _assign_chord_release_voices(
+        prepared,
+        analysis,
+        minimum_duration_difference=max(step, 0.125),
+    )
+    return _normalize_ringing_overlaps(voiced)
 
 
 def _build_measure_boundaries(
@@ -265,8 +337,8 @@ def build_guitar_ir(
 ) -> GuitarProjectIR:
     """Build schema-versioned, measure-aware Guitar IR.
 
-    V0.1 quantizes note durations to the selected onset grid, normalizes common
-    ringing and chord-release differences for readable one-voice notation,
+    V0.1 quantizes note durations to the selected onset grid, promotes safe
+    unequal chord releases to a second voice, normalizes remaining ringing,
     preserves source timing, and splits notes at measure boundaries with ties.
     """
 
@@ -397,6 +469,19 @@ def build_guitar_ir(
                 )
             )
 
+        if item.voice == 2:
+            changes.append(
+                Transformation(
+                    id=f"chg-voice-{item.source_index + 1:05d}",
+                    stage="voice_assignment",
+                    source_note_index=stable_source_index,
+                    before={"voice": 1},
+                    after={"voice": 2},
+                    confidence=0.9,
+                    reason="preserve_safe_independent_chord_release",
+                )
+            )
+
         for fragment_index, (measure, fragment_start, fragment_duration) in enumerate(
             fragments
         ):
@@ -412,8 +497,8 @@ def build_guitar_ir(
                             type="let_ring",
                             confidence=0.8,
                             reason=(
-                                "Written duration was shortened for readable one-voice "
-                                "notation while source performance timing keeps the ring."
+                                "Written duration was shortened inside its notation "
+                                "voice while source performance timing keeps the ring."
                             ),
                         )
                     )
@@ -450,6 +535,7 @@ def build_guitar_ir(
                     duration_beats=fragment_duration,
                     measure_number=measure.number,
                     beat_in_measure=fragment_start - measure.start_beat,
+                    voice=item.voice,
                     tie_in=not is_first,
                     tie_out=not is_last,
                 ),
@@ -477,7 +563,12 @@ def build_guitar_ir(
 
     for measure in measures:
         measure.events.sort(
-            key=lambda event: (event.score.start_beat, event.pitch, event.id)
+            key=lambda event: (
+                event.score.start_beat,
+                event.score.voice,
+                event.pitch,
+                event.id,
+            )
         )
 
     tuning = [pitch for _string, pitch in STANDARD_TUNING.open_strings]

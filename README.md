@@ -194,7 +194,7 @@ Current IR includes:
 
 Currently supported:
 
-- one guitar track and one notation voice
+- one guitar track and up to two notation voices
 - monophonic phrases
 - same-onset chords with normalized equal written duration
 - generated rests for silent gaps
@@ -206,7 +206,12 @@ Currently supported:
 - hammer-on / pull-off
 - shift slide
 
-The exporter raises an explicit error when a stream requires unsupported independent voices. A partial let-ring marking inside one chord remains in Guitar IR and performance timing, but is omitted from GP5 with a warning because PyGuitarPro 0.11 cannot safely round-trip that combination.
+The builder promotes a high-confidence unequal chord release to voice 2 when
+the sustained string is not rearticulated and the second voice is available.
+Other ringing material keeps the established let-ring normalization path. The
+exporter raises an explicit error for polyphony that still exceeds two safe
+voices; unsafe partial chord let-ring remains in Guitar IR/performance timing
+and is reported when GP5 must omit the marking.
 
 ## Ample Guitar SC prototype
 
@@ -297,4 +302,4 @@ FretPilot/
 
 ## Status
 
-FretPilot is an early V0.1 prototype with both target output paths and a one-command multi-guitar package workflow implemented. The next milestone is hands-on validation: open generated GP5 files in Guitar Pro, play generated MIDI through Ample Guitar SC, record measure-level issues, then prioritize true two-voice notation, bend/vibrato rendering, and a simple upload/download interface.
+FretPilot is an early V0.1 prototype with both target output paths and a one-command multi-guitar package workflow implemented. The next milestone is hands-on validation: open generated GP5 files in Guitar Pro, play generated MIDI through Ample Guitar SC, record measure-level issues, then prioritize richer voice separation/PDF engraving, bend/vibrato rendering, and a simple upload/download interface.

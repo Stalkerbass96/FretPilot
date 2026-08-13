@@ -146,3 +146,49 @@ def test_builder_preserves_playing_context_metadata() -> None:
     assert ir_context["role_scores"] == {"solo": 0.9}
     assert ir_context["style_scores"] == {"metal": 0.8}
     assert ir_context["knowledge_version"] == context.knowledge_version
+
+
+def test_voice_two_note_can_ring_while_voice_one_continues() -> None:
+    track = NormalizedTrack(
+        index=0,
+        name="Two Voice Guitar",
+        notes=[
+            _note(pitch=64, start_beat=0.0, duration_beats=0.5),
+            _note(pitch=67, start_beat=0.0, duration_beats=1.5),
+            _note(pitch=65, start_beat=0.5, duration_beats=0.5),
+        ],
+    )
+
+    project = build_guitar_ir(_timeline(track), track, analyze_guitar_track(track))
+    events = project.tracks[0].measures[0].events
+    sustained = next(event for event in events if event.source_note_index == 1)
+    continuation = next(event for event in events if event.source_note_index == 2)
+
+    assert sustained.score.voice == 2
+    assert sustained.score.duration_beats == 1.5
+    assert continuation.score.voice == 1
+    assert continuation.score.start_beat == 0.5
+
+
+def test_second_voice_is_not_used_when_sustained_string_is_rearticulated() -> None:
+    track = NormalizedTrack(
+        index=0,
+        name="String reuse",
+        notes=[
+            _note(pitch=64, start_beat=0.0, duration_beats=0.5),
+            _note(pitch=67, start_beat=0.0, duration_beats=1.5),
+            # The optimizer places this B on the same string as the sustained G.
+            _note(pitch=59, start_beat=0.5, duration_beats=0.5),
+        ],
+    )
+
+    project = build_guitar_ir(_timeline(track), track, analyze_guitar_track(track))
+    sustained = next(
+        event
+        for event in project.tracks[0].measures[0].events
+        if event.source_note_index == 1
+    )
+
+    assert sustained.score.voice == 1
+    assert sustained.score.duration_beats == 0.5
+    assert any(item.type == "let_ring" for item in sustained.articulations)

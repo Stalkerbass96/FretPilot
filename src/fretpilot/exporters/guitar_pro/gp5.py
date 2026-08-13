@@ -1,8 +1,9 @@
 """Minimal Guitar IR to Guitar Pro 5 exporter.
 
 The V0 exporter intentionally supports a narrow, testable subset: one guitar
-track, one voice, monophonic notes or same-onset chords with equal durations,
-rests, ties, standard string/fret data, and a few basic note effects.
+track, up to two notation voices, monophonic notes or same-onset chords with
+equal durations inside each voice, rests, ties, standard string/fret data, and
+a few basic note effects.
 """
 
 from __future__ import annotations
@@ -133,10 +134,13 @@ def _make_rest_beats(
 
 def _group_measure_events(
     measure: GuitarMeasure,
+    *,
+    voice_number: int,
 ) -> list[tuple[float, list[GuitarNoteEvent]]]:
     grouped: dict[float, list[GuitarNoteEvent]] = {}
     for event in measure.events:
-        grouped.setdefault(event.score.start_beat, []).append(event)
+        if event.score.voice == voice_number:
+            grouped.setdefault(event.score.start_beat, []).append(event)
     return sorted(grouped.items(), key=lambda item: item[0])
 
 
@@ -160,27 +164,37 @@ def _apply_direct_effects(
             note.effect.letRing = True
 
 
-def _populate_measure(
+def _populate_voice(
     ir_measure: GuitarMeasure,
     gp_measure: gp.Measure,
     *,
+    voice_number: int,
     note_lookup: dict[str, gp.Note],
 ) -> tuple[int, list[str]]:
     warnings: list[str] = []
-    voice = gp_measure.voices[0]
+    if voice_number not in {1, 2}:
+        raise UnsupportedGuitarIR("The GP5 exporter supports voices 1 and 2 only.")
+    voice = gp_measure.voices[voice_number - 1]
     voice.beats.clear()
+    grouped_events = _group_measure_events(
+        ir_measure,
+        voice_number=voice_number,
+    )
+    if not grouped_events and voice_number == 2:
+        return 0, warnings
 
     measure_start = gp_measure.start
     cursor = measure_start
     note_count = 0
 
-    for absolute_start_beat, events in _group_measure_events(ir_measure):
+    for absolute_start_beat, events in grouped_events:
         start_in_measure = absolute_start_beat - ir_measure.start_beat
         start_tick = measure_start + _beats_to_gp_ticks(start_in_measure)
         if start_tick < cursor:
             raise UnsupportedGuitarIR(
                 "Overlapping note groups require multiple voices, which the V0 GP5 "
-                f"exporter does not support (measure {ir_measure.number})."
+                "exporter cannot further split "
+                f"(measure {ir_measure.number}, voice {voice_number})."
             )
 
         if start_tick > cursor:
@@ -198,7 +212,7 @@ def _populate_measure(
         if len(durations) != 1:
             raise UnsupportedGuitarIR(
                 "Same-onset chord notes must have equal score durations in the V0 "
-                f"GP5 exporter (measure {ir_measure.number})."
+                f"GP5 exporter (measure {ir_measure.number}, voice {voice_number})."
             )
         total_duration = durations.pop()
         segments = _split_duration_ticks(total_duration)
@@ -209,7 +223,7 @@ def _populate_measure(
             raise UnsupportedGuitarIR(
                 "Same-onset chord notes must use distinct strings; duplicate "
                 f"string assignment in measure {ir_measure.number}, beat "
-                f"{start_in_measure:g}."
+                f"{start_in_measure:g}, voice {voice_number}."
             )
 
         # PyGuitarPro 0.11 can emit an unreadable GP5 when only some notes in a
@@ -276,6 +290,32 @@ def _populate_measure(
             f"Events overflow measure {ir_measure.number} by {cursor - measure_end} GP ticks."
         )
 
+    return note_count, warnings
+
+
+def _populate_measure(
+    ir_measure: GuitarMeasure,
+    gp_measure: gp.Measure,
+    *,
+    note_lookup: dict[str, gp.Note],
+) -> tuple[int, list[str]]:
+    note_count = 0
+    warnings: list[str] = []
+    present_voices = {event.score.voice for event in ir_measure.events}
+    unsupported = sorted(present_voices - {1, 2})
+    if unsupported:
+        raise UnsupportedGuitarIR(
+            f"Measure {ir_measure.number} uses unsupported voices: {unsupported}."
+        )
+    for voice_number in (1, 2):
+        exported, voice_warnings = _populate_voice(
+            ir_measure,
+            gp_measure,
+            voice_number=voice_number,
+            note_lookup=note_lookup,
+        )
+        note_count += exported
+        warnings.extend(voice_warnings)
     return note_count, warnings
 
 

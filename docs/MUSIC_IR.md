@@ -149,6 +149,8 @@ Current stages:
 ```text
 rhythm_onset
 rhythm_duration
+rhythm_overlap
+voice_assignment
 ```
 
 ## Core articulation vocabulary
@@ -178,7 +180,8 @@ The IR stores musical intent. It must never store Ample Guitar keyswitch note nu
 
 ## Current V0.1 limitations
 
-- one voice only;
+- up to two voices for safe unequal chord releases;
+- general contrapuntal voice separation is not yet implemented;
 - duration spelling uses the selected rhythm grid;
 - no explicit rest events yet;
 - no dotted-note or tuplet spelling objects yet;

@@ -70,6 +70,7 @@ Implemented and covered by tests/CI:
 - stable `section_id`-keyed context override hook for future user corrections;
 - canonical Guitar IR v0.1;
 - GP5 write + parse-back validation;
+- safe unequal-chord voice separation and two-voice GP5 output;
 - Ample Guitar SC MIDI renderer;
 - PDF/TAB renderer exists, but engraving quality is not yet musician-grade;
 - generic `VirtualGuitarInstrumentProfile` schema skeleton;
@@ -82,14 +83,15 @@ The last code-level product regression for section-aware prototype packaging pas
 Do not mistake these for implemented features:
 
 - Section behavior labels are still hand-authored experimental rules, not calibrated truth.
-- Section boundaries currently act as hard phrase/hand-position reset points.
+- Section boundaries use explicit strength to choose hand-position carry or reset.
 - Hand-position state is a deterministic baseline and still needs calibration
   against reviewed real-song fingerings.
 - No left-hand finger numbers / barre / thumb-over planning.
 - `PerformancePreferences` exist in PlayingContext but do not yet drive a generic performance plan.
 - Full section-context provenance is not yet persisted as a first-class Guitar IR contract everywhere.
 - PDF/TAB is still primarily a review renderer, not Guitar Pro / Songsterr-quality engraving.
-- No true two-voice notation yet.
+- Two-voice notation currently covers safe unequal chord releases; general
+  contrapuntal voice separation and multi-voice PDF engraving remain incomplete.
 - Bend/vibrato performance rendering is incomplete.
 - Ample is the only implemented virtual-guitar target.
 - Track identification is useful but intentionally not treated as finished.

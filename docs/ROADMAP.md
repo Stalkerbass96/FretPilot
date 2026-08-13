@@ -95,7 +95,7 @@ Long-term architecture:
 - [x] section-context field reserved in track IR
 - [ ] persist complete section/knowledge provenance as a stable IR contract
 - [ ] generic performance-intent representation
-- [ ] true multi-voice notation representation
+- [x] safe unequal-chord two-voice notation baseline (`PV-002`)
 
 ### PDF / TAB
 
@@ -121,7 +121,15 @@ Long-term architecture:
 - [x] write + parse-back automated validation
 - [ ] hands-on Guitar Pro visual review
 - [ ] real-song golden score review
-- [ ] true two-voice output
+- [x] two-voice GP5 output + parse-back validation baseline
+
+Two-voice baseline evidence (2026-08-13):
+
+- `Story of Despair`, stream `t2:ch1:p0`: partial let-ring GP5 warnings
+  reduced from 187 to 60; 133 source notes received voice-2 assignments; the
+  resulting 58-measure file passed PyGuitarPro parse-back.
+- `Message in a Bottle`, stream `t0:ch4:p27`: remained at zero GP5 warnings;
+  the 181-measure file continued to pass parse-back.
 
 ### Ample Guitar SC 4.x
 
