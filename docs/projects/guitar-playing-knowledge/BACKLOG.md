@@ -17,23 +17,30 @@ Acceptance:
 
 ### GK-002 — thread PlayingContext through analysis
 
-Status: **in progress**
+Status: **in progress; section-aware execution baseline implemented**
 
-Implemented baseline:
+Implemented flow:
 
 ```text
-analyze_guitar_track
-→ optimize_fingering
-→ plan_articulations
-→ Guitar IR metadata
+InstrumentStream
+→ section segmentation
+→ section behavior profiles
+→ section PlayingContext
+→ per-section optimize_fingering
+→ per-section plan_articulations
+→ remap local note indices to stream-wide source_note_index
+→ merged GuitarTrackAnalysis
+→ Guitar IR / prototype outputs
 ```
 
-Section-level PlayingContexts can now also be derived after GK-010/GK-011 segmentation.
+The one-command prototype package now uses this section-aware path by default.
+Its analysis/report files expose the section contexts used to drive execution.
 
 Still pending:
 
-- make `PerformancePreferences` influence the generic performance plan / virtual-instrument rendering path;
-- route section-varying contexts into per-region fingering/articulation analysis rather than only exposing them as analysis results.
+- make `PerformancePreferences` influence a generic performance plan before any virtual-instrument adapter;
+- persist full section-context provenance directly into Guitar IR rather than only analysis/report metadata;
+- decide when selected section boundaries should carry hand-position state across the boundary instead of resetting it.
 
 Acceptance:
 
@@ -145,11 +152,33 @@ Examples:
 
 ### GK-013 — hand-position state
 
+**Next execution priority.**
+
 Track hand center, span, shift boundaries, and phrase-level position plans rather than evaluating only note-to-note transitions.
+
+Section-aware analysis currently treats each detected section boundary as a safe reset point. GK-013 should make that explicit and selective:
+
+- carry hand-position state across weak boundaries;
+- allow deliberate repositioning at strong phrase/style boundaries;
+- record the shift reason and cost;
+- keep physical fretboard constraints deterministic.
 
 ### GK-014 — left-hand finger assignment
 
 Add finger numbers, barre representation, stretch feasibility, and optional thumb-over techniques.
+
+### GK-015 — section-aware execution and merge
+
+Status: **implemented baseline**
+
+Current behavior:
+
+- solve fingering and articulation independently with each section's PlayingContext;
+- section boundaries act as phrase resets;
+- remap local section note indices back to original stream-wide indices;
+- preserve global source timing for Guitar IR and performance rendering;
+- support stable `section_id`-keyed context overrides for future user corrections;
+- one-command prototype generation uses this path and reports section contexts.
 
 ## P2 — expand style knowledge
 
