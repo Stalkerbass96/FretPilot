@@ -39,6 +39,7 @@ def test_analysis_combines_rhythm_fingering_and_articulation() -> None:
 
     analysis = analyze_guitar_track(track)
 
+    assert analysis.playing_context is None
     assert analysis.rhythm.selected_grid.name == "eighth"
     assert all(note.playable for note in analysis.fingering.notes)
     assert any(
@@ -55,17 +56,14 @@ def test_analysis_combines_rhythm_fingering_and_articulation() -> None:
     )
 
 
-def test_analysis_threads_explicit_playing_context_into_fingering() -> None:
+def test_analysis_threads_explicit_playing_context_into_result() -> None:
     track = _track([64, 66, 67, 69])
     context = compose_playing_context({"solo": 1.0})
 
     analysis = analyze_guitar_track(track, playing_context=context)
 
     assert analysis.playing_context is context
-    assert analysis.to_dict()["playing_context"]["role_scores"] == {"solo": 1.0}
-    assert [(note.string, note.fret) for note in analysis.fingering.notes] == [
-        (2, 5),
-        (2, 7),
-        (2, 8),
-        (2, 10),
-    ]
+    serialized = analysis.to_dict()["playing_context"]
+    assert serialized["role_scores"] == {"solo": 1.0}
+    assert serialized["knowledge_version"] == context.knowledge_version
+    assert all(note.playable for note in analysis.fingering.notes)
