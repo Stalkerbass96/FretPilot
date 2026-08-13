@@ -22,6 +22,24 @@ def _track(pitches: list[int]) -> NormalizedTrack:
     return NormalizedTrack(index=0, name="Lead Guitar", notes=notes)
 
 
+def _chord_track(pitches: list[int]) -> NormalizedTrack:
+    notes = [
+        NormalizedNote(
+            track_index=0,
+            track_name="Chord Guitar",
+            channel=0,
+            pitch=pitch,
+            velocity=90,
+            start_tick=0,
+            duration_ticks=480,
+            start_beat=0.0,
+            duration_beats=1.0,
+        )
+        for pitch in pitches
+    ]
+    return NormalizedTrack(index=0, name="Chord Guitar", notes=notes)
+
+
 def test_e4_has_all_standard_guitar_positions() -> None:
     positions = candidate_positions(64)
     locations = {(position.string, position.fret) for position in positions}
@@ -42,6 +60,18 @@ def test_phrase_optimizer_prefers_coherent_same_string_path() -> None:
     assert not result.diagnostics
     assert [note.string for note in result.notes] == [1, 1, 1, 1]
     assert [note.fret for note in result.notes] == [0, 2, 3, 5]
+
+
+def test_simultaneous_chord_notes_use_distinct_strings() -> None:
+    result = optimize_fingering(_chord_track([64, 67, 71]))
+
+    strings = [note.string for note in result.notes]
+    assert all(note.playable for note in result.notes)
+    assert len(set(strings)) == len(strings)
+    assert not any(
+        diagnostic.code == "unplayable_chord_shape"
+        for diagnostic in result.diagnostics
+    )
 
 
 def test_unplayable_pitch_is_retained_and_reported() -> None:
