@@ -103,6 +103,9 @@ class GuitarTrackIR:
     # Musical context/provenance is generic data. Product-specific keyswitches,
     # CCs, or virtual-instrument capabilities must remain downstream of IR.
     playing_context: dict[str, Any] | None = None
+    # Time-varying contexts remain generic musical knowledge. Exporters may
+    # inspect them, but they must not rewrite their meaning for one plugin.
+    section_contexts: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(slots=True)
