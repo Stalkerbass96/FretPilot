@@ -27,17 +27,17 @@ def _note(*, pitch: int, start_beat: float, duration_beats: float) -> Normalized
     )
 
 
-def test_slide_source_uses_final_fragment_of_tied_note() -> None:
+def test_hammer_source_uses_final_fragment_of_tied_note() -> None:
     track = NormalizedTrack(
         index=0,
         name="Lead Guitar",
         notes=[
             _note(pitch=64, start_beat=3.5, duration_beats=1.0),
-            _note(pitch=69, start_beat=4.5, duration_beats=0.5),
+            _note(pitch=66, start_beat=4.5, duration_beats=0.5),
         ],
     )
     timeline = NormalizedTimeline(
-        source="tied-slide.mid",
+        source="tied-hammer.mid",
         midi_type=1,
         ticks_per_beat=480,
         tempo_events=[TempoEvent(tick=0, beat=0.0, bpm=120.0)],
@@ -61,10 +61,10 @@ def test_slide_source_uses_final_fragment_of_tied_note() -> None:
         for event in measure.events
         if event.source_note_index == 1
     )
-    slide = next(
+    hammer = next(
         articulation
         for articulation in target_event.articulations
-        if articulation.type == "slide"
+        if articulation.type == "hammer_on"
     )
 
-    assert slide.source_note_id == "n-00001-2"
+    assert hammer.source_note_id == "n-00001-2"
