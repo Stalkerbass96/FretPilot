@@ -2,29 +2,44 @@
 
 ## Purpose
 
-The Guitar IR is FretPilot's canonical intermediate representation between musical reasoning and output adapters.
+Guitar IR is FretPilot's canonical representation between musical reasoning and output adapters.
 
-It must be:
+It is:
 
-- independent of Guitar Pro
-- independent of Ample Guitar
-- serializable
-- deterministic
-- rich enough to describe notation and performance intent
-- extensible without breaking old files
+- independent of Guitar Pro;
+- independent of Ample Guitar;
+- JSON serializable;
+- deterministic;
+- explicit about score timing versus source/performance timing;
+- extensible through a schema version.
 
-## Top-level shape
+Implemented code:
+
+```text
+src/fretpilot/ir/models.py
+src/fretpilot/ir/builder.py
+```
+
+CLI:
+
+```bash
+fretpilot build-ir song.mid --stream-id t0:ch2:p27 -o guitar-ir.json
+```
+
+## Current schema
+
+Top-level shape:
 
 ```json
 {
   "schema_version": "0.1",
-  "project": {
-    "title": "Untitled",
-    "source": "midi"
-  },
+  "title": "song",
+  "source": "song.mid",
   "tempo_map": [],
   "time_signatures": [],
-  "tracks": []
+  "tracks": [],
+  "changes": [],
+  "warnings": []
 }
 ```
 
@@ -33,37 +48,44 @@ It must be:
 ```json
 {
   "id": "guitar-1",
-  "role": "lead",
+  "name": "Lead Guitar · CH3 · Electric Guitar (clean)",
+  "source_stream_id": "t0:ch2:p27",
+  "role": "unknown",
   "tuning": [40, 45, 50, 55, 59, 64],
   "fret_count": 24,
-  "phrases": []
+  "measures": []
 }
 ```
 
-Tuning values are MIDI pitches from string 6 to string 1 by convention.
+Tuning values are MIDI pitches from string 6 to string 1.
 
-## Phrase
+## Measure
 
 ```json
 {
-  "id": "phrase-001",
+  "number": 1,
   "start_beat": 0.0,
-  "end_beat": 4.0,
-  "role": "melodic_lead",
-  "confidence": 0.92,
+  "duration_beats": 4.0,
+  "numerator": 4,
+  "denominator": 4,
   "events": []
 }
 ```
+
+The V0.1 builder supports time-signature maps and emits a warning when a time-signature change truncates a nominal measure.
 
 ## Note event
 
 ```json
 {
-  "id": "n-001",
+  "id": "n-00001",
+  "source_note_index": 0,
   "pitch": 69,
   "score": {
     "start_beat": 1.5,
     "duration_beats": 0.5,
+    "measure_number": 1,
+    "beat_in_measure": 1.5,
     "voice": 1,
     "tie_in": false,
     "tie_out": false
@@ -71,47 +93,79 @@ Tuning values are MIDI pitches from string 6 to string 1 by convention.
   "performance": {
     "source_start_beat": 1.487,
     "source_duration_beats": 0.493,
-    "start_offset_ms": -8,
-    "duration_scale": 1.03,
     "velocity": 92
   },
   "fingering": {
     "string": 2,
-    "fret": 10,
-    "position": 9,
-    "finger": null
+    "fret": 10
   },
   "articulations": [
     {
       "type": "slide",
-      "direction": "up",
-      "target_note_id": "n-002",
-      "confidence": 0.89
+      "confidence": 0.89,
+      "reason": "Connected notes remain on the same string.",
+      "source_note_id": "n-00000"
     }
   ],
   "confidence": {
     "rhythm": 0.96,
-    "fingering": 0.91,
+    "fingering": 1.0,
     "articulation": 0.89
   }
 }
 ```
 
+## Ties and measure splitting
+
+A note crossing a barline becomes multiple score events with the same `source_note_index` and source performance timing.
+
+Example:
+
+```text
+n-00012-1  tie_out=true
+n-00012-2  tie_in=true
+```
+
+This keeps the score writable in notation formats without losing the fact that the original MIDI contained one continuous note.
+
+## Transformation log
+
+Rhythm changes remain inspectable:
+
+```json
+{
+  "id": "chg-onset-00001",
+  "stage": "rhythm_onset",
+  "source_note_index": 0,
+  "before": {"start_beat": 1.487},
+  "after": {"start_beat": 1.5},
+  "confidence": 0.96,
+  "reason": "snap_to_eighth_grid"
+}
+```
+
+Current stages:
+
+```text
+rhythm_onset
+rhythm_duration
+```
+
 ## Core articulation vocabulary
 
-Initial generic articulation types:
+Current deterministic output:
 
-- `pick`
 - `hammer_on`
 - `pull_off`
 - `slide`
-- `legato_slide`
 - `vibrato`
+
+Planned canonical vocabulary:
+
+- `pick`
+- `legato_slide`
 - `palm_mute`
 - `natural_harmonic`
-
-Future candidates:
-
 - `bend`
 - `pre_bend`
 - `bend_release`
@@ -120,30 +174,39 @@ Future candidates:
 - `pinch_harmonic`
 - `tremolo_pick`
 
-The IR stores musical intent. It must not store plugin-specific keyswitch note numbers.
+The IR stores musical intent. It must never store Ample Guitar keyswitch note numbers.
 
-## Change log / transformation record
+## Current V0.1 limitations
 
-A processed project may carry transformations so the UI can explain changes:
+- one voice only;
+- duration spelling uses the selected rhythm grid;
+- no explicit rest events yet;
+- no dotted-note or tuplet spelling objects yet;
+- no phrase/section objects yet;
+- role defaults to `unknown`;
+- fingering confidence is currently binary playable/unplayable;
+- note fragments repeat the original source performance timing;
+- no chord grouping or chord-diagram representation yet.
 
-```json
-{
-  "changes": [
-    {
-      "id": "chg-001",
-      "stage": "rhythm",
-      "event_ids": ["n-001"],
-      "before": {"start_beat": 1.487},
-      "after": {"start_beat": 1.5},
-      "confidence": 0.96,
-      "reason": "phrase_consistent_16th_quantization"
-    }
-  ]
-}
+## Next adapters
+
+The next prototype milestone is:
+
+```text
+Guitar IR
+→ minimal GP5 exporter
+→ open and inspect in Guitar Pro
 ```
 
-## Key rule
+After GP5 round-trip validation:
 
-Score timing and performance timing are separate on purpose.
+```text
+Guitar IR
+→ Ample Guitar performance MIDI adapter
+```
 
-The score should be clean and readable. The performance may contain microtiming, overlaps, duration changes, velocity shaping, and instrument-specific rendering behavior.
+## Key invariant
+
+> Score timing and performance timing are separate data.
+
+Score timing should be clean and writable. Performance timing may retain microtiming, overlaps, velocity shaping, and later instrument-specific rendering behavior.
