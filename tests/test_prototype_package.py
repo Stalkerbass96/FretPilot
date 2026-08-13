@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from fretpilot.midi.models import (
@@ -98,3 +99,9 @@ def test_all_likely_guitars_receive_complete_output_packages(tmp_path: Path) -> 
         assert result.gp5.path and Path(result.gp5.path).exists()
         assert result.ample_sc_midi.path and Path(result.ample_sc_midi.path).exists()
         assert result.report.path and Path(result.report.path).exists()
+
+        analysis_payload = json.loads(Path(result.analysis.path).read_text(encoding="utf-8"))
+        report_payload = json.loads(Path(result.report.path).read_text(encoding="utf-8"))
+        assert analysis_payload["section_contexts"]
+        assert report_payload["sections"]["count"] >= 1
+        assert report_payload["sections"]["items"]
