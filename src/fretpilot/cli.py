@@ -11,6 +11,7 @@ from fretpilot import __version__
 from fretpilot.analysis import analyze_guitar_track
 from fretpilot.detection import classify_timeline, resolve_instrument_streams
 from fretpilot.guitar import optimize_fingering
+from fretpilot.ir import build_guitar_ir
 from fretpilot.midi import load_midi
 from fretpilot.midi.models import NormalizedTimeline, NormalizedTrack
 from fretpilot.rhythm import analyze_track_rhythm
@@ -104,6 +105,15 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_max_fret_argument(analyze_parser)
     _add_json_output_arguments(analyze_parser)
 
+    ir_parser = subparsers.add_parser(
+        "build-ir",
+        help="Build measure-aware canonical Guitar IR for a selected guitar stream",
+    )
+    ir_parser.add_argument("midi_file", type=Path, help="Path to a .mid/.midi file")
+    _add_source_selector(ir_parser)
+    _add_max_fret_argument(ir_parser)
+    _add_json_output_arguments(ir_parser)
+
     return parser
 
 
@@ -127,7 +137,7 @@ def _select_analysis_source(
     *,
     track_index: int | None,
     stream_id: str | None,
-) -> NormalizedTrack:
+) -> tuple[NormalizedTrack, str | None]:
     if stream_id is not None:
         streams = resolve_instrument_streams(timeline)
         stream = next(
@@ -139,7 +149,7 @@ def _select_analysis_source(
             raise SystemExit(
                 f"Unknown stream ID {stream_id!r}. Available streams: {available or 'none'}."
             )
-        return stream.as_track()
+        return stream.as_track(), stream.stream_id
 
     if track_index is not None:
         if track_index < 0 or track_index >= len(timeline.tracks):
@@ -150,7 +160,7 @@ def _select_analysis_source(
         track = timeline.tracks[track_index]
         if not track.notes:
             raise SystemExit(f"Track {track_index} ({track.name}) contains no notes.")
-        return track
+        return track, None
 
     report = classify_timeline(timeline)
     likely = [
@@ -159,7 +169,8 @@ def _select_analysis_source(
         if candidate.decision == "likely_guitar"
     ]
     if len(likely) == 1:
-        return likely[0].stream.as_track()
+        candidate = likely[0]
+        return candidate.stream.as_track(), candidate.stream.stream_id
     if not likely:
         raise SystemExit(
             "No high-confidence guitar stream was found. Run `fretpilot tracks` "
@@ -193,7 +204,7 @@ def _run_tracks(args: argparse.Namespace) -> int:
 
 def _run_rhythm(args: argparse.Namespace) -> int:
     timeline = load_midi(args.midi_file)
-    track = _select_analysis_source(
+    track, _stream_id = _select_analysis_source(
         timeline,
         track_index=args.track,
         stream_id=args.stream_id,
@@ -206,7 +217,7 @@ def _run_rhythm(args: argparse.Namespace) -> int:
 def _run_fingering(args: argparse.Namespace) -> int:
     _validate_max_fret(args.max_fret)
     timeline = load_midi(args.midi_file)
-    track = _select_analysis_source(
+    track, _stream_id = _select_analysis_source(
         timeline,
         track_index=args.track,
         stream_id=args.stream_id,
@@ -219,13 +230,32 @@ def _run_fingering(args: argparse.Namespace) -> int:
 def _run_analyze(args: argparse.Namespace) -> int:
     _validate_max_fret(args.max_fret)
     timeline = load_midi(args.midi_file)
-    track = _select_analysis_source(
+    track, _stream_id = _select_analysis_source(
         timeline,
         track_index=args.track,
         stream_id=args.stream_id,
     )
     result = analyze_guitar_track(track, max_fret=args.max_fret)
     _emit_json(result.to_dict(), args.output, args.compact)
+    return 0
+
+
+def _run_build_ir(args: argparse.Namespace) -> int:
+    _validate_max_fret(args.max_fret)
+    timeline = load_midi(args.midi_file)
+    track, stream_id = _select_analysis_source(
+        timeline,
+        track_index=args.track,
+        stream_id=args.stream_id,
+    )
+    analysis = analyze_guitar_track(track, max_fret=args.max_fret)
+    project = build_guitar_ir(
+        timeline,
+        track,
+        analysis,
+        source_stream_id=stream_id,
+    )
+    _emit_json(project.to_dict(), args.output, args.compact)
     return 0
 
 
@@ -243,6 +273,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_fingering(args)
     if args.command == "analyze":
         return _run_analyze(args)
+    if args.command == "build-ir":
+        return _run_build_ir(args)
 
     parser.error(f"Unknown command: {args.command}")
     return 2
