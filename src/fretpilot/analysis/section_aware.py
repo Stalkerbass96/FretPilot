@@ -21,7 +21,8 @@ from fretpilot.analysis.section_contexts import (
     analyze_section_contexts,
 )
 from fretpilot.analysis.sections import segment_instrument_stream
-from fretpilot.articulation import ArticulationDecision, ArticulationPlan, plan_articulations
+from fretpilot.articulation.models import ArticulationDecision, ArticulationPlan
+from fretpilot.articulation.planner import plan_articulations
 from fretpilot.detection.models import InstrumentStream
 from fretpilot.guitar import optimize_fingering
 from fretpilot.guitar.instrument import STANDARD_TUNING
