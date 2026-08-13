@@ -2,7 +2,7 @@
 
 ## Current focus
 
-The current vertical slice is now:
+The current runnable vertical slice is:
 
 ```text
 MIDI
@@ -11,12 +11,13 @@ MIDI
 → layered guitar detection
 → selected guitar stream
 → rhythm-grid analysis
-→ phrase-level guitar fingering
+→ guitar fingering
 → basic articulation planning
-→ JSON analysis
+→ measure-aware Guitar IR
+→ JSON with score timing, source timing, ties and change log
 ```
 
-The next priority is **phrase/section segmentation**. One guitar stream may contain riff, strumming, solo, and breakdown sections, so the behavior library must classify musical regions rather than permanently labeling a whole channel. Notation-quality duration spelling, ties, and measure coordinates follow immediately after that.
+Track identification will continue as a separate incremental project. The main prototype priority is now a **minimal GP5 exporter** that converts Guitar IR into a file Guitar Pro can open. After GP5 round-trip validation, the next prototype output is Ample Guitar performance MIDI.
 
 ## Phase 0 — Product definition
 
@@ -42,7 +43,7 @@ Goal: load real-world MIDI reliably and produce normalized timelines.
 - [x] preserve optional instrument name
 - [x] note-on/note-off normalization
 - [ ] malformed/hanging-note repair policy
-- [ ] measure coordinate conversion
+- [x] measure coordinate conversion in Guitar IR
 - [x] beat coordinate conversion
 - [x] JSON debug dump
 - [x] parser diagnostics
@@ -76,7 +77,7 @@ Acceptance test:
 
 > Type-0 and Type-1 MIDI files produce correctly separated logical streams, and likely guitar streams rank above bass, drums, and unrelated instruments without blindly trusting metadata.
 
-**Status:** Explainable three-layer V0 implemented.
+**Status:** Explainable three-layer V0 implemented. Continued work is tracked under `docs/projects/track-identification/` and GitHub Issue #1.
 
 ## Phase 1.6 — Guitar behavior and style knowledge library
 
@@ -108,28 +109,31 @@ Acceptance test:
 
 > A single guitar stream can be segmented and labeled with changing roles such as riff → strumming → solo, with explanations and confidence per region.
 
-**Status:** Whole-stream experimental profile registry implemented; section-level classification is next.
+**Status:** Whole-stream experimental profile registry implemented. This is no longer blocking the first GP5 prototype.
 
-## Phase 2 — Rhythm repair
+## Phase 2 — Rhythm repair and notation timing
 
-Goal: generate a readable symbolic rhythm while preserving source performance timing.
+Goal: generate readable symbolic timing while preserving source performance timing.
 
 - [x] candidate quantization grids
 - [x] note-start scoring
-- [ ] note-duration scoring / spelling
-- [ ] rests and ties
+- [x] basic note-duration grid spelling
+- [ ] explicit rest events
+- [x] cross-measure note splitting and ties
 - [ ] phrase segmentation and phrase consistency
 - [x] basic triplet detection
 - [x] per-note confidence values
 - [x] source/target onset deltas
+- [x] transformation/change log
+- [ ] dotted-note spelling objects
 - [ ] swing interpretation
 - [ ] mixed-grid / tuplet handling
 
 Acceptance test:
 
-> Typical generated/extracted guitar MIDI becomes materially easier to read without flattening intentional rhythm.
+> Typical generated/extracted guitar MIDI becomes materially easier to read while the original source timing remains available.
 
-**Status:** Onset-repair V0 implemented. Duration and phrase logic are the next core task.
+**Status:** Onset repair, basic duration spelling, measure coordinates, ties, and source/performance separation are implemented in Guitar IR V0.1. Rests and advanced notation spelling remain.
 
 ## Phase 3 — Guitar fingering engine
 
@@ -142,6 +146,7 @@ Goal: assign physically plausible strings/frets at phrase level.
 - [x] dynamic-programming optimizer
 - [x] lead/riff same-string preference where musically justified
 - [x] impossible-note diagnostics
+- [x] carry string/fret assignments into Guitar IR
 - [ ] polyphonic/chord fingering constraints
 - [ ] alternate tunings
 
@@ -149,7 +154,7 @@ Acceptance test:
 
 > Monophonic lead/riff MIDI exports with no impossible fingerings and substantially fewer awkward jumps than naive lowest-fret assignment.
 
-**Status:** Monophonic lead/riff V0 implemented.
+**Status:** Monophonic lead/riff V0 implemented and connected to Guitar IR.
 
 ## Phase 4 — Basic articulation engine
 
@@ -170,6 +175,7 @@ Initial set:
 Additional work:
 
 - [x] keep articulation vocabulary independent from plugin keyswitches
+- [x] carry generic articulations into Guitar IR
 - [ ] phrase/style context
 - [ ] confidence calibration
 - [ ] optional AI ranking of ambiguous candidates
@@ -184,19 +190,37 @@ Acceptance test:
 
 Goal: produce an editable readable score from the canonical representation.
 
-- [ ] build current analysis results into Guitar IR schema v0.1
-- [ ] transformation/change log
-- [ ] GP5 library evaluation / integration
-- [ ] measures / voices
-- [ ] notes / rests / ties
-- [ ] string + fret
-- [ ] basic articulations
-- [ ] tempo / time signature
-- [ ] round-trip test in Guitar Pro
+### Guitar IR
+
+- [x] schema-versioned data models
+- [x] build current analysis results into Guitar IR schema v0.1
+- [x] transformation/change log
+- [x] measures and one score voice
+- [x] note events and source-note provenance
+- [x] cross-measure ties
+- [x] string + fret
+- [x] basic articulations
+- [x] tempo / time-signature maps
+- [x] CLI `fretpilot build-ir`
+- [x] regression tests for score/performance timing separation
+
+### Guitar Pro
+
+- [x] evaluate PyGuitarPro as the first GP5 writing library
+- [ ] add optional PyGuitarPro dependency
+- [ ] Guitar IR → PyGuitarPro model adapter
+- [ ] represent silent gaps as GP rests
+- [ ] map supported durations and tuplets
+- [ ] map ties, string/fret, hammer/pull, slide, and vibrato
+- [ ] write `.gp5`
+- [ ] parse generated `.gp5` back as an automated round-trip test
+- [ ] open and inspect generated output in Guitar Pro
 
 Acceptance test:
 
-> Export opens cleanly in Guitar Pro and matches the canonical score representation.
+> Export opens cleanly in Guitar Pro and matches the canonical score representation for the supported V0.1 subset.
+
+**Status:** Guitar IR V0.1 is runnable. Minimal GP5 export is the active prototype milestone.
 
 ## Phase 6 — Ample Guitar adapter
 
@@ -254,12 +278,13 @@ Upload MIDI
 - [x] CLI skeleton and JSON inspection
 - [x] layered stream detection command
 - [x] stream-aware end-to-end analysis command
+- [x] measure-aware Guitar IR command
+- [ ] minimal GP5 download/output
+- [ ] Ample MIDI download/output
 - [ ] API service
 - [ ] simple web UI
 - [ ] processing report
 - [ ] low-confidence measure list
-- [ ] downloadable GP5
-- [ ] downloadable Ample MIDI
 
 ## Dataset / testing strategy
 
@@ -276,7 +301,7 @@ Instrument identity:
 - piano/synth parts that are guitar-playable
 - drums and percussion
 
-Guitar behavior:
+Guitar notation/performance:
 
 - slow melodic lead
 - fast scalar lead
@@ -287,7 +312,8 @@ Guitar behavior:
 - sections that change role
 - triplets and syncopation
 - noisy note lengths and imperfect note-on timing
-- large melodic leaps
+- notes crossing barlines
+- silent gaps requiring rests
 - articulation-friendly phrases
 - phrases where articulation should remain minimal
 
