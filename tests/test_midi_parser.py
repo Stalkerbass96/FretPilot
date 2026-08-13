@@ -95,3 +95,35 @@ def test_unclosed_note_is_reported(tmp_path: Path) -> None:
 
     assert timeline.note_count == 0
     assert any(diagnostic.code == "unclosed_note" for diagnostic in timeline.diagnostics)
+
+
+def test_invalid_key_signature_is_ignored_without_losing_notes(
+    tmp_path: Path,
+) -> None:
+    midi_path = tmp_path / "invalid-key.mid"
+    midi = mido.MidiFile(type=0, ticks_per_beat=480)
+    track = mido.MidiTrack()
+    track.append(mido.MetaMessage("key_signature", key="C", time=0))
+    track.append(mido.Message("note_on", note=64, velocity=90, time=0))
+    track.append(mido.Message("note_off", note=64, velocity=0, time=480))
+    midi.tracks.append(track)
+    midi.save(midi_path)
+
+    raw = bytearray(midi_path.read_bytes())
+    signature = raw.find(b"\xff\x59\x02\x00\x00")
+    assert signature >= 0
+    raw[signature + 3] = 18
+    raw[signature + 4] = 1
+    midi_path.write_bytes(raw)
+
+    timeline = load_midi(midi_path)
+
+    assert timeline.note_count == 1
+    diagnostic = next(
+        item
+        for item in timeline.diagnostics
+        if item.code == "invalid_key_signature"
+    )
+    assert diagnostic.track_index == 0
+    assert diagnostic.tick == 0
+    assert "18 sharps/flats" in diagnostic.message
