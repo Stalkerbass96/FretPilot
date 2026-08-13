@@ -15,7 +15,7 @@ Musical / Guitar Intelligence
       ↓
 Canonical Guitar IR
       ↓
-Output Adapters
+Output / Virtual-Instrument Adapters
 ```
 
 Long-term evolution adds a separate offline Learning Plane. See [`LONG_TERM_ARCHITECTURE.md`](LONG_TERM_ARCHITECTURE.md).
@@ -48,10 +48,16 @@ GuitarTrackAnalysis
 Guitar IR
  ├── PDF/TAB preview
  ├── GP5 exporter
- └── Ample Guitar SC MIDI renderer
+ └── Performance intent
+       ↓
+   Ample Guitar SC profile/renderer
+       ↓
+   Ample-compatible MIDI
 ```
 
 The prototype also supports batch packaging for likely guitar streams.
+
+The Ample path is the first implementation of a broader virtual-guitar adapter architecture. The generic provider-neutral profile model now lives in `src/fretpilot/virtual_instruments/`; migration of the working Ample profile is intentionally deferred so the prototype remains stable.
 
 ---
 
@@ -139,7 +145,7 @@ Hard playability is deterministic. Which valid path is most guitarist-like is a 
 
 ### `knowledge`
 
-**Implemented initial versioned knowledge layer.**
+**Implemented initial versioned guitar-playing knowledge layer.**
 
 Current components include:
 
@@ -157,6 +163,8 @@ technique family: legato/arpeggio/sweep/fingerstyle/...
 ```
 
 These dimensions compose instead of being flattened into one genre label.
+
+This module describes guitarist behavior and musical preferences. It must not contain vendor-specific virtual-instrument controls.
 
 Detailed work lives under `projects/guitar-playing-knowledge/` (`GK-*`).
 
@@ -193,6 +201,42 @@ Invariant:
 
 > Output-specific plugin mappings do not belong in Guitar IR.
 
+### `virtual_instruments`
+
+**Generic schema foundation implemented; product migration pending.**
+
+This module owns provider-neutral knowledge models that describe how a target virtual-guitar instrument can realize canonical performance intent.
+
+Current model types include:
+
+- `VirtualGuitarInstrumentProfile`;
+- `ArticulationCapability`;
+- `ControlAction`;
+- `AdapterEvidence`.
+
+Long-term responsibilities include:
+
+- product/version identity;
+- playable range and capabilities;
+- native / approximated / unsupported intent negotiation;
+- keyswitch/CC/velocity/program/pitch-bend binding descriptions;
+- string/position forcing capability;
+- timing/legato overlap requirements;
+- state/latch/reset semantics;
+- evidence/provenance and verification maturity.
+
+Important distinction:
+
+```text
+Guitar Playing Knowledge
+= what a real guitarist is likely to do
+
+Virtual Guitar Instrument Knowledge
+= how a specific software instrument must be controlled
+```
+
+Detailed work lives under `projects/virtual-guitar-instruments/` (`VI-*`).
+
 ### `exporters/guitar_pro`
 
 **Implemented GP5 prototype.**
@@ -211,7 +255,7 @@ PDF exists so users can inspect output without Guitar Pro. Its notation quality 
 
 **Implemented Ample Guitar SC 4.x prototype adapter.**
 
-Owns plugin-specific details such as:
+Owns current product-specific details such as:
 
 - keyswitches;
 - note overlaps;
@@ -219,6 +263,10 @@ Owns plugin-specific details such as:
 - plugin/version-specific conventions.
 
 The renderer consumes Guitar IR/source performance data; it must not redefine musical intent.
+
+Current Ample static profile data remains in this package until `VI-002` migrates it to the generic virtual-instrument profile contract. Existing behavior should remain green during that migration.
+
+Future virtual-guitar products should be added through `VI-*` rather than by copying Ample assumptions into shared code.
 
 ### `ai`
 
@@ -237,71 +285,25 @@ The deterministic engine must remain functional with AI disabled.
 
 ## Runtime vs Learning
 
-Runtime processing uses deterministic code plus an approved/versioned knowledge state.
+Runtime processing uses deterministic code plus approved/versioned knowledge states and target-instrument profiles.
 
 Future self-evolution happens offline:
 
 ```text
-eligible sources / corrections / golden material
-→ provenance + quality + deduplication
-→ feature extraction / training
-→ candidate knowledge
-→ evaluation
-→ approved snapshot
+eligible sources / corrections / golden material / adapter evidence
+→ provenance + quality + deduplication/verification
+→ feature extraction / training / capability extraction
+→ candidate knowledge or adapter profile
+→ evaluation / conformance tests
+→ approved snapshot/profile
 → Runtime
 ```
 
-Runtime must never silently modify production knowledge while processing a user request.
+Runtime must never silently modify production knowledge or product mappings while processing a user request.
 
 See:
 
 - [`LONG_TERM_ARCHITECTURE.md`](LONG_TERM_ARCHITECTURE.md)
 - [`projects/system-evolution/README.md`](projects/system-evolution/README.md)
 - [`projects/guitar-playing-knowledge/LEARNING_PIPELINE.md`](projects/guitar-playing-knowledge/LEARNING_PIPELINE.md)
-
----
-
-## Determinism and reproducibility
-
-A long-term result should be attributable to a version tuple including:
-
-```text
-source fingerprint
-engine version
-configuration version
-Guitar IR schema version
-knowledge snapshot version
-optional provider/model version
-```
-
-AI/learned components rank or advise. Hard guitar constraints and output validation remain deterministic.
-
----
-
-## Explainability
-
-Transformations should be able to expose:
-
-- confidence;
-- reason/code;
-- source value;
-- transformed value;
-- section/context identity;
-- knowledge/model version where relevant.
-
-This supports a product-facing "What FretPilot changed" review workflow rather than hiding algorithmic decisions.
-
----
-
-## Task ownership
-
-Use stable project task prefixes:
-
-```text
-PV-*  prototype/output validation
-TI-*  instrument/track identification
-GK-*  guitar-playing/style/learning knowledge
-SE-*  cross-project evolution infrastructure
-```
-
-Do not duplicate work across project backlogs. The specialized backlog remains authoritative for module-specific algorithms.
+- [`projects/virtual-guitar-instruments/README.md`](projects/virtual-guitar-instruments/README.md)
