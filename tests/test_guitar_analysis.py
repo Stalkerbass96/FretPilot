@@ -6,7 +6,7 @@ from fretpilot.midi.models import NormalizedNote, NormalizedTrack
 
 def test_analysis_combines_rhythm_fingering_and_articulation() -> None:
     onsets = [0.02, 0.49, 1.01]
-    pitches = [64, 66, 69]
+    pitches = [64, 66, 71]
     durations = [0.47, 0.50, 1.50]
 
     notes = [
