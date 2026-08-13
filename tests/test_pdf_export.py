@@ -1,6 +1,9 @@
 from pathlib import Path
 
+import pytest
+
 from fretpilot.exporters.pdf_score import export_score_pdf
+from fretpilot.exporters.pdf_score.renderer import _rhythm_mark
 from fretpilot.ir.models import (
     GuitarMeasure,
     GuitarNoteEvent,
@@ -69,3 +72,33 @@ def test_export_score_pdf_writes_reviewable_pdf(tmp_path: Path) -> None:
     assert result.note_count == 1
     assert destination.read_bytes().startswith(b"%PDF")
     assert destination.stat().st_size > 1000
+
+
+@pytest.mark.parametrize(
+    ("duration", "stem", "filled", "beams", "dotted", "tuplet"),
+    [
+        (4.0, False, False, 0, False, None),
+        (2.0, True, False, 0, False, None),
+        (1.0, True, True, 0, False, None),
+        (0.75, True, True, 1, True, None),
+        (0.5, True, True, 1, False, None),
+        (1 / 3, True, True, 1, False, 3),
+        (0.25, True, True, 2, False, None),
+        (0.125, True, True, 3, False, None),
+    ],
+)
+def test_rhythm_mark_maps_written_durations(
+    duration: float,
+    stem: bool,
+    filled: bool,
+    beams: int,
+    dotted: bool,
+    tuplet: int | None,
+) -> None:
+    mark = _rhythm_mark(duration)
+
+    assert mark.stem is stem
+    assert mark.filled is filled
+    assert mark.beam_count == beams
+    assert mark.dotted is dotted
+    assert mark.tuplet == tuplet

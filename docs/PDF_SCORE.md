@@ -29,7 +29,7 @@ When exactly one likely guitar stream exists, `--stream-id` may be omitted. When
 - six-line guitar TAB;
 - measure numbers and beat guides;
 - fret numbers from Guitar IR;
-- written-duration labels;
+- compact rhythm row with note heads, stems, beams, dots, and triplet marks;
 - cross-measure tie marks;
 - generic technique labels such as hammer-on, pull-off, slide, vibrato, let ring, palm mute, and harmonic;
 - warnings for notes without printable string/fret assignments.
@@ -39,7 +39,7 @@ When exactly one likely guitar stream exists, `--stream-id` may be omitted. When
 The first PDF renderer is a review format rather than publication engraving. It does not yet include:
 
 - five-line standard notation;
-- beams, stems, or conventional rhythmic noteheads;
+- full five-line standard-notation rhythm engraving;
 - multiple independent notation voices;
 - chord diagrams;
 - key signatures and enharmonic spelling;

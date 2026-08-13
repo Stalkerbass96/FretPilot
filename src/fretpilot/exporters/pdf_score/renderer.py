@@ -1,7 +1,7 @@
 """Render canonical Guitar IR as a review-friendly PDF TAB score.
 
 The PDF output is intentionally independent of Guitar Pro. V0.1 renders six-line
-TAB, measure positions, duration labels, ties, and generic guitar techniques.
+TAB, measure positions, a compact rhythm row, ties, and generic guitar techniques.
 It is designed for review and prototype validation rather than final publishing.
 """
 
@@ -38,20 +38,37 @@ class PDFScoreExportResult:
         }
 
 
-def _duration_label(beats: float) -> str:
+@dataclass(frozen=True, slots=True)
+class _RhythmMark:
+    label: str
+    stem: bool
+    filled: bool
+    beam_count: int = 0
+    dotted: bool = False
+    tuplet: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class _RhythmPlacement:
+    x: float
+    beat_in_measure: float
+    mark: _RhythmMark
+
+
+def _rhythm_mark(beats: float) -> _RhythmMark:
     candidates = [
-        (4.0, "1"),
-        (3.0, "1/2."),
-        (2.0, "1/2"),
-        (1.5, "1/4."),
-        (1.0, "1/4"),
-        (0.75, "1/8."),
-        (2 / 3, "4T"),
-        (0.5, "1/8"),
-        (1 / 3, "8T"),
-        (0.25, "1/16"),
-        (1 / 6, "16T"),
-        (0.125, "1/32"),
+        (4.0, _RhythmMark("1", stem=False, filled=False)),
+        (3.0, _RhythmMark("1/2.", stem=True, filled=False, dotted=True)),
+        (2.0, _RhythmMark("1/2", stem=True, filled=False)),
+        (1.5, _RhythmMark("1/4.", stem=True, filled=True, dotted=True)),
+        (1.0, _RhythmMark("1/4", stem=True, filled=True)),
+        (0.75, _RhythmMark("1/8.", stem=True, filled=True, beam_count=1, dotted=True)),
+        (2 / 3, _RhythmMark("4T", stem=True, filled=True, tuplet=3)),
+        (0.5, _RhythmMark("1/8", stem=True, filled=True, beam_count=1)),
+        (1 / 3, _RhythmMark("8T", stem=True, filled=True, beam_count=1, tuplet=3)),
+        (0.25, _RhythmMark("1/16", stem=True, filled=True, beam_count=2)),
+        (1 / 6, _RhythmMark("16T", stem=True, filled=True, beam_count=2, tuplet=3)),
+        (0.125, _RhythmMark("1/32", stem=True, filled=True, beam_count=3)),
     ]
     return min(candidates, key=lambda item: abs(item[0] - beats))[1]
 
@@ -193,7 +210,7 @@ class _PDFScoreRenderer:
         self.canvas.setFont("Helvetica", 8.5)
         self.canvas.setFillColor(colors.HexColor("#374151"))
         legend = [
-            "Duration labels: 1/4 quarter, 1/8 eighth, 1/16 sixteenth, 8T eighth-note triplet.",
+            "Rhythm row: hollow/filled heads, stems, beams, dots, and triplet marks show written duration.",
             "Technique labels: H hammer-on, P pull-off, S slide, LS legato slide, vib., let ring, P.M.",
             "Fret numbers are positioned on standard six-line TAB. Ties are drawn at measure boundaries.",
             "This V0.1 PDF is a review format; standard notation and advanced engraving remain future work.",
@@ -252,17 +269,18 @@ class _PDFScoreRenderer:
             for event in measure.events:
                 grouped[round(event.score.start_beat, 7)].append(event)
 
+            rhythm_placements: list[_RhythmPlacement] = []
             for absolute_start, events in sorted(grouped.items()):
                 beat_in_measure = absolute_start - measure.start_beat
                 ratio = max(0.0, min(1.0, beat_in_measure / measure.duration_beats))
                 note_x = measure_x + 7 + (measure_width - 14) * ratio
                 duration = min(event.score.duration_beats for event in events)
-                self.canvas.setFillColor(colors.HexColor("#374151"))
-                self.canvas.setFont("Helvetica", 5.8)
-                self.canvas.drawCentredString(
-                    note_x,
-                    tab_top + 2.5,
-                    _duration_label(duration),
+                rhythm_placements.append(
+                    _RhythmPlacement(
+                        x=note_x,
+                        beat_in_measure=beat_in_measure,
+                        mark=_rhythm_mark(duration),
+                    )
                 )
 
                 labels: list[str] = []
@@ -318,10 +336,118 @@ class _PDFScoreRenderer:
                         )
                         self.canvas.drawPath(path, stroke=1, fill=0)
 
+            self._draw_rhythm_row(
+                rhythm_placements,
+                y=tab_bottom - 14,
+            )
+
         self.canvas.setStrokeColor(colors.HexColor("#111827"))
         self.canvas.setLineWidth(0.9)
         self.canvas.line(x1, tab_top + 1, x1, tab_bottom - 1)
-        return tab_bottom - 21
+        return tab_bottom - 42
+
+    def _draw_rhythm_row(
+        self,
+        placements: list[_RhythmPlacement],
+        *,
+        y: float,
+    ) -> None:
+        if not placements:
+            return
+
+        head_width = 5.2
+        head_height = 3.7
+        stem_height = 13.0
+        beam_gap = 3.0
+        stem_x_offset = head_width / 2 - 0.3
+
+        self.canvas.setStrokeColor(colors.HexColor("#111827"))
+        self.canvas.setFillColor(colors.HexColor("#111827"))
+        self.canvas.setLineWidth(0.75)
+
+        for placement in placements:
+            mark = placement.mark
+            self.canvas.ellipse(
+                placement.x - head_width / 2,
+                y - head_height / 2,
+                placement.x + head_width / 2,
+                y + head_height / 2,
+                fill=1 if mark.filled else 0,
+                stroke=1,
+            )
+            if mark.stem:
+                stem_x = placement.x + stem_x_offset
+                self.canvas.line(stem_x, y, stem_x, y + stem_height)
+            if mark.dotted:
+                self.canvas.circle(
+                    placement.x + head_width / 2 + 3.0,
+                    y,
+                    0.8,
+                    fill=1,
+                    stroke=0,
+                )
+
+        connected: set[tuple[int, int]] = set()
+        for index in range(len(placements) - 1):
+            left = placements[index]
+            right = placements[index + 1]
+            if int(left.beat_in_measure + 1e-7) != int(
+                right.beat_in_measure + 1e-7
+            ):
+                continue
+            shared_beams = min(left.mark.beam_count, right.mark.beam_count)
+            for level in range(shared_beams):
+                beam_y = y + stem_height - level * beam_gap
+                self.canvas.setLineWidth(1.35)
+                self.canvas.line(
+                    left.x + stem_x_offset,
+                    beam_y,
+                    right.x + stem_x_offset,
+                    beam_y,
+                )
+                connected.add((index, level))
+                connected.add((index + 1, level))
+
+        self.canvas.setLineWidth(1.0)
+        for index, placement in enumerate(placements):
+            for level in range(placement.mark.beam_count):
+                if (index, level) in connected:
+                    continue
+                beam_y = y + stem_height - level * beam_gap
+                path = self.canvas.beginPath()
+                path.moveTo(placement.x + stem_x_offset, beam_y)
+                path.curveTo(
+                    placement.x + stem_x_offset + 2.8,
+                    beam_y - 1.2,
+                    placement.x + stem_x_offset + 5.0,
+                    beam_y - 3.0,
+                    placement.x + stem_x_offset + 5.6,
+                    beam_y - 5.0,
+                )
+                self.canvas.drawPath(path, stroke=1, fill=0)
+
+        triplet_runs: list[list[_RhythmPlacement]] = []
+        current_run: list[_RhythmPlacement] = []
+        current_beat: int | None = None
+        for placement in placements:
+            beat = int(placement.beat_in_measure + 1e-7)
+            if placement.mark.tuplet == 3:
+                if current_run and beat != current_beat:
+                    triplet_runs.append(current_run)
+                    current_run = []
+                current_run.append(placement)
+                current_beat = beat
+            elif current_run:
+                triplet_runs.append(current_run)
+                current_run = []
+                current_beat = None
+        if current_run:
+            triplet_runs.append(current_run)
+
+        self.canvas.setFont("Helvetica-Bold", 6.0)
+        for run in triplet_runs:
+            center_x = (run[0].x + run[-1].x) / 2
+            self.canvas.drawCentredString(center_x, y + stem_height + 3.0, "3")
 
     def draw_tracks(self) -> None:
         for track in self.project.tracks:

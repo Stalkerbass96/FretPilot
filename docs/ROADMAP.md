@@ -99,7 +99,8 @@ Long-term architecture:
 
 - [x] direct PDF renderer exists
 - [x] six-line TAB review output
-- [ ] musician-readable rhythmic stems/beams
+- [x] basic rhythm row with note heads, stems, beams, dots, and triplet marks
+- [ ] musician-grade rhythmic grouping and collision avoidance
 - [ ] proportional musical spacing
 - [ ] high-quality rests/ties/slides/let-ring presentation
 - [ ] section/phrase-aware system layout
