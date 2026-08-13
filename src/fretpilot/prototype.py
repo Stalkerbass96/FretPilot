@@ -1,0 +1,331 @@
+"""One-command prototype package generation for real MIDI evaluation."""
+
+from __future__ import annotations
+
+from collections import Counter
+from dataclasses import asdict, dataclass, field
+import json
+from pathlib import Path
+from typing import Any
+
+from fretpilot.analysis import analyze_guitar_track
+from fretpilot.detection import classify_timeline
+from fretpilot.detection.models import GuitarStreamCandidate
+from fretpilot.exporters.ample_guitar import export_ample_sc_midi
+from fretpilot.exporters.guitar_pro import UnsupportedGuitarIR, export_gp5
+from fretpilot.ir import build_guitar_ir
+from fretpilot.midi.models import NormalizedTimeline
+
+
+@dataclass(slots=True)
+class PrototypeOutputStatus:
+    path: str | None
+    status: str
+    warnings: list[str] = field(default_factory=list)
+    error: str | None = None
+
+
+@dataclass(slots=True)
+class PrototypeStreamResult:
+    stream_id: str
+    directory: str
+    analysis: PrototypeOutputStatus
+    guitar_ir: PrototypeOutputStatus
+    gp5: PrototypeOutputStatus
+    ample_sc_midi: PrototypeOutputStatus
+    report: PrototypeOutputStatus
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
+class PrototypeManifest:
+    source: str
+    output_directory: str
+    stream_results: list[PrototypeStreamResult]
+    selected_stream_ids: list[str]
+    format_version: str = "0.1"
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def _write_json(path: Path, data: dict[str, Any], *, compact: bool) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            data,
+            ensure_ascii=False,
+            indent=None if compact else 2,
+            sort_keys=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def _safe_stream_name(stream_id: str) -> str:
+    return "".join(character if character.isalnum() else "_" for character in stream_id)
+
+
+def _count_transformations(changes: list[Any]) -> dict[str, int]:
+    return dict(Counter(change.stage for change in changes))
+
+
+def _count_articulations(analysis: Any) -> dict[str, int]:
+    return dict(
+        Counter(decision.technique for decision in analysis.articulations.decisions)
+    )
+
+
+def _build_processing_report(
+    candidate: GuitarStreamCandidate,
+    analysis: Any,
+    project: Any,
+    *,
+    gp5_status: PrototypeOutputStatus,
+    ample_status: PrototypeOutputStatus,
+) -> dict[str, Any]:
+    low_confidence_rhythm = [
+        suggestion.note_index
+        for suggestion in analysis.rhythm.suggestions
+        if suggestion.confidence < 0.60
+    ]
+    unplayable = [
+        item.note_index
+        for item in analysis.fingering.notes
+        if not item.playable
+    ]
+    ir_events = [
+        event
+        for track in project.tracks
+        for measure in track.measures
+        for event in measure.events
+    ]
+    let_ring_sources = sorted(
+        {
+            event.source_note_index
+            for event in ir_events
+            if any(item.type == "let_ring" for item in event.articulations)
+        }
+    )
+
+    return {
+        "format_version": "0.1",
+        "source": project.source,
+        "stream": candidate.stream.to_summary_dict(),
+        "detection": {
+            "guitar_probability": candidate.guitar_probability,
+            "confidence": candidate.confidence,
+            "decision": candidate.decision,
+            "layers": [asdict(layer) for layer in candidate.layers],
+            "behavior_profiles": [
+                asdict(profile) for profile in candidate.behavior_profiles
+            ],
+        },
+        "rhythm": {
+            "selected_grid": asdict(analysis.rhythm.selected_grid),
+            "note_count": len(analysis.rhythm.suggestions),
+            "low_confidence_note_indices": low_confidence_rhythm,
+            "low_confidence_count": len(low_confidence_rhythm),
+        },
+        "fingering": {
+            "tuning": analysis.fingering.tuning,
+            "max_fret": analysis.fingering.max_fret,
+            "unplayable_note_indices": unplayable,
+            "unplayable_count": len(unplayable),
+            "diagnostics": [asdict(item) for item in analysis.fingering.diagnostics],
+        },
+        "articulations": {
+            "counts": _count_articulations(analysis),
+            "decision_count": len(analysis.articulations.decisions),
+        },
+        "guitar_ir": {
+            "schema_version": project.schema_version,
+            "measure_count": sum(len(track.measures) for track in project.tracks),
+            "event_count": len(ir_events),
+            "transformation_counts": _count_transformations(project.changes),
+            "let_ring_source_note_indices": let_ring_sources,
+            "let_ring_count": len(let_ring_sources),
+            "warnings": project.warnings,
+        },
+        "outputs": {
+            "gp5": asdict(gp5_status),
+            "ample_sc_midi": asdict(ample_status),
+        },
+        "review_required": bool(
+            low_confidence_rhythm
+            or unplayable
+            or project.warnings
+            or gp5_status.status != "success"
+            or gp5_status.warnings
+            or ample_status.status != "success"
+            or ample_status.warnings
+        ),
+    }
+
+
+def _select_candidates(
+    timeline: NormalizedTimeline,
+    *,
+    stream_id: str | None,
+    all_likely_guitars: bool,
+) -> list[GuitarStreamCandidate]:
+    report = classify_timeline(timeline)
+
+    if stream_id is not None:
+        candidate = next(
+            (
+                item
+                for item in report.candidates
+                if item.stream.stream_id == stream_id
+            ),
+            None,
+        )
+        if candidate is None:
+            available = ", ".join(
+                item.stream.stream_id for item in report.candidates
+            )
+            raise ValueError(
+                f"Unknown stream ID {stream_id!r}. Available streams: {available or 'none'}."
+            )
+        return [candidate]
+
+    likely = [
+        item for item in report.candidates if item.decision == "likely_guitar"
+    ]
+    if all_likely_guitars:
+        if not likely:
+            raise ValueError("No likely guitar streams were detected.")
+        return likely
+
+    if len(likely) == 1:
+        return likely
+    if not likely:
+        raise ValueError(
+            "No likely guitar stream was detected. Select a stream explicitly."
+        )
+    options = ", ".join(item.stream.stream_id for item in likely)
+    raise ValueError(
+        "Multiple likely guitar streams were detected. Use --all-likely-guitars "
+        f"or select one stream explicitly. Candidates: {options}."
+    )
+
+
+def generate_prototype_package(
+    timeline: NormalizedTimeline,
+    output_directory: str | Path,
+    *,
+    stream_id: str | None = None,
+    all_likely_guitars: bool = False,
+    max_fret: int = 24,
+    compact_json: bool = False,
+) -> PrototypeManifest:
+    """Generate analysis, IR, GP5, Ample MIDI, reports, and a manifest."""
+
+    if stream_id is not None and all_likely_guitars:
+        raise ValueError("stream_id and all_likely_guitars are mutually exclusive.")
+    if max_fret < 0:
+        raise ValueError("max_fret must be zero or greater.")
+
+    root = Path(output_directory)
+    root.mkdir(parents=True, exist_ok=True)
+    candidates = _select_candidates(
+        timeline,
+        stream_id=stream_id,
+        all_likely_guitars=all_likely_guitars,
+    )
+
+    results: list[PrototypeStreamResult] = []
+    for candidate in candidates:
+        stream_name = _safe_stream_name(candidate.stream.stream_id)
+        stream_dir = root / stream_name
+        stream_dir.mkdir(parents=True, exist_ok=True)
+        prefix = stream_dir / stream_name
+
+        track = candidate.stream.as_track()
+        analysis = analyze_guitar_track(track, max_fret=max_fret)
+        project = build_guitar_ir(
+            timeline,
+            track,
+            analysis,
+            source_stream_id=candidate.stream.stream_id,
+        )
+
+        analysis_path = prefix.with_suffix(".analysis.json")
+        ir_path = prefix.with_suffix(".guitar-ir.json")
+        gp5_path = prefix.with_suffix(".gp5")
+        ample_path = prefix.with_suffix(".ample-sc.mid")
+        report_path = prefix.with_suffix(".report.json")
+
+        _write_json(analysis_path, analysis.to_dict(), compact=compact_json)
+        _write_json(ir_path, project.to_dict(), compact=compact_json)
+
+        analysis_status = PrototypeOutputStatus(
+            path=str(analysis_path),
+            status="success",
+        )
+        ir_status = PrototypeOutputStatus(path=str(ir_path), status="success")
+
+        try:
+            gp5_result = export_gp5(project, gp5_path)
+            gp5_status = PrototypeOutputStatus(
+                path=str(gp5_path),
+                status="success",
+                warnings=gp5_result.warnings,
+            )
+        except (UnsupportedGuitarIR, ValueError) as exc:
+            gp5_status = PrototypeOutputStatus(
+                path=None,
+                status="unsupported",
+                error=str(exc),
+            )
+
+        try:
+            ample_result = export_ample_sc_midi(project, ample_path)
+            ample_status = PrototypeOutputStatus(
+                path=str(ample_path),
+                status="success",
+                warnings=ample_result.warnings,
+            )
+        except ValueError as exc:
+            ample_status = PrototypeOutputStatus(
+                path=None,
+                status="unsupported",
+                error=str(exc),
+            )
+
+        processing_report = _build_processing_report(
+            candidate,
+            analysis,
+            project,
+            gp5_status=gp5_status,
+            ample_status=ample_status,
+        )
+        _write_json(report_path, processing_report, compact=compact_json)
+        report_status = PrototypeOutputStatus(
+            path=str(report_path),
+            status="success",
+        )
+
+        results.append(
+            PrototypeStreamResult(
+                stream_id=candidate.stream.stream_id,
+                directory=str(stream_dir),
+                analysis=analysis_status,
+                guitar_ir=ir_status,
+                gp5=gp5_status,
+                ample_sc_midi=ample_status,
+                report=report_status,
+            )
+        )
+
+    manifest = PrototypeManifest(
+        source=timeline.source,
+        output_directory=str(root),
+        selected_stream_ids=[candidate.stream.stream_id for candidate in candidates],
+        stream_results=results,
+    )
+    _write_json(root / "manifest.json", manifest.to_dict(), compact=compact_json)
+    return manifest
