@@ -4,13 +4,16 @@ This page is the navigation entry point for product, architecture, and active de
 
 ## Start here
 
+- [`AI_AGENT_HANDOFF.md`](AI_AGENT_HANDOFF.md) — **fast handoff for AI agents: current state, task map, boundaries, and recommended next work**.
+- [`../AGENTS.md`](../AGENTS.md) — mandatory contributor workflow and non-negotiable design rules.
 - [`../README.md`](../README.md) — product overview, installation, and runnable CLI commands.
-- [`../AGENTS.md`](../AGENTS.md) — required reading and workflow for AI agents and contributors.
 - [`PRODUCT.md`](PRODUCT.md) — product definition, scope, and target user.
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — current module boundaries and executable architecture.
 - [`LONG_TERM_ARCHITECTURE.md`](LONG_TERM_ARCHITECTURE.md) — stable vs evolvable modules, Runtime/Learning planes, knowledge assets, and self-evolution architecture.
 - [`ROADMAP.md`](ROADMAP.md) — prototype phases and current product priorities.
 - [`MUSIC_IR.md`](MUSIC_IR.md) — canonical Guitar IR contract.
+
+For a new AI agent, read `AI_AGENT_HANDOFF.md` first. Only enter the detailed project documents for the task family being changed.
 
 ## Umbrella project: system evolution
 
@@ -62,6 +65,7 @@ SE-*  cross-project evolution infrastructure and governance
 
 Use documents for different purposes:
 
+- **AI Agent Handoff** summarizes current state and routes work to the correct project.
 - **Product docs** explain why the feature exists and what users receive.
 - **Architecture docs** define module boundaries and invariants.
 - **Long-term architecture** defines stable/evolvable boundaries and learning governance.
