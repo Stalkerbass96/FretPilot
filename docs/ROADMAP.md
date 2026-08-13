@@ -35,6 +35,7 @@ FretPilot uses stable task prefixes:
 PV-*  prototype/output validation and immediate product quality
 TI-*  instrument-stream / guitar-track identification
 GK-*  guitar-playing knowledge, style, phrasing, and learning
+VI-*  virtual-guitar product knowledge, adapters, and compatibility
 SE-*  cross-project self-evolution infrastructure and governance
 ```
 
@@ -44,10 +45,12 @@ Long-term architecture and self-evolution are documented separately so they do n
 - `docs/projects/system-evolution/README.md`
 - `docs/projects/system-evolution/BACKLOG.md`
 - `docs/projects/guitar-playing-knowledge/LEARNING_PIPELINE.md`
+- `docs/projects/virtual-guitar-instruments/README.md`
+- `docs/projects/virtual-guitar-instruments/BACKLOG.md`
 
 The core long-term rule is:
 
-> Runtime uses deterministic constraints plus approved/versioned knowledge. New external data, user corrections, or learned models enter production only through offline evaluation and promotion.
+> Runtime uses deterministic constraints plus approved/versioned musical knowledge and approved/versioned target-instrument profiles. New external data, user corrections, learned models, or adapter discoveries enter production only through offline evaluation/verification and promotion.
 
 ## Prototype status
 
@@ -89,6 +92,7 @@ The core long-term rule is:
 - [x] confidence and warnings
 - [x] CLI `fretpilot build-ir`
 - [ ] context/knowledge provenance metadata (`SE-011`)
+- [ ] target-instrument capability negotiation remains downstream of IR (`VI-004`)
 
 ### Guitar Pro 5
 
@@ -137,6 +141,18 @@ The core long-term rule is:
 - [ ] vibrato rendering
 - [ ] bend curves
 - [ ] pick direction and accent shaping
+
+### Virtual guitar instrument adapter architecture
+
+- [x] `VI-*` project and long-term boundaries defined
+- [x] provider-neutral `VirtualGuitarInstrumentProfile` model skeleton
+- [ ] migrate Ample static profile into generic schema (`VI-002`)
+- [ ] generic adapter registry (`VI-003`)
+- [ ] capability negotiation: native / approximated / unsupported (`VI-004`)
+- [ ] common conformance tests (`VI-021`)
+- [ ] add a second virtual-guitar target after Ample validation (`VI-030`)
+
+The prototype should keep Ample working while this abstraction is introduced incrementally.
 
 ## Active Phase — Prototype validation
 
@@ -199,6 +215,8 @@ Acceptance:
 
 > The exported MIDI plays from beginning to end without broken keyswitch state or hanging notes, and selected legato passages trigger correctly.
 
+The observations from this review should also become the first verified adapter evidence for the `VI-*` project.
+
 ### PV-004 — Processing report
 
 Add a single machine-readable and human-readable report containing:
@@ -211,13 +229,14 @@ Add a single machine-readable and human-readable report containing:
 - unplayable notes;
 - articulation counts;
 - score/PDF/GP5 warnings;
-- Ample warnings;
+- virtual-instrument profile identity;
+- adapter capability/fallback warnings;
 - low-confidence measures;
 - runtime/knowledge version provenance when available.
 
 Acceptance:
 
-> A user can understand what FretPilot changed and where manual review is needed.
+> A user can understand what FretPilot changed, which target profile was used, and where manual review is needed.
 
 ### PV-005 — Batch command
 
@@ -251,22 +270,39 @@ Acceptance:
 - [ ] hand-position state (`GK-013`)
 - [ ] shape memory (`GK-012`)
 - [ ] left-hand finger assignment (`GK-014`)
-- [ ] bend detection and rendering
-- [ ] vibrato controller/keyswitch strategy
+- [ ] bend detection and canonical intent
+- [ ] vibrato intent
 - [ ] palm-mute inference
 - [ ] pick-direction planning
 - [ ] accent and velocity shaping
 - [ ] strum timing and direction
-- [ ] position/string forcing for supported Ample products
+
+### Virtual guitar instrument support
+
+Continue through `VI-*` without contaminating Guitar IR or guitarist-playing knowledge:
+
+- generic profile schema (`VI-001`);
+- Ample migration (`VI-002`);
+- adapter registry (`VI-003`);
+- capability negotiation (`VI-004`);
+- state-machine and timing abstractions (`VI-011/VI-012`);
+- pitch expression (`VI-013`);
+- string/position forcing (`VI-014`);
+- picking/strumming control (`VI-015`);
+- profile evidence/conformance (`VI-020/VI-021`);
+- second/third product adapters (`VI-030/VI-031`);
+- product/version compatibility matrix (`VI-032`);
+- controlled adapter-knowledge evolution (`VI-040+`).
 
 ### Product application
 
 - [ ] processing service/API
 - [ ] upload UI
 - [ ] guitar-stream selection UI
+- [ ] target virtual-instrument selection UI
 - [ ] score/change preview
 - [ ] downloadable output package
-- [ ] user correction capture
+- [ ] user correction/calibration capture
 
 ### Track identification
 
@@ -281,15 +317,18 @@ Continue through the dedicated `TI-*` backlog without blocking output validation
 
 ### Self-evolution infrastructure
 
-Continue through `SE-*` and `GK-*` only after the prototype interfaces provide useful real data:
+Continue through `SE-*`, `GK-*`, and `VI-*` only after the prototype interfaces provide useful real data:
 
-- runtime reproducibility manifest (`SE-002`);
+- runtime reproducibility manifest (`SE-002`), including target adapter profile identity;
 - shared evaluation identity (`SE-003`);
 - correction/golden-review registry (`SE-020/SE-021`);
-- knowledge snapshot format/pinning (`GK-035`, `SE-030`);
+- musical knowledge snapshot format/pinning (`GK-035`, `SE-030`);
 - candidate vs production lifecycle (`GK-036`, `SE-031`);
+- adapter-profile candidate/approval lifecycle (`VI-040`);
+- adapter calibration dataset (`VI-041`);
 - shadow comparison (`SE-032`);
 - learned fingering ranker (`GK-041/GK-042`);
+- optional learned expressive adapter tuning (`VI-042`);
 - optional model registry/integration (`SE-050/SE-051`).
 
 ## Release definition: Prototype 0.1
@@ -303,4 +342,4 @@ Prototype 0.1 is ready for external hands-on testing when:
 5. known unsupported cases appear as warnings rather than silent corruption;
 6. the README contains exact reproducible commands.
 
-The long-term learning system is explicitly **not** a Prototype 0.1 release requirement.
+Multi-product virtual-guitar support and the long-term learning system are explicitly **not** Prototype 0.1 release requirements.
