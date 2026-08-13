@@ -4,6 +4,7 @@ import {
   ChevronRight,
   CircleHelp,
   Clock3,
+  Database,
   Download,
   FileAudio2,
   FileMusic,
@@ -40,8 +41,9 @@ import {
   type OutputSelection,
 } from "./api";
 import { cn } from "./lib/utils";
+import { KnowledgeView } from "./KnowledgeView";
 
-type View = "studio" | "projects" | "system";
+type View = "studio" | "projects" | "knowledge" | "system";
 type OutputKey = keyof OutputSelection;
 
 const recentProjects = [
@@ -151,6 +153,12 @@ function Sidebar({ view, onView }: { view: View; onView: (view: View) => void })
           label="项目资料库"
           onClick={() => onView("projects")}
         />
+        <NavItem
+          active={view === "knowledge"}
+          icon={<Database size={17} />}
+          label="知识库"
+          onClick={() => onView("knowledge")}
+        />
         <p className="nav-label nav-label--spaced">系统</p>
         <NavItem
           active={view === "system"}
@@ -190,6 +198,7 @@ function Topbar({ view }: { view: View }) {
   const titles: Record<View, string> = {
     studio: "转换工作台",
     projects: "项目资料库",
+    knowledge: "知识库",
     system: "设计系统",
   };
   return (
@@ -646,6 +655,7 @@ export default function App() {
         <Topbar view={view} />
         {view === "studio" && <StudioView />}
         {view === "projects" && <ProjectsView />}
+        {view === "knowledge" && <KnowledgeView />}
         {view === "system" && <SystemView />}
       </main>
     </div>

@@ -70,6 +70,7 @@ Long-term architecture:
 - [x] frontend test/build CI
 - [x] Python API and real conversion-job execution
 - [x] coarse job polling and per-stream output downloads
+- [x] read-only Guitar Playing / Virtual Instrument knowledge review UI
 - [ ] resolved `InstrumentStream` selection UI
 - [ ] granular progress/event streaming and cancellation
 - [ ] score preview and measure-level review/correction

@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from fretpilot.api.jobs import JobManager, OutputRequest
+from fretpilot.knowledge import get_builtin_knowledge_registry
 from fretpilot.rewrite import DEFAULT_MIDI_FIDELITY
 from fretpilot.virtual_instruments import get_builtin_virtual_instrument_registry
 
@@ -64,6 +65,11 @@ def create_app(
     def health() -> dict[str, str]:
         return {"status": "ready", "engine": "fretpilot"}
 
+    @app.get("/api/knowledge")
+    def get_knowledge() -> dict[str, object]:
+        registry = get_builtin_knowledge_registry()
+        return registry.snapshot.to_dict()
+
     @app.get("/api/virtual-instruments")
     def list_virtual_instruments() -> dict[str, object]:
         registry = get_builtin_virtual_instrument_registry()
@@ -88,6 +94,17 @@ def create_app(
                 for profile in registry.list()
             ],
         }
+
+    @app.get("/api/virtual-instruments/{profile_id}")
+    def get_virtual_instrument(profile_id: str) -> dict[str, object]:
+        registry = get_builtin_virtual_instrument_registry()
+        profile = registry.get(profile_id)
+        if profile is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Virtual-instrument profile not found.",
+            )
+        return profile.to_dict()
 
     @app.post("/api/jobs", status_code=status.HTTP_202_ACCEPTED)
     async def create_job(

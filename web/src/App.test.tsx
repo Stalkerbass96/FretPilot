@@ -42,6 +42,122 @@ describe("FretPilot studio", () => {
     expect(screen.getByText("Quiet Studio · 0.1")).toBeInTheDocument();
   });
 
+  it("loads both knowledge bases for human review", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((input: string) => {
+      if (input.endsWith("/api/knowledge")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            snapshot_version: "2026.08.0",
+            schema_version: "1",
+            status: "approved",
+            entries: [{
+              knowledge_id: "gk.profile.metal",
+              domain: "guitar_playing",
+              kind: "playing_profile",
+              schema_version: "1",
+              knowledge_version: "2026.08.0",
+              status: "approved",
+              payload: {
+                profile_id: "metal",
+                label: "Metal",
+                dimension: "style",
+                description: "Tight low-register guitar language.",
+                maturity: "experimental",
+                fingering: { hand_position_stability: 1.35 },
+                articulation: { palm_mute: 1.6 },
+                performance: { timing_looseness: 0.65 },
+              },
+              scope: { styles: ["metal"] },
+              provenance: {
+                source_type: "hand_authored",
+                reference: "FretPilot hand-authored V0 priors",
+                license: null,
+                notes: "Soft preference baseline.",
+              },
+              evaluation: { benchmark_version: "builtin-v0", status: "baseline", notes: "" },
+            }],
+          }),
+        });
+      }
+      if (input.endsWith("/api/virtual-instruments")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            snapshot_version: "2026.08.0",
+            profiles: [{
+              profile_id: "ample-metal-eclipse-v4.1",
+              vendor: "Ample Sound",
+              product: "Ample Metal Eclipse",
+              version_family: "4.1",
+              maturity: "official_documented",
+              verification_status: "plugin_unverified",
+              playable_range: { minimum: 36, maximum: 84 },
+              articulation_intents: ["sustain", "palm_mute"],
+            }],
+          }),
+        });
+      }
+      if (input.endsWith("/api/virtual-instruments/ample-metal-eclipse-v4.1")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            profile_id: "ample-metal-eclipse-v4.1",
+            profile_version: "1.0.0",
+            knowledge_version: "2026.08.0",
+            vendor: "Ample Sound",
+            product: "Ample Metal Eclipse",
+            version_family: "4.1",
+            maturity: "official_documented",
+            verification_status: "plugin_unverified",
+            instrument_model: "ESP Eclipse I",
+            playable_min: 36,
+            playable_max: 84,
+            default_tuning: [40, 45, 50, 55, 59, 64],
+            sample_modes: ["mono_di", "stereo_di"],
+            supported_formats: ["VST3", "AU"],
+            capabilities: [{
+              intent: "palm_mute",
+              support: "native",
+              actions: [{ kind: "keyswitch", target: 26, display_label: "D0", timing: "before_note", state: "latched" }],
+              notes: "Lower note velocity produces greater mute depth.",
+              playable_min: 36,
+              playable_max: 84,
+              evidence_ids: ["ame-main-panel-manual"],
+            }],
+            controls: [],
+            velocity_layers: [],
+            limitations: ["Plugin playback has not yet been verified."],
+            evidence: [{
+              evidence_id: "ame-main-panel-manual",
+              source_type: "official_manual",
+              reference: "https://example.com/manual.pdf",
+              status: "official",
+              notes: "Control map.",
+              document_version: "AME Manual",
+              retrieved_on: "2026-08-13",
+              verified_on: "",
+            }],
+          }),
+        });
+      }
+      return Promise.reject(new Error(`Unexpected request: ${input}`));
+    }));
+
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "知识库" }));
+
+    expect(await screen.findByRole("heading", { name: "可以被审阅的音乐智能。" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Metal" })).toBeInTheDocument();
+    expect(screen.getByText("Palm mute")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: /音源适配/ }));
+    expect(await screen.findByRole("heading", { name: "Ample Metal Eclipse" })).toBeInTheDocument();
+    expect(screen.getByText("D0 · MIDI 26")).toBeInTheDocument();
+    expect(screen.getByText("尚未插件验证")).toBeInTheDocument();
+  });
+
   it("runs a conversion and renders downloadable stream artifacts", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({

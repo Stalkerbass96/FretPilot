@@ -80,7 +80,8 @@ Implemented and covered by tests/CI:
 - knowledge snapshot and used-entry IDs in Guitar IR/reports;
 - multi-guitar one-command prototype package including PDF review output.
 - responsive React/TypeScript frontend and `Quiet Studio 0.1` design-system
-  baseline with local file/output preferences and browser-validated layouts.
+  baseline with local file/output preferences, a read-only knowledge review
+  console, and browser-validated layouts.
 
 The last code-level product regression for section-aware prototype packaging passed CI. Always verify current HEAD CI before merging new changes.
 
