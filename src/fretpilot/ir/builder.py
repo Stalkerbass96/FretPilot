@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from math import floor
 from pathlib import Path
 
@@ -25,7 +25,7 @@ from fretpilot.ir.models import (
 )
 from fretpilot.midi.models import NormalizedNote, NormalizedTimeline, NormalizedTrack
 
-_EPSILON = 1e-9
+_EPSILON = 1e-8
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,6 +44,8 @@ class _NotatedNote:
     start_beat: float
     duration_beats: float
     rhythm_confidence: float
+    let_ring_inferred: bool = False
+    pre_overlap_duration_beats: float | None = None
 
     @property
     def end_beat(self) -> float:
@@ -55,6 +57,45 @@ def _round_to_grid(value: float, step: float) -> float:
         return value
     units = max(1, int(floor(value / step + 0.5)))
     return units * step
+
+
+def _normalize_ringing_overlaps(
+    prepared: list[_NotatedNote],
+) -> list[_NotatedNote]:
+    """Create sequential score timing while preserving ringing performance.
+
+    Guitar MIDI frequently leaves an arpeggiated note sounding after the next
+    pick attack. Treating every such overlap as a second notation voice creates
+    unreadable scores. V0 clips the written duration to the next distinct onset
+    and marks the note ``let_ring``; source performance timing remains untouched.
+
+    True independent polyphony still needs the later voice-separation stage.
+    """
+
+    onset_groups: dict[float, list[int]] = defaultdict(list)
+    for index, item in enumerate(prepared):
+        onset_groups[round(item.start_beat, 9)].append(index)
+
+    ordered_onsets = sorted(onset_groups)
+    normalized = list(prepared)
+    for onset_index, onset in enumerate(ordered_onsets[:-1]):
+        next_onset = ordered_onsets[onset_index + 1]
+        available_duration = next_onset - onset
+        if available_duration <= _EPSILON:
+            continue
+
+        for note_index in onset_groups[onset]:
+            item = normalized[note_index]
+            if item.duration_beats <= available_duration + _EPSILON:
+                continue
+            normalized[note_index] = replace(
+                item,
+                duration_beats=available_duration,
+                let_ring_inferred=True,
+                pre_overlap_duration_beats=item.duration_beats,
+            )
+
+    return normalized
 
 
 def _prepare_notated_notes(
@@ -78,7 +119,7 @@ def _prepare_notated_notes(
             )
         )
 
-    return prepared
+    return _normalize_ringing_overlaps(prepared)
 
 
 def _build_measure_boundaries(
@@ -181,10 +222,9 @@ def build_guitar_ir(
 ) -> GuitarProjectIR:
     """Build schema-versioned, measure-aware Guitar IR.
 
-    V0.1 quantizes note durations to the selected onset grid, preserves source
-    performance timing, and splits notes at measure boundaries with ties.
-    Rests, multiple voices, tuplets, swing, and phrase segmentation remain later
-    notation stages.
+    V0.1 quantizes note durations to the selected onset grid, normalizes common
+    ringing overlaps for readable one-voice notation, preserves source timing,
+    and splits notes at measure boundaries with ties.
     """
 
     if len(track.notes) != len(analysis.rhythm.suggestions):
@@ -244,16 +284,35 @@ def build_guitar_ir(
                     reason=f"snap_to_{analysis.rhythm.selected_grid.name}_grid",
                 )
             )
-        if abs(item.duration_beats - item.note.duration_beats) > _EPSILON:
+
+        initial_grid_duration = (
+            item.pre_overlap_duration_beats
+            if item.pre_overlap_duration_beats is not None
+            else item.duration_beats
+        )
+        if abs(initial_grid_duration - item.note.duration_beats) > _EPSILON:
             changes.append(
                 Transformation(
                     id=f"chg-duration-{item.source_index + 1:05d}",
                     stage="rhythm_duration",
                     source_note_index=item.source_index,
                     before={"duration_beats": item.note.duration_beats},
-                    after={"duration_beats": item.duration_beats},
+                    after={"duration_beats": initial_grid_duration},
                     confidence=item.rhythm_confidence,
                     reason=f"spell_on_{analysis.rhythm.selected_grid.name}_grid",
+                )
+            )
+
+        if item.let_ring_inferred and item.pre_overlap_duration_beats is not None:
+            changes.append(
+                Transformation(
+                    id=f"chg-overlap-{item.source_index + 1:05d}",
+                    stage="rhythm_overlap",
+                    source_note_index=item.source_index,
+                    before={"score_duration_beats": item.pre_overlap_duration_beats},
+                    after={"score_duration_beats": item.duration_beats},
+                    confidence=0.8,
+                    reason="clip_written_duration_at_next_attack_and_mark_let_ring",
                 )
             )
 
@@ -266,6 +325,17 @@ def build_guitar_ir(
 
             ir_articulations: list[IRArticulation] = []
             if is_first:
+                if item.let_ring_inferred:
+                    ir_articulations.append(
+                        IRArticulation(
+                            type="let_ring",
+                            confidence=0.8,
+                            reason=(
+                                "Source note rings beyond the next pick attack; "
+                                "written duration was clipped for one-voice notation."
+                            ),
+                        )
+                    )
                 for decision in decisions:
                     source_note_id = (
                         event_id_by_source.get(decision.source_note_index)
@@ -282,7 +352,11 @@ def build_guitar_ir(
                     )
 
             articulation_confidence = (
-                max((decision.confidence for decision in decisions), default=None)
+                max(
+                    [decision.confidence for decision in decisions]
+                    + ([0.8] if item.let_ring_inferred else []),
+                    default=None,
+                )
                 if is_first
                 else None
             )
@@ -317,8 +391,6 @@ def build_guitar_ir(
             measures_by_number[measure.number].events.append(note_event)
 
         if fragment_event_ids:
-            # Outgoing hammer/slide links should attach to the final tied fragment,
-            # because that is the sounding source immediately before the next note.
             event_id_by_source[item.source_index] = fragment_event_ids[-1]
 
     for measure in measures:
