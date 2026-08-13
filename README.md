@@ -57,6 +57,7 @@ MIDI file
 → InstrumentStream resolution
 → three-layer guitar candidate ranking
 → experimental guitar behavior profiles
+→ selected stream
 → rhythm-grid scoring + onset repair suggestions
 → phrase-level guitar fingering
 → basic articulation planning
@@ -97,25 +98,21 @@ fretpilot tracks song.mid
 fretpilot tracks song.mid -o tracks.json
 ```
 
-Analyze likely notation rhythm:
+Analyze one selected logical stream:
 
 ```bash
-fretpilot rhythm song.mid
+fretpilot rhythm song.mid --stream-id t0:ch2:p27
+fretpilot fingering song.mid --stream-id t0:ch2:p27
+fretpilot analyze song.mid --stream-id t0:ch2:p27 -o analysis.json
 ```
 
-Optimize guitar string/fret positions:
+When exactly one high-confidence guitar stream exists, the analysis commands can select it automatically. When multiple likely guitar streams exist, FretPilot stops and asks for an explicit `--stream-id` instead of silently choosing the wrong guitar part.
+
+A legacy physical-track selector remains available:
 
 ```bash
-fretpilot fingering song.mid
+fretpilot analyze song.mid --track 2
 ```
-
-Run the current end-to-end guitar intelligence stack:
-
-```bash
-fretpilot analyze song.mid -o analysis.json
-```
-
-`tracks` already works on logical instrument streams. The older `rhythm`, `fingering`, and `analyze` commands still select physical tracks; adding `--stream-id` is the next integration step.
 
 Current deterministic articulation vocabulary includes:
 
@@ -164,6 +161,6 @@ FretPilot/
 
 ## Status
 
-Early V0.1 implementation. Layered instrument-stream detection and the first deterministic guitar-analysis vertical slice are runnable. The next core milestone is to route a selected `InstrumentStream` through rhythm, fingering, and articulation analysis, then add phrase/section segmentation before expanding the behavior library.
+Early V0.1 implementation. Layered instrument-stream detection and stream-aware deterministic guitar analysis are runnable. The next core milestone is phrase/section segmentation so one stream can change behavior between riff, strumming, solo, and breakdown sections, followed by notation-quality duration spelling and Guitar IR construction.
 
 See [`docs/PRODUCT.md`](docs/PRODUCT.md), [`docs/GUITAR_DETECTION.md`](docs/GUITAR_DETECTION.md), and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the current product and architecture definitions.
