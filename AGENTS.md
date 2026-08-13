@@ -1,14 +1,14 @@
 # FretPilot AI Contributor Guide
 
-This file is the mandatory entry point for AI agents and new contributors.
+This file is the mandatory entry point for Codex, AI agents, and new contributors.
 
 ## Start here
 
 Read these in order before making a nontrivial change:
 
-1. [`docs/AI_AGENT_HANDOFF.md`](docs/AI_AGENT_HANDOFF.md) — **current state, task map, architecture boundaries, and recommended next work**.
-2. [`docs/ROADMAP.md`](docs/ROADMAP.md) — current prototype status and user-facing priority.
-3. Read the specialized project docs for the task family you are changing.
+1. [`docs/AI_AGENT_HANDOFF.md`](docs/AI_AGENT_HANDOFF.md) — **authoritative current state, task map, architecture boundaries, and recommended next work**.
+2. [`docs/ROADMAP.md`](docs/ROADMAP.md) — current prototype milestone and product priority.
+3. Read the specialized project docs only for the task family you are changing.
 
 Do not reconstruct architecture or priorities from old chat history when these repository documents already define them.
 
@@ -73,6 +73,16 @@ src/fretpilot/articulation/
 src/fretpilot/analysis/
 ```
 
+Current section-aware execution path is centered on:
+
+```text
+src/fretpilot/analysis/sections.py
+src/fretpilot/analysis/section_contexts.py
+src/fretpilot/analysis/section_aware.py
+src/fretpilot/guitar/fingering.py
+src/fretpilot/articulation/planner.py
+```
+
 ### Virtual guitar instruments (`VI-*`)
 
 Read:
@@ -114,13 +124,14 @@ Use `SE-*` only for shared infrastructure/governance. Do not duplicate work alre
 ## Non-negotiable design rules
 
 - A physical MIDI Track is not necessarily one instrument.
-- Preserve source Track, Channel, Program, ticks, and original note timing.
+- Preserve source Track, Channel, Program, ticks, original note timing, and stable source-note identity.
 - Resolve logical `InstrumentStream` objects before guitar analysis.
 - Track names and General MIDI programs are evidence, not absolute truth.
 - Layers 1–3 estimate guitar identity; Layer 4 / `PlayingContext` describes behavior/style.
 - `role`, `style`, and `technique family` are separate, composable dimensions.
 - Guitar Playing Knowledge is a soft prior; physical fretboard/playability constraints are hard constraints.
 - Learned/AI systems rank or advise among valid alternatives; they do not bypass deterministic physical/file constraints.
+- Section-local processing must remap results back to stream-wide `source_note_index` correctly.
 - Score timing and performance timing remain separate representations.
 - Canonical Guitar IR is versioned and independent of output adapters.
 - Product-specific keyswitch/CC/state mappings never belong in Guitar IR or Guitar Playing Knowledge.
@@ -157,4 +168,13 @@ Runtime must not learn directly from arbitrary web pages while processing a user
 
 ## Default priority when the user has not specified a task
 
-Prefer improving the existing prototype over expanding distant infrastructure. See `docs/AI_AGENT_HANDOFF.md` for the current recommended starting points.
+Use `docs/AI_AGENT_HANDOFF.md` as the source of truth. Current preferred work is:
+
+```text
+PV-002  musician-readable PDF/TAB
+GK-013  explicit hand-position state / cross-section continuity
+GK-005  generic Performance Plan consuming PerformancePreferences
+VI-002  migrate Ample product facts to the generic VI profile
+```
+
+Prefer improving the existing prototype over expanding distant crawling/training infrastructure.
