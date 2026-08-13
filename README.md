@@ -135,14 +135,22 @@ GitHub Actions also runs the test suite on pushes to `main` and pull requests.
 
 ```text
 FretPilot/
+├── AGENTS.md
 ├── README.md
 ├── pyproject.toml
 ├── docs/
+│   ├── README.md
 │   ├── PRODUCT.md
 │   ├── ARCHITECTURE.md
 │   ├── GUITAR_DETECTION.md
 │   ├── MUSIC_IR.md
-│   └── ROADMAP.md
+│   ├── ROADMAP.md
+│   └── projects/
+│       └── track-identification/
+│           ├── README.md
+│           ├── STATUS.md
+│           ├── BACKLOG.md
+│           └── TEST_PLAN.md
 ├── src/fretpilot/
 │   ├── midi/
 │   ├── detection/
@@ -159,8 +167,17 @@ FretPilot/
 └── .github/workflows/ci.yml
 ```
 
+## Development documentation
+
+- [`AGENTS.md`](AGENTS.md) — mandatory starting point for AI agents and contributors.
+- [`docs/README.md`](docs/README.md) — documentation index.
+- [`docs/projects/track-identification/README.md`](docs/projects/track-identification/README.md) — track-identification project hub.
+- [`docs/projects/track-identification/STATUS.md`](docs/projects/track-identification/STATUS.md) — implemented versus planned behavior.
+- [`docs/projects/track-identification/BACKLOG.md`](docs/projects/track-identification/BACKLOG.md) — prioritized task IDs and acceptance criteria.
+- [`docs/projects/track-identification/TEST_PLAN.md`](docs/projects/track-identification/TEST_PLAN.md) — fixture and evaluation quality gates.
+
 ## Status
 
-Early V0.1 implementation. Layered instrument-stream detection and stream-aware deterministic guitar analysis are runnable. The next core milestone is phrase/section segmentation so one stream can change behavior between riff, strumming, solo, and breakdown sections, followed by notation-quality duration spelling and Guitar IR construction.
+Early V0.1 implementation. Layered instrument-stream detection and stream-aware deterministic guitar analysis are runnable. The next core milestone is to establish a labeled/evaluable detection corpus and section/phrase segmentation so one stream can change behavior between riff, strumming, solo, and breakdown sections, followed by notation-quality duration spelling and Guitar IR construction.
 
 See [`docs/PRODUCT.md`](docs/PRODUCT.md), [`docs/GUITAR_DETECTION.md`](docs/GUITAR_DETECTION.md), and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the current product and architecture definitions.
