@@ -62,6 +62,44 @@ def test_phrase_optimizer_prefers_coherent_same_string_path() -> None:
     assert [note.fret for note in result.notes] == [0, 2, 3, 5]
 
 
+def test_stacked_fifths_use_adjacent_strings_instead_of_one_string_ladder() -> None:
+    # C#sus2-like cell from the Message in a Bottle reference: the same pitches
+    # could be forced onto the low E string at frets 9/16/23, but a guitarist
+    # naturally keeps the closed movable shape across A/D/G at 4/6/8.
+    result = optimize_fingering(_track([49, 56, 63]))
+
+    assert [note.string for note in result.notes] == [5, 4, 3]
+    assert [note.fret for note in result.notes] == [4, 6, 8]
+
+
+def test_repeating_sus2_riff_preserves_movable_shape_family() -> None:
+    # Golden fingering pattern derived from the supplied original TAB reference:
+    # C#sus2  A4-D6-G8
+    # Asus2   E5-A7-D9
+    # Bsus2   E7-A9-D11
+    # F#sus2  E2-A4-D6, followed by a same-string 6->7 move.
+    pitches = [
+        49, 56, 63,
+        45, 52, 59,
+        47, 54, 61,
+        42, 49, 56, 57,
+    ]
+    result = optimize_fingering(_track(pitches))
+
+    assert [note.string for note in result.notes] == [
+        5, 4, 3,
+        6, 5, 4,
+        6, 5, 4,
+        6, 5, 4, 4,
+    ]
+    assert [note.fret for note in result.notes] == [
+        4, 6, 8,
+        5, 7, 9,
+        7, 9, 11,
+        2, 4, 6, 7,
+    ]
+
+
 def test_simultaneous_chord_notes_use_distinct_strings() -> None:
     result = optimize_fingering(_chord_track([64, 67, 71]))
 
