@@ -35,7 +35,11 @@ def _transition_cost(previous: FretPosition, current: FretPosition) -> float:
     fret_distance = abs(current.fret - previous.fret)
     string_distance = abs(current.string - previous.string)
 
-    cost = fret_distance * 0.32 + string_distance * 0.70
+    # V0 is tuned for lead/riff material. String changes therefore cost more
+    # than a modest same-string hand movement because staying on a string keeps
+    # hammer-on, pull-off and slide possibilities available to the articulation
+    # stage. Chord/rhythm-guitar modes will use different weights later.
+    cost = fret_distance * 0.32 + string_distance * 1.45
 
     # Large hand relocations are possible but should need a musical reason.
     if fret_distance > 5:
@@ -43,7 +47,7 @@ def _transition_cost(previous: FretPosition, current: FretPosition) -> float:
 
     # Staying on one string is useful for legato/slide possibilities.
     if previous.string == current.string:
-        cost -= 0.20
+        cost -= 0.25
 
     return max(0.0, cost)
 
