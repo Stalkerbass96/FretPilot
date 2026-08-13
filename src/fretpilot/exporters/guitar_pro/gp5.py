@@ -144,6 +144,8 @@ def _apply_direct_effects(event: GuitarNoteEvent, note: gp.Note) -> None:
     for articulation in event.articulations:
         if articulation.type == "vibrato":
             note.effect.vibrato = True
+        elif articulation.type == "let_ring":
+            note.effect.letRing = True
 
 
 def _populate_measure(
