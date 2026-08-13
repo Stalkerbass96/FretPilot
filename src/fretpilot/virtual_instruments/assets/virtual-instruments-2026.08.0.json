@@ -1,0 +1,312 @@
+{
+  "snapshot_version": "2026.08.0",
+  "schema_version": "1",
+  "status": "approved",
+  "profiles": [
+    {
+      "profile_id": "ample-metal-eclipse-v4.1",
+      "profile_version": "1.0.0",
+      "knowledge_version": "2026.08.0",
+      "vendor": "Ample Sound",
+      "product": "Ample Metal Eclipse",
+      "version_family": "4.1",
+      "profile_schema_version": "1",
+      "maturity": "official_documented",
+      "verification_status": "plugin_unverified",
+      "instrument_model": "ESP Eclipse I",
+      "instrument_type": "six_string_electric_guitar",
+      "pickup_configuration": "bridge_pickup_sample_library",
+      "playable_min": 36,
+      "playable_max": 84,
+      "default_tuning": [40, 45, 50, 55, 59, 64],
+      "tuning_down_semitones_per_string": 2,
+      "sample_modes": ["mono_di", "stereo_di"],
+      "supported_formats": ["VST2", "VST3", "AU", "AAX", "Standalone"],
+      "supports_string_forcing": true,
+      "supports_position_forcing": true,
+      "supports_per_note_pitch_expression": null,
+      "pitch_bend_range_semitones": null,
+      "default_note_channel": 0,
+      "timing_parameters": {},
+      "capabilities": [
+        {
+          "intent": "sustain",
+          "support": "native",
+          "playable_min": 36,
+          "playable_max": 84,
+          "actions": [
+            {"kind": "keyswitch", "target": 24, "display_label": "C0", "state": "latched", "timing": "before_note"}
+          ],
+          "evidence_ids": ["ame-main-panel-manual"]
+        },
+        {
+          "intent": "pop",
+          "support": "native",
+          "playable_min": 36,
+          "playable_max": 84,
+          "actions": [
+            {"kind": "keyswitch", "target": 24, "display_label": "C0", "state": "latched", "timing": "before_note"},
+            {"kind": "velocity_range", "target": "note_velocity", "value": 127, "timing": "at_note", "conditions": {"settings": "pop_selected"}}
+          ],
+          "notes": "Velocity 127 is Pop or Pinch Harmonic according to the product setting.",
+          "evidence_ids": ["ame-main-panel-manual"]
+        },
+        {
+          "intent": "natural_harmonic",
+          "support": "native",
+          "playable_min": 36,
+          "playable_max": 81,
+          "actions": [
+            {"kind": "keyswitch", "target": 25, "display_label": "C#0", "state": "latched", "timing": "before_note"}
+          ],
+          "evidence_ids": ["ame-main-panel-manual"]
+        },
+        {
+          "intent": "palm_mute",
+          "support": "native",
+          "playable_min": 36,
+          "playable_max": 84,
+          "actions": [
+            {"kind": "keyswitch", "target": 26, "display_label": "D0", "state": "latched", "timing": "before_note"},
+            {"kind": "velocity_continuous", "target": "mute_depth", "value": "inverse", "timing": "at_note"}
+          ],
+          "notes": "Lower note velocity produces greater mute depth.",
+          "evidence_ids": ["ame-main-panel-manual"]
+        },
+        {
+          "intent": "slide_in",
+          "support": "native",
+          "playable_min": 38,
+          "playable_max": 84,
+          "actions": [
+            {"kind": "keyswitch", "target": 27, "display_label": "D#0", "state": "momentary", "timing": "before_note"},
+            {"kind": "automatic_reset", "target": "sustain", "timing": "after_note"}
+          ],
+          "notes": "The target note must be above fret 2.",
+          "evidence_ids": ["ame-main-panel-manual"]
+        },
+        {
+          "intent": "slide_out",
+          "support": "native",
+          "playable_min": 38,
+          "playable_max": 84,
+          "actions": [
+            {"kind": "keyswitch", "target": 27, "display_label": "D#0", "state": "momentary", "timing": "during_note"},
+            {"kind": "automatic_reset", "target": "sustain", "timing": "after_note"}
+          ],
+          "notes": "Trigger while a note above fret 3 is sounding.",
+          "evidence_ids": ["ame-main-panel-manual"]
+        },
+        {
+          "intent": "legato_slide",
+          "support": "native",
+          "playable_min": 37,
+          "playable_max": 84,
+          "actions": [
+            {"kind": "keyswitch", "target": 28, "display_label": "E0", "state": "momentary", "timing": "before_source_note"},
+            {"kind": "note_overlap", "target": "source_and_destination", "value": "required", "timing": "between_notes"},
+            {"kind": "velocity_continuous", "target": "slide_speed_and_interval", "timing": "at_keyswitch"},
+            {"kind": "automatic_reset", "target": "previous_articulation", "timing": "after_destination_note"}
+          ],
+          "notes": "Supports poly legato. High keyswitch velocity changes fret position; low velocity preserves it.",
+          "evidence_ids": ["ame-main-panel-manual"]
+        },
+        {
+          "intent": "hammer_on",
+          "support": "native",
+          "playable_min": 37,
+          "playable_max": 84,
+          "actions": [
+            {"kind": "keyswitch", "target": 29, "display_label": "F0", "state": "momentary", "timing": "before_source_note"},
+            {"kind": "note_overlap", "target": "source_and_destination", "value": "required", "timing": "between_notes"},
+            {"kind": "automatic_reset", "target": "previous_articulation", "timing": "after_destination_note"}
+          ],
+          "notes": "Supports poly legato. High keyswitch velocity changes fret position; low velocity preserves it.",
+          "evidence_ids": ["ame-main-panel-manual"]
+        },
+        {
+          "intent": "pull_off",
+          "support": "native",
+          "playable_min": 37,
+          "playable_max": 84,
+          "actions": [
+            {"kind": "keyswitch", "target": 29, "display_label": "F0", "state": "momentary", "timing": "before_source_note"},
+            {"kind": "note_overlap", "target": "source_and_destination", "value": "required", "timing": "between_notes"},
+            {"kind": "automatic_reset", "target": "previous_articulation", "timing": "after_destination_note"}
+          ],
+          "notes": "Supports poly legato. High keyswitch velocity changes fret position; low velocity preserves it.",
+          "evidence_ids": ["ame-main-panel-manual"]
+        },
+        {
+          "intent": "tap",
+          "support": "native",
+          "playable_min": 36,
+          "playable_max": 84,
+          "actions": [
+            {"kind": "keyswitch", "target": 30, "display_label": "F#0", "state": "latched", "timing": "before_note"}
+          ],
+          "evidence_ids": ["ame-main-panel-manual"]
+        },
+        {
+          "intent": "pinch_harmonic",
+          "support": "native",
+          "playable_min": 36,
+          "playable_max": 84,
+          "actions": [
+            {"kind": "keyswitch", "target": 31, "display_label": "G0", "state": "latched", "timing": "before_note"}
+          ],
+          "evidence_ids": ["ame-main-panel-manual"]
+        }
+      ],
+      "velocity_layers": [
+        {"context": "sustain", "minimum": 1, "maximum": 15, "result": "full_mute", "evidence_ids": ["ame-main-panel-manual"]},
+        {"context": "sustain", "minimum": 16, "maximum": 31, "result": "three_quarter_mute", "evidence_ids": ["ame-main-panel-manual"]},
+        {"context": "sustain", "minimum": 32, "maximum": 63, "result": "half_mute", "evidence_ids": ["ame-main-panel-manual"]},
+        {"context": "sustain", "minimum": 64, "maximum": 126, "result": "sustain", "evidence_ids": ["ame-main-panel-manual"]},
+        {"context": "sustain", "minimum": 127, "maximum": 127, "result": "pop_or_pinch_harmonic", "notes": "Selected by product settings.", "evidence_ids": ["ame-main-panel-manual"]}
+      ],
+      "controls": [
+        {
+          "capability_id": "sustain_palm_mute_velocity_switch",
+          "category": "articulation_state",
+          "support": "native",
+          "actions": [
+            {"kind": "compound_keyswitch", "target": "24+26", "display_label": "C0 + D0", "state": "latched", "timing": "before_note"},
+            {"kind": "velocity_continuous", "target": "sustain_or_palm_mute", "timing": "at_note"}
+          ],
+          "evidence_ids": ["ame-main-panel-manual"]
+        },
+        {
+          "capability_id": "string_assignment",
+          "category": "fretboard",
+          "support": "native",
+          "actions": [
+            {"kind": "keyswitch_range", "target": "18-23", "display_label": "F#-1..B-1", "value": "string_6_to_1", "timing": "before_note"},
+            {"kind": "velocity_threshold", "target": "position_change", "value": "high_changes_low_preserves", "timing": "at_keyswitch"}
+          ],
+          "evidence_ids": ["ame-main-panel-manual"]
+        },
+        {
+          "capability_id": "position_assignment",
+          "category": "fretboard",
+          "support": "native",
+          "actions": [
+            {"kind": "keyswitch", "target": 32, "display_label": "G#0", "state": "momentary", "timing": "before_value"},
+            {"kind": "note_range", "target": "36-54", "display_label": "C1..F#2", "value": "position", "timing": "after_keyswitch"}
+          ],
+          "notes": "Position range is five frets, or twelve frets in Melody Mode.",
+          "evidence_ids": ["ame-main-panel-manual"]
+        },
+        {
+          "capability_id": "position_mode",
+          "category": "fretboard",
+          "support": "native",
+          "actions": [
+            {"kind": "velocity_keyswitch", "target": 107, "display_label": "B6", "value": "melody_mode", "timing": "at_event", "conditions": {"velocity": "low"}},
+            {"kind": "velocity_keyswitch", "target": 107, "display_label": "B6", "value": "chord_mode", "timing": "at_event", "conditions": {"velocity": "high"}}
+          ],
+          "evidence_ids": ["ame-main-panel-manual"]
+        },
+        {
+          "capability_id": "open_string_first",
+          "category": "fretboard",
+          "support": "native",
+          "actions": [
+            {"kind": "velocity_keyswitch", "target": 104, "display_label": "G#6", "value": "enabled", "timing": "at_event", "conditions": {"velocity": "high"}},
+            {"kind": "velocity_keyswitch", "target": 104, "display_label": "G#6", "value": "disabled", "timing": "at_event", "conditions": {"velocity": "low"}}
+          ],
+          "notes": "Open-string priority applies to raw MIDI notes 36, 43, 48, 53, 57 and 62.",
+          "evidence_ids": ["ame-main-panel-manual"]
+        },
+        {
+          "capability_id": "auto_legato",
+          "category": "legato",
+          "support": "native",
+          "actions": [
+            {"kind": "velocity_keyswitch", "target": 99, "display_label": "D#6", "value": "auto_hammer_pull", "timing": "at_event", "conditions": {"velocity": "low"}},
+            {"kind": "velocity_keyswitch", "target": 99, "display_label": "D#6", "value": "auto_legato_slide", "timing": "at_event", "conditions": {"velocity": "high"}}
+          ],
+          "evidence_ids": ["ame-main-panel-manual"]
+        },
+        {
+          "capability_id": "vibrato",
+          "category": "pitch_expression",
+          "support": "native",
+          "actions": [
+            {"kind": "mod_wheel", "target": 1, "value": "vibrato_depth", "timing": "during_note"}
+          ],
+          "notes": "The manual describes Auto Vibrato as the default mode; depth of 0.75 or more can trigger vibrato noise.",
+          "evidence_ids": ["ame-main-panel-manual"]
+        },
+        {
+          "capability_id": "play_mode",
+          "category": "engine_mode",
+          "support": "native",
+          "actions": [
+            {"kind": "product_setting", "target": "play_mode", "value": "instrument"},
+            {"kind": "product_setting", "target": "play_mode", "value": "keyboard"},
+            {"kind": "product_setting", "target": "play_mode", "value": "solo"},
+            {"kind": "product_setting", "target": "play_mode", "value": "power_chord_or_fifth"},
+            {"kind": "product_setting", "target": "play_mode", "value": "octave"}
+          ],
+          "notes": "Instrument mode applies real-instrument rules; Keyboard mode does not; Solo mode is monophonic.",
+          "evidence_ids": ["ame-main-panel-manual"]
+        },
+        {
+          "capability_id": "note_repeater",
+          "category": "repetition",
+          "support": "native",
+          "actions": [
+            {"kind": "keyswitch", "target": 98, "display_label": "D6", "value": "repeat_previous_note", "timing": "at_event"}
+          ],
+          "evidence_ids": ["ame-main-panel-manual"]
+        },
+        {
+          "capability_id": "performance_effects",
+          "category": "effects",
+          "support": "native",
+          "actions": [
+            {"kind": "keyswitch", "target": 89, "display_label": "F5", "value": "scratch"},
+            {"kind": "keyswitch", "target": 90, "display_label": "F#5", "value": "slap"},
+            {"kind": "keyswitch", "target": 91, "display_label": "G5", "value": "muting"},
+            {"kind": "keyswitch", "target": 92, "display_label": "G#5", "value": "strum_mute"},
+            {"kind": "keyswitch", "target": 93, "display_label": "A5", "value": "downstroke_noise_1"},
+            {"kind": "keyswitch", "target": 94, "display_label": "A#5", "value": "upstroke_noise_1"},
+            {"kind": "keyswitch", "target": 95, "display_label": "B5", "value": "downstroke_noise_2"},
+            {"kind": "keyswitch", "target": 96, "display_label": "C6", "value": "upstroke_noise_2"},
+            {"kind": "keyswitch", "target": 101, "display_label": "F6", "value": "pick_scrape"},
+            {"kind": "keyswitch", "target": 102, "display_label": "F#6", "value": "fx_slide_1"},
+            {"kind": "keyswitch", "target": 103, "display_label": "G6", "value": "fx_slide_2"}
+          ],
+          "evidence_ids": ["ame-main-panel-manual"]
+        }
+      ],
+      "limitations": [
+        "The control map is transcribed from official documentation but has not yet been verified by playback in Ample Metal Eclipse 4.1.",
+        "Vendor note labels are retained only for display; renderers must use the raw MIDI numbers.",
+        "No exact keyswitch preroll or legato-overlap duration is claimed because the manual specifies ordering/overlap but not a calibrated tick value.",
+        "Channel-wide pitch expression and host-specific behavior still require plugin verification."
+      ],
+      "evidence": [
+        {
+          "evidence_id": "ame-product-page",
+          "source_type": "official_product_page",
+          "reference": "https://www.amplesound.net/en/pro-pd.asp?id=16",
+          "document_version": "Ample Metal Eclipse v4.1 product page",
+          "retrieved_on": "2026-08-13",
+          "status": "official",
+          "notes": "Product identity, sampled instrument, pickup library, formats, articulation count and low-range statement."
+        },
+        {
+          "evidence_id": "ame-main-panel-manual",
+          "source_type": "official_manual",
+          "reference": "https://amplesound.net/en/Main_Panel_Manual-AME.pdf",
+          "document_version": "AME Main Panel Manual available with v4.1 product",
+          "retrieved_on": "2026-08-13",
+          "status": "official",
+          "notes": "Articulation map, playable subranges, velocity layers, string/position controls, legato behavior, effects and tuning behavior."
+        }
+      ]
+    }
+  ]
+}

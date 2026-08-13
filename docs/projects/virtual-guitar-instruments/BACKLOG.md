@@ -10,7 +10,7 @@ Status markers:
 
 ## P0 — establish the adapter knowledge contract
 
-### [ ] VI-001 — Generic VirtualGuitarInstrumentProfile schema
+### [~] VI-001 — Generic VirtualGuitarInstrumentProfile schema
 
 Define a shared typed schema for virtual-guitar capabilities and control mappings.
 
@@ -52,7 +52,7 @@ Acceptance:
 - current `ample-guitar-sc-v4` profile remains selectable;
 - no musical intent changes are introduced by the migration.
 
-### [ ] VI-003 — Adapter registry
+### [x] VI-003 — Adapter registry
 
 Create a registry/factory that resolves a requested virtual-guitar profile independently of the CLI command implementation.
 
@@ -178,7 +178,7 @@ Acceptance:
 
 ## P1 — validation and evidence
 
-### [ ] VI-020 — Profile provenance schema
+### [~] VI-020 — Profile provenance schema
 
 Every nontrivial product mapping should record evidence such as:
 

@@ -40,9 +40,10 @@ This project manages the maintainable bridge between style/behavior understandin
 This project owns product/version-specific virtual-guitar capability and adapter knowledge:
 
 - [`projects/virtual-guitar-instruments/README.md`](projects/virtual-guitar-instruments/README.md) — boundary between real-guitar playing knowledge and software-instrument control knowledge.
+- [`VIRTUAL_INSTRUMENT_KNOWLEDGE_BASE.md`](VIRTUAL_INSTRUMENT_KNOWLEDGE_BASE.md) — versioned product-profile schema, evidence levels, and the initial Ample Metal Eclipse 4.1 knowledge asset.
 - [`projects/virtual-guitar-instruments/BACKLOG.md`](projects/virtual-guitar-instruments/BACKLOG.md) — stable `VI-xxx` tasks for profile schemas, capability negotiation, adapter state machines, compatibility, calibration, and future multi-product support.
 
-Current Ample Guitar support is the first implementation example. Future adapters must consume canonical Guitar IR without leaking product-specific keyswitch/CC behavior upstream.
+Current Ample Guitar support is the first implementation example. The registry now contains a documented Ample Metal Eclipse 4.1 profile; future adapters must consume canonical Guitar IR without leaking product-specific keyswitch/CC behavior upstream.
 
 ## Active project: track identification
 

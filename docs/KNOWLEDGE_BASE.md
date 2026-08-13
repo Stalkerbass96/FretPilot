@@ -37,10 +37,11 @@ The common entry schema can represent several independent domains:
 | Virtual instrument | How does a plugin realize canonical intent? | `VI-*` |
 | Evaluation/corrections | Did a candidate improve the result? | `SE-*` |
 
-Virtual-instrument profiles keep their provider-neutral models under
-`src/fretpilot/virtual_instruments/`. They may share snapshot/provenance
-infrastructure later, but vendor keyswitches and CC mappings must never enter
-Guitar Playing Knowledge.
+Virtual-instrument profiles keep their provider-neutral models and an
+independently pinned snapshot under `src/fretpilot/virtual_instruments/`.
+Vendor keyswitches and CC mappings must never enter Guitar Playing Knowledge.
+See [`VIRTUAL_INSTRUMENT_KNOWLEDGE_BASE.md`](VIRTUAL_INSTRUMENT_KNOWLEDGE_BASE.md)
+for the profile contract and initial Ample Metal Eclipse asset.
 
 ## Common contract
 
@@ -116,7 +117,8 @@ explicit provenance and allowed-use decision before ingestion.
 - Runtime uses one built-in pinned snapshot; selecting an external approved
   snapshot is still pending.
 - Shape prototypes are represented but not yet consumed by fingering.
-- Behavior profiles and virtual-instrument profiles have not yet migrated into
-  this common asset envelope.
+- Behavior profiles have not yet migrated into this common asset envelope.
+- Virtual-instrument profiles intentionally use a separately pinned snapshot;
+  a shared release manifest across both snapshot families is still pending.
 - No user-correction or promotion UI exists yet.
 - Knowledge release reports and shadow-comparison tooling remain future work.

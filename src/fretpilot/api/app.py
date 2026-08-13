@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse
 
 from fretpilot.api.jobs import JobManager, OutputRequest
 from fretpilot.rewrite import DEFAULT_MIDI_FIDELITY
+from fretpilot.virtual_instruments import get_builtin_virtual_instrument_registry
 
 DEFAULT_MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 UPLOAD_CHUNK_BYTES = 1024 * 1024
@@ -62,6 +63,31 @@ def create_app(
     @app.get("/api/health")
     def health() -> dict[str, str]:
         return {"status": "ready", "engine": "fretpilot"}
+
+    @app.get("/api/virtual-instruments")
+    def list_virtual_instruments() -> dict[str, object]:
+        registry = get_builtin_virtual_instrument_registry()
+        return {
+            "snapshot_version": registry.snapshot.snapshot_version,
+            "profiles": [
+                {
+                    "profile_id": profile.profile_id,
+                    "vendor": profile.vendor,
+                    "product": profile.product,
+                    "version_family": profile.version_family,
+                    "maturity": profile.maturity,
+                    "verification_status": profile.verification_status,
+                    "playable_range": {
+                        "minimum": profile.playable_min,
+                        "maximum": profile.playable_max,
+                    },
+                    "articulation_intents": [
+                        capability.intent for capability in profile.capabilities
+                    ],
+                }
+                for profile in registry.list()
+            ],
+        }
 
     @app.post("/api/jobs", status_code=status.HTTP_202_ACCEPTED)
     async def create_job(

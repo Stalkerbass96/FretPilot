@@ -45,6 +45,39 @@ def test_health_reports_ready_engine(tmp_path: Path) -> None:
     assert response.json() == {"status": "ready", "engine": "fretpilot"}
 
 
+def test_api_lists_virtual_instrument_knowledge_profiles(tmp_path: Path) -> None:
+    with TestClient(create_app(job_root=tmp_path)) as client:
+        response = client.get("/api/virtual-instruments")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["snapshot_version"] == "2026.08.0"
+    assert payload["profiles"] == [
+        {
+            "profile_id": "ample-metal-eclipse-v4.1",
+            "vendor": "Ample Sound",
+            "product": "Ample Metal Eclipse",
+            "version_family": "4.1",
+            "maturity": "official_documented",
+            "verification_status": "plugin_unverified",
+            "playable_range": {"minimum": 36, "maximum": 84},
+            "articulation_intents": [
+                "sustain",
+                "pop",
+                "natural_harmonic",
+                "palm_mute",
+                "slide_in",
+                "slide_out",
+                "legato_slide",
+                "hammer_on",
+                "pull_off",
+                "tap",
+                "pinch_harmonic",
+            ],
+        }
+    ]
+
+
 def test_job_runs_real_engine_and_exposes_selected_downloads(tmp_path: Path) -> None:
     with TestClient(create_app(job_root=tmp_path)) as client:
         response = client.post(
