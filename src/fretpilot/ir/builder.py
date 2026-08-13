@@ -220,12 +220,15 @@ def build_guitar_ir(
 
     for item in prepared:
         base_id = f"n-{item.source_index + 1:05d}"
-        event_id_by_source[item.source_index] = base_id
         fragments = _split_across_measures(
             item.start_beat,
             item.duration_beats,
             boundaries,
         )
+        fragment_event_ids = [
+            base_id if len(fragments) == 1 else f"{base_id}-{index + 1}"
+            for index in range(len(fragments))
+        ]
         fingering = fingering_by_index[item.source_index]
         decisions = articulations_by_index[item.source_index]
 
@@ -257,11 +260,7 @@ def build_guitar_ir(
         for fragment_index, (measure, fragment_start, fragment_duration) in enumerate(
             fragments
         ):
-            event_id = (
-                base_id
-                if len(fragments) == 1
-                else f"{base_id}-{fragment_index + 1}"
-            )
+            event_id = fragment_event_ids[fragment_index]
             is_first = fragment_index == 0
             is_last = fragment_index == len(fragments) - 1
 
@@ -316,6 +315,11 @@ def build_guitar_ir(
                 ),
             )
             measures_by_number[measure.number].events.append(note_event)
+
+        if fragment_event_ids:
+            # Outgoing hammer/slide links should attach to the final tied fragment,
+            # because that is the sounding source immediately before the next note.
+            event_id_by_source[item.source_index] = fragment_event_ids[-1]
 
     for measure in measures:
         measure.events.sort(
