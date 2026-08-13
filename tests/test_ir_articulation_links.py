@@ -32,8 +32,10 @@ def test_hammer_source_uses_final_fragment_of_tied_note() -> None:
         index=0,
         name="Lead Guitar",
         notes=[
-            _note(pitch=64, start_beat=3.5, duration_beats=1.0),
-            _note(pitch=66, start_beat=4.5, duration_beats=0.5),
+            # The first note crosses the 4/4 barline and the second attack is a
+            # connected half-beat later, which satisfies the V0 HP rule.
+            _note(pitch=64, start_beat=3.75, duration_beats=0.5),
+            _note(pitch=66, start_beat=4.25, duration_beats=0.5),
         ],
     )
     timeline = NormalizedTimeline(
