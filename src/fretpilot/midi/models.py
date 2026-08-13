@@ -1,8 +1,9 @@
 """Canonical data structures produced by FretPilot's MIDI import layer.
 
 The importer intentionally preserves raw MIDI ticks while also exposing musical
-beat values. Later rhythm-repair stages should never need to guess what the
-original file contained.
+beat values. Later stages should never need to guess what the original file
+contained. Physical MIDI tracks, channels, and program changes remain distinct
+because a type-0 MIDI file may place an entire arrangement in one track.
 """
 
 from __future__ import annotations
@@ -28,6 +29,17 @@ class TimeSignatureEvent:
 
 
 @dataclass(slots=True)
+class ProgramEvent:
+    track_index: int
+    channel: int
+    tick: int
+    beat: float
+    program: int
+    program_name: str
+    family: str
+
+
+@dataclass(slots=True)
 class NormalizedNote:
     track_index: int
     track_name: str
@@ -38,6 +50,9 @@ class NormalizedNote:
     duration_ticks: int
     start_beat: float
     duration_beats: float
+    # Program active when note-on occurred. None means the source did not
+    # provide an explicit program before the note.
+    program: int | None = None
 
     @property
     def end_tick(self) -> int:
@@ -53,6 +68,7 @@ class NormalizedTrack:
     index: int
     name: str
     notes: list[NormalizedNote] = field(default_factory=list)
+    instrument_name: str | None = None
 
 
 @dataclass(slots=True)
@@ -72,6 +88,7 @@ class NormalizedTimeline:
     tempo_events: list[TempoEvent]
     time_signature_events: list[TimeSignatureEvent]
     tracks: list[NormalizedTrack]
+    program_events: list[ProgramEvent] = field(default_factory=list)
     diagnostics: list[Diagnostic] = field(default_factory=list)
 
     @property
@@ -90,8 +107,9 @@ class NormalizedTimeline:
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
         payload["summary"] = {
-            "track_count": len(self.tracks),
+            "physical_track_count": len(self.tracks),
             "note_count": self.note_count,
+            "program_event_count": len(self.program_events),
             "duration_beats": self.duration_beats,
         }
         return payload
