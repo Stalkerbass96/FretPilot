@@ -253,7 +253,7 @@ Future work:
 
 ## P2 — expand style knowledge
 
-Snapshot `2026.08.1` adds a reviewable editorial candidate catalog derived from
+Snapshot `2026.08.2` adds a reviewable editorial candidate catalog derived from
 the user-provided *Total Rock Guitar* reference: 71 entries across all 22
 lessons. This advances representation and source coverage for `GK-020` through
 `GK-024`, but does not mark runtime integration or evaluation complete. See

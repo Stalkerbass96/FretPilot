@@ -4,6 +4,7 @@ from fretpilot.knowledge.models import (
     KnowledgeEntry,
     KnowledgeEvaluation,
     KnowledgeProvenance,
+    KnowledgeSource,
     KnowledgeSnapshot,
 )
 from fretpilot.knowledge.registry import (
@@ -48,6 +49,7 @@ __all__ = [
     "KnowledgeEntry",
     "KnowledgeEvaluation",
     "KnowledgeProvenance",
+    "KnowledgeSource",
     "KnowledgeSnapshot",
     "KnowledgeRegistry",
     "get_builtin_knowledge_registry",

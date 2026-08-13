@@ -1,6 +1,6 @@
 # FretPilot Knowledge Base
 
-> Current built-in snapshot: `2026.08.1`
+> Current built-in snapshot: `2026.08.2`
 
 ## Purpose
 
@@ -58,6 +58,17 @@ provenance
 evaluation identity
 ```
 
+Source metadata is normalized at snapshot level:
+
+```text
+KnowledgeSnapshot.sources: one record per book/dataset/reference
+KnowledgeEntry.provenance.source_ids: zero or more reusable source links
+```
+
+Musical payloads never contain source titles, lesson/page locators, or other
+source-specific organization. When another source supports an existing rule,
+append its `source_id`; do not duplicate the rule.
+
 Lifecycle status is explicit:
 
 ```text
@@ -70,7 +81,7 @@ describes how mature the musical interpretation is.
 
 ## Current built-in asset
 
-`src/fretpilot/knowledge/assets/knowledge-2026.08.1.json` currently contains:
+`src/fretpilot/knowledge/assets/knowledge-2026.08.2.json` currently contains:
 
 - the six existing Playing Profiles (`solo`, `riff`, `strumming`, `metal`,
   `jazz`, `rock_arpeggio`) as approved runtime entries;
@@ -81,9 +92,10 @@ describes how mature the musical interpretation is.
   phrase patterns, harmonic contexts, and additional shape families.
 
 The reference-derived candidates store concise rules in original wording,
-lesson-level provenance, allowed-use notes, engine targets, hard constraints,
-soft preferences, and exceptions. They do not contain song transcriptions,
-continuous TAB, page images, or audio. See
+engine targets, hard constraints, soft preferences, and exceptions. All 71
+entries point to one normalized source record; none embeds textbook locations
+inside its musical payload. They do not contain song transcriptions, continuous
+TAB, page images, or audio. See
 [`projects/guitar-playing-knowledge/TRG_SOURCE_REVIEW.md`](projects/guitar-playing-knowledge/TRG_SOURCE_REVIEW.md).
 
 Shape coordinates increment `string_offset` toward higher-pitched strings;

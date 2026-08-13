@@ -59,6 +59,7 @@ export type KnowledgeEntry = {
     reference: string | null;
     license: string | null;
     notes: string;
+    source_ids: string[];
   };
   evaluation: {
     benchmark_version: string | null;
@@ -67,10 +68,22 @@ export type KnowledgeEntry = {
   };
 };
 
+export type KnowledgeSource = {
+  source_id: string;
+  source_type: string;
+  title: string;
+  creator: string | null;
+  reference: string | null;
+  license: string | null;
+  allowed_uses: string[];
+  notes: string;
+};
+
 export type KnowledgeSnapshot = {
   snapshot_version: string;
   schema_version: string;
   status: string;
+  sources: KnowledgeSource[];
   entries: KnowledgeEntry[];
 };
 

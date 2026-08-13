@@ -47,12 +47,12 @@ def test_shape_library_contains_relative_reusable_prototypes() -> None:
     assert power_chord.status == "candidate"
 
 
-def test_total_rock_guitar_candidate_covers_every_lesson() -> None:
+def test_total_rock_guitar_candidates_reference_one_shared_source() -> None:
     registry = get_builtin_knowledge_registry()
     entries = [
         entry
         for entry in registry.query(domain="guitar_playing")
-        if entry.provenance.source_type == "user_provided_reference"
+        if "source.book.total_rock_guitar" in entry.provenance.source_ids
     ]
 
     assert len(entries) == 71
@@ -65,16 +65,18 @@ def test_total_rock_guitar_candidate_covers_every_lesson() -> None:
     }
     assert all(entry.status == "candidate" for entry in entries)
     assert all(entry.evaluation.status == "untested" for entry in entries)
-    assert all(entry.provenance.license for entry in entries)
 
-    covered_lessons = {
-        lesson
+    assert all("source_sections" not in entry.payload for entry in entries)
+    assert all(
+        entry.provenance.source_ids == ("source.book.total_rock_guitar",)
         for entry in entries
-        for section in entry.payload["source_sections"]
-        for lesson in range(1, 23)
-        if section.startswith(f"Lesson {lesson} ")
-    }
-    assert covered_lessons == set(range(1, 23))
+    )
+    assert len(registry.snapshot.sources) == 1
+    source = registry.snapshot.sources[0]
+    assert source.source_id == "source.book.total_rock_guitar"
+    assert source.title == "Total Rock Guitar"
+    assert source.license == "Copyrighted reference; redistribution not granted"
+    assert source.allowed_uses == ("analysis", "derived_abstractions")
 
 
 def test_reference_candidates_do_not_change_approved_runtime_profiles() -> None:
@@ -136,4 +138,34 @@ def test_loader_rejects_an_incompatible_snapshot_schema(tmp_path: Path) -> None:
     )
 
     with pytest.raises(ValueError, match="Unsupported knowledge schema"):
+        load_knowledge_snapshot(path)
+
+
+def test_loader_rejects_an_unknown_source_reference(tmp_path: Path) -> None:
+    path = tmp_path / "unknown-source.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1",
+                "snapshot_version": "candidate-v1",
+                "status": "candidate",
+                "sources": [],
+                "entries": [
+                    {
+                        "knowledge_id": "gk.rule.example",
+                        "domain": "guitar_playing",
+                        "kind": "execution_rule",
+                        "schema_version": "1",
+                        "knowledge_version": "candidate-v1",
+                        "status": "candidate",
+                        "payload": {},
+                        "provenance": {"source_ids": ["source.missing"]},
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="unknown sources"):
         load_knowledge_snapshot(path)

@@ -11,8 +11,8 @@ from typing import Iterable, Mapping
 from fretpilot.knowledge.models import KnowledgeEntry, KnowledgeSnapshot
 
 
-BUILTIN_KNOWLEDGE_SNAPSHOT_VERSION = "2026.08.1"
-BUILTIN_KNOWLEDGE_RESOURCE = "assets/knowledge-2026.08.1.json"
+BUILTIN_KNOWLEDGE_SNAPSHOT_VERSION = "2026.08.2"
+BUILTIN_KNOWLEDGE_RESOURCE = "assets/knowledge-2026.08.2.json"
 SUPPORTED_KNOWLEDGE_SCHEMA_VERSION = "1"
 
 

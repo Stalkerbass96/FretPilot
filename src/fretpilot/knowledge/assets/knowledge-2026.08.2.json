@@ -1,14 +1,29 @@
 {
+  "snapshot_version": "2026.08.2",
   "schema_version": "1",
-  "snapshot_version": "2026.08.1",
   "status": "approved",
+  "sources": [
+    {
+      "source_id": "source.book.total_rock_guitar",
+      "source_type": "user_provided_reference",
+      "title": "Total Rock Guitar",
+      "creator": "Troy Stetina",
+      "reference": "User-provided PDF review copy",
+      "license": "Copyrighted reference; redistribution not granted",
+      "allowed_uses": [
+        "analysis",
+        "derived_abstractions"
+      ],
+      "notes": "Registered once at snapshot level. Knowledge entries reference this source by ID and remain source-independent semantic records."
+    }
+  ],
   "entries": [
     {
       "knowledge_id": "gk.profile.solo",
       "domain": "guitar_playing",
       "kind": "playing_profile",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "approved",
       "scope": {
         "roles": [
@@ -53,7 +68,7 @@
       "domain": "guitar_playing",
       "kind": "playing_profile",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "approved",
       "scope": {
         "roles": [
@@ -102,7 +117,7 @@
       "domain": "guitar_playing",
       "kind": "playing_profile",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "approved",
       "scope": {
         "roles": [
@@ -151,7 +166,7 @@
       "domain": "guitar_playing",
       "kind": "playing_profile",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "approved",
       "scope": {
         "styles": [
@@ -204,7 +219,7 @@
       "domain": "guitar_playing",
       "kind": "playing_profile",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "approved",
       "scope": {
         "styles": [
@@ -256,7 +271,7 @@
       "domain": "guitar_playing",
       "kind": "playing_profile",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "approved",
       "scope": {
         "technique_families": [
@@ -296,7 +311,7 @@
       "domain": "guitar_playing",
       "kind": "shape_prototype",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -349,7 +364,7 @@
       "domain": "guitar_playing",
       "kind": "shape_prototype",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -396,7 +411,7 @@
       "domain": "guitar_playing",
       "kind": "shape_prototype",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -447,7 +462,7 @@
       "domain": "guitar_playing",
       "kind": "shape_prototype",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -500,7 +515,7 @@
       "domain": "guitar_playing",
       "kind": "shape_family",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -514,9 +529,6 @@
         "label": "四度双音形状",
         "description": "相邻低音弦上的纯四度双音，可用单指横按并整体移动。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 1 — Fourth-Dyad Power Chords, Sliding Chords, Rests"
-        ],
         "principles": [
           "相邻弦、同品通常构成纯四度双音。",
           "保持形状整体移动比逐音重新定位更稳定。"
@@ -533,10 +545,13 @@
         "formula": "root + perfect fourth"
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 1 — Fourth-Dyad Power Chords, Sliding Chords, Rests",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -549,7 +564,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -564,9 +579,6 @@
         "label": "和弦整体滑动",
         "description": "滑动和弦时维持按弦压力，整只左手同步移动且不重复拨弦。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 1 — Fourth-Dyad Power Chords, Sliding Chords, Rests"
-        ],
         "principles": [
           "滑音连接的是两个稳定和弦形状。"
         ],
@@ -584,10 +596,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 1 — Fourth-Dyad Power Chords, Sliding Chords, Rests",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -600,7 +615,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -617,10 +632,6 @@
         "label": "休止处双手联合止音",
         "description": "休止不是被动缩短音符，而是由左右手共同产生的明确静音动作。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 1 — Fourth-Dyad Power Chords, Sliding Chords, Rests",
-          "Lesson 17 — Sixteenth Rests, Diagonal Blues Scale and Question/Answer Phrasing"
-        ],
         "principles": [
           "左手释放按弦压力但仍接触琴弦。",
           "右手掌协助压制全部弦的残响与噪声。"
@@ -637,10 +648,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 1 — Fourth-Dyad Power Chords, Sliding Chords, Rests; Lesson 17 — Sixteenth Rests, Diagonal Blues Scale and Question/Answer Phrasing",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -653,7 +667,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -665,9 +679,6 @@
         "label": "相邻弦噪声抑制",
         "description": "单音 Riff 需要利用左手指尖、侧面或下缘抑制未演奏的相邻弦。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 2 — Single-Note Riffs, Rolling String Changes, Hammer-Ons and Pull-Offs"
-        ],
         "principles": [
           "目标音正确不代表演奏干净；相邻弦也必须纳入动作规划。"
         ],
@@ -683,10 +694,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 2 — Single-Note Riffs, Rolling String Changes, Hammer-Ons and Pull-Offs",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -699,7 +713,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -714,9 +728,6 @@
         "label": "同品相邻弦滚指",
         "description": "同一品位跨相邻弦时，优先用同一手指滚动接触而非完全抬起重按。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 2 — Single-Note Riffs, Rolling String Changes, Hammer-Ons and Pull-Offs"
-        ],
         "principles": [
           "滚指能缩短动作路径并减少断裂。"
         ],
@@ -733,10 +744,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 2 — Single-Note Riffs, Rolling String Changes, Hammer-Ons and Pull-Offs",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -749,7 +763,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -764,9 +778,6 @@
         "label": "击勾弦同弦关系",
         "description": "Hammer-on、pull-off 与 trill 的相邻事件应落在同一根弦上，并由清晰的品位方向决定技术。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 2 — Single-Note Riffs, Rolling String Changes, Hammer-Ons and Pull-Offs"
-        ],
         "principles": [
           "音高上行对应 hammer-on 候选，下行对应 pull-off 候选。",
           "连续往返可组成 trill。"
@@ -782,10 +793,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 2 — Single-Note Riffs, Rolling String Changes, Hammer-Ons and Pull-Offs",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -798,7 +812,7 @@
       "domain": "guitar_playing",
       "kind": "shape_family",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -814,9 +828,6 @@
         "label": "根音—五度 Power Chord 双音",
         "description": "以根音与纯五度组成的可移动双音，是摇滚节奏吉他的核心形状。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 3 — Fifth-Dyad Power Chords, Palm Muting"
-        ],
         "principles": [
           "低音弦根音与高一根弦、前进两品的音通常构成纯五度。",
           "开放弦根音是同一音程结构的边界变体。"
@@ -834,10 +845,13 @@
         "formula": "root + perfect fifth"
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 3 — Fifth-Dyad Power Chords, Palm Muting",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -850,7 +864,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -865,9 +879,6 @@
         "label": "琴桥侧 Palm Mute",
         "description": "右手掌在琴桥附近接触弦尾，以控制延音、动态与重型音色。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 3 — Fifth-Dyad Power Chords, Palm Muting"
-        ],
         "principles": [
           "接触点越远离琴桥通常越闷。",
           "Palm mute 是连续深度而不是单一开关。"
@@ -885,10 +896,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 3 — Fifth-Dyad Power Chords, Palm Muting",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -901,7 +915,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -916,9 +930,6 @@
         "label": "琶音保持和弦形状",
         "description": "琶音按顺序发出和弦音时，应尽量保持和弦形状并允许可兼容声部延续。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 4 — Arpeggiation and Three-String Power Chords"
-        ],
         "principles": [
           "琶音是和弦音的序列化表达。"
         ],
@@ -936,10 +947,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 4 — Arpeggiation and Three-String Power Chords",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -952,7 +966,7 @@
       "domain": "guitar_playing",
       "kind": "rhythm_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -967,9 +981,6 @@
         "label": "琶音拨弦方向服从运动效率",
         "description": "琶音可按弦移动方向选择下拨或上拨，但这是人体工学偏好而非绝对规则。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 4 — Arpeggiation and Three-String Power Chords"
-        ],
         "principles": [
           "拨弦方向应减少跨弦绕行。"
         ],
@@ -985,10 +996,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 4 — Arpeggiation and Three-String Power Chords",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1001,7 +1015,7 @@
       "domain": "guitar_playing",
       "kind": "shape_family",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1017,9 +1031,6 @@
         "label": "根音—五度—八度 Power Chord",
         "description": "在双音 Power Chord 上加入根音八度，形成三弦可移动形状。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 4 — Arpeggiation and Three-String Power Chords"
-        ],
         "principles": [
           "第三个声部强化根音而不引入大小调三度。"
         ],
@@ -1035,10 +1046,13 @@
         "formula": "root + perfect fifth + octave"
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 4 — Arpeggiation and Three-String Power Chords",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1051,7 +1065,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1068,12 +1082,6 @@
         "label": "小五声音阶可移动框架",
         "description": "小五声音阶 Box 由主音锚定，可整体移调并通过上下延伸连接把位。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 5 — Minor Pentatonic, String Bending, Vibrato, Major Barre Chords",
-          "Lesson 9 — Second-Position Moves, E Minor Pentatonic, Bend Vibrato and Oblique Bends",
-          "Lesson 16 — Pentatonic Boxes, Muted Offbeats, Repeating Licks and Rakes",
-          "Lesson 21 — Phrygian, Pentatonic Wrap-Up and Picking Strategies"
-        ],
         "principles": [
           "同一音级集合可在多个把位重叠连接。",
           "高把位品距变窄时可调整指法。"
@@ -1089,10 +1097,13 @@
         "formula": "1, ♭3, 4, 5, ♭7"
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 5 — Minor Pentatonic, String Bending, Vibrato, Major Barre Chords; Lesson 9 — Second-Position Moves, E Minor Pentatonic, Bend Vibrato and Oblique Bends; Lesson 16 — Pentatonic Boxes, Muted Offbeats, Repeating Licks and Rakes; Lesson 21 — Phrygian, Pentatonic Wrap-Up and Picking Strategies",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1105,7 +1116,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1121,10 +1132,6 @@
         "label": "推弦目标音与手指支撑",
         "description": "推弦首先是目标音高约束；常由无名指主推、中指辅助，以提高稳定性。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 5 — Minor Pentatonic, String Bending, Vibrato, Major Barre Chords",
-          "Lesson 14 — Fret-Hand Muting, Harmonics and Bend Shapes"
-        ],
         "principles": [
           "半音、全音等推弦必须到达可听目标音。"
         ],
@@ -1142,10 +1149,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 5 — Minor Pentatonic, String Bending, Vibrato, Major Barre Chords; Lesson 14 — Fret-Hand Muting, Harmonics and Bend Shapes",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1158,7 +1168,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1173,9 +1183,6 @@
         "label": "预推弦与释放",
         "description": "预推弦在发音前到达目标张力，发音后可向原始音高释放。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 5 — Minor Pentatonic, String Bending, Vibrato, Major Barre Chords"
-        ],
         "principles": [
           "预推弦的起音音高与左手初始品位不同。"
         ],
@@ -1191,10 +1198,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 5 — Minor Pentatonic, String Bending, Vibrato, Major Barre Chords",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1207,7 +1217,7 @@
       "domain": "guitar_playing",
       "kind": "shape_family",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1223,9 +1233,6 @@
         "label": "大调横按和弦族",
         "description": "以开放和弦形状为模板的可移动大调横按和弦族。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 5 — Minor Pentatonic, String Bending, Vibrato, Major Barre Chords"
-        ],
         "principles": [
           "横按承担可移动上枕，根音位置决定和弦名称。"
         ],
@@ -1240,10 +1247,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 5 — Minor Pentatonic, String Bending, Vibrato, Major Barre Chords",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1256,7 +1266,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1272,9 +1282,6 @@
         "label": "十二小节 Blues 框架",
         "description": "以 I、IV、V 为核心的十二小节功能循环，末尾可通过 turnaround 返回起点。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 6 — 12-Bar Blues, Seventh Chords, Comping Patterns"
-        ],
         "principles": [
           "段落功能比绝对和弦名称更适合移调与匹配。"
         ],
@@ -1289,10 +1296,13 @@
         "formula": "12-bar I–IV–V with turnaround"
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 6 — 12-Bar Blues, Seventh Chords, Comping Patterns",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1305,7 +1315,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1321,9 +1331,6 @@
         "label": "属七和弦 Blues 语境",
         "description": "Blues 中 I、IV、V 可采用属七性质，并允许小三度向大三度的单音趋近。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 6 — 12-Bar Blues, Seventh Chords, Comping Patterns"
-        ],
         "principles": [
           "同一语境可并存大小调色彩。"
         ],
@@ -1339,10 +1346,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 6 — 12-Bar Blues, Seventh Chords, Comping Patterns",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1355,7 +1365,7 @@
       "domain": "guitar_playing",
       "kind": "rhythm_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1371,9 +1381,6 @@
         "label": "二、四拍 Backbeat 重音",
         "description": "摇滚伴奏可在第 2、4 拍加强重音，以对应鼓组军鼓的 backbeat。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 6 — 12-Bar Blues, Seventh Chords, Comping Patterns"
-        ],
         "principles": [],
         "hard_constraints": [],
         "soft_preferences": [
@@ -1387,10 +1394,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 6 — 12-Bar Blues, Seventh Chords, Comping Patterns",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1403,7 +1413,7 @@
       "domain": "guitar_playing",
       "kind": "phrase_pattern",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1418,9 +1428,6 @@
         "label": "和弦骨架上的 Comping 变化",
         "description": "在固定功能和声上通过六度音、节奏空隙和短趋近音形成伴奏变化。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 6 — 12-Bar Blues, Seventh Chords, Comping Patterns"
-        ],
         "principles": [
           "伴奏变化应保留和声功能与律动支点。"
         ],
@@ -1434,10 +1441,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 6 — 12-Bar Blues, Seventh Chords, Comping Patterns",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1450,7 +1460,7 @@
       "domain": "guitar_playing",
       "kind": "rhythm_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1465,9 +1475,6 @@
         "label": "重音和弦与闷音交替",
         "description": "完整重音和弦可与 Palm-muted 和弦或踏板音交替，建立摇滚 Riff 的动态层次。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 7 — Accent-Muting Patterns, Alternate Picking, D-Form Power Chords"
-        ],
         "principles": [
           "重音与闷音是同一节奏型内的对比关系。"
         ],
@@ -1483,10 +1490,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 7 — Accent-Muting Patterns, Alternate Picking, D-Form Power Chords",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1499,7 +1509,7 @@
       "domain": "guitar_playing",
       "kind": "rhythm_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1514,12 +1524,6 @@
         "label": "交替拨弦细分连续性",
         "description": "交替拨弦由节拍细分驱动：连续细分预留连续上下拨，漏拨或连音不打断手部相位。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 7 — Accent-Muting Patterns, Alternate Picking, D-Form Power Chords",
-          "Lesson 11 — Major Pentatonic and Moving Riffs Through a Progression",
-          "Lesson 12 — Blues Scale, Barre Chords, Rhythmic Displacement, Sixteenth Offbeats",
-          "Lesson 21 — Phrygian, Pentatonic Wrap-Up and Picking Strategies"
-        ],
         "principles": [
           "常见基线是拍点下拨、反拍上拨。",
           "未实际拨响的细分仍占用拨弦相位。"
@@ -1536,10 +1540,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 7 — Accent-Muting Patterns, Alternate Picking, D-Form Power Chords; Lesson 11 — Major Pentatonic and Moving Riffs Through a Progression; Lesson 12 — Blues Scale, Barre Chords, Rhythmic Displacement, Sixteenth Offbeats; Lesson 21 — Phrygian, Pentatonic Wrap-Up and Picking Strategies",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1552,7 +1559,7 @@
       "domain": "guitar_playing",
       "kind": "shape_family",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1567,9 +1574,6 @@
         "label": "D 形 Power Chord",
         "description": "由 D 形开放和弦抽取根音与五度形成的高音区 Power Chord 变体。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 7 — Accent-Muting Patterns, Alternate Picking, D-Form Power Chords"
-        ],
         "principles": [
           "可与 E 形、A 形 Power Chord 组成跨把位形状族。"
         ],
@@ -1582,10 +1586,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 7 — Accent-Muting Patterns, Alternate Picking, D-Form Power Chords",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1598,7 +1605,7 @@
       "domain": "guitar_playing",
       "kind": "shape_family",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1615,9 +1622,6 @@
         "label": "常用开放和弦族",
         "description": "E、A、D、G、C 等开放和弦形状应作为低把位高共鸣候选。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 8 — Open Chords, Strumming Patterns, Key of A Major"
-        ],
         "principles": [
           "开放弦提高共鸣，也限制整体移调。"
         ],
@@ -1635,10 +1639,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 8 — Open Chords, Strumming Patterns, Key of A Major",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1651,7 +1658,7 @@
       "domain": "guitar_playing",
       "kind": "rhythm_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1667,9 +1674,6 @@
         "label": "扫弦动作连续性",
         "description": "扫弦手维持连续上下摆动；延音、休止或漏拨只跳过触弦，不重置运动方向。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 8 — Open Chords, Strumming Patterns, Key of A Major"
-        ],
         "principles": [
           "拍点通常下扫，反拍通常上扫。"
         ],
@@ -1683,10 +1687,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 8 — Open Chords, Strumming Patterns, Key of A Major",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1699,7 +1706,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1712,10 +1719,6 @@
         "label": "大调顺阶和弦族",
         "description": "大调音阶叠置三度形成稳定的顺阶和弦功能，可用于和弦归属和修音。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 8 — Open Chords, Strumming Patterns, Key of A Major",
-          "Lesson 18 — Harmonizing the Major Scale and Partial Chord Shapes"
-        ],
         "principles": [
           "I、IV、V 为大三和弦；ii、iii、vi 为小三和弦；vii° 为减三和弦。"
         ],
@@ -1729,10 +1732,13 @@
         "formula": "I ii iii IV V vi vii°"
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 8 — Open Chords, Strumming Patterns, Key of A Major; Lesson 18 — Harmonizing the Major Scale and Partial Chord Shapes",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1745,7 +1751,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1761,9 +1767,6 @@
         "label": "顺阶六度双音",
         "description": "旋律可按当前调内音级配成顺阶六度，产生兼具旋律与和声的双音线条。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 8 — Open Chords, Strumming Patterns, Key of A Major"
-        ],
         "principles": [
           "实际大六度或小六度随调内音级变化。"
         ],
@@ -1778,10 +1781,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 8 — Open Chords, Strumming Patterns, Key of A Major",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1794,7 +1800,7 @@
       "domain": "guitar_playing",
       "kind": "phrase_pattern",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1809,9 +1815,6 @@
         "label": "低把位开放弦 Riff 语汇",
         "description": "开放低音弦可与第二把位附近的和弦、短旋律和踏板音快速交替。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 9 — Second-Position Moves, E Minor Pentatonic, Bend Vibrato and Oblique Bends"
-        ],
         "principles": [],
         "hard_constraints": [],
         "soft_preferences": [
@@ -1824,10 +1827,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 9 — Second-Position Moves, E Minor Pentatonic, Bend Vibrato and Oblique Bends",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1840,7 +1846,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1855,9 +1861,6 @@
         "label": "四分之一音趋近推弦",
         "description": "轻微推弦可作为靠近目标音的蓝调语气，不必达到完整半音且可不释放。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 9 — Second-Position Moves, E Minor Pentatonic, Bend Vibrato and Oblique Bends"
-        ],
         "principles": [
           "它是音高表情而非错误微音准。"
         ],
@@ -1872,10 +1875,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 9 — Second-Position Moves, E Minor Pentatonic, Bend Vibrato and Oblique Bends",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1888,7 +1894,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1904,9 +1910,6 @@
         "label": "推弦后的目标音揉弦",
         "description": "已推至目标音的揉弦围绕目标音轻微释放和再推，中心不能掉回原始未推音高。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 9 — Second-Position Moves, E Minor Pentatonic, Bend Vibrato and Oblique Bends"
-        ],
         "principles": [],
         "hard_constraints": [
           "揉弦中心是推弦目标音而非原始品位音。"
@@ -1919,10 +1922,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 9 — Second-Position Moves, E Minor Pentatonic, Bend Vibrato and Oblique Bends",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1935,7 +1941,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -1950,9 +1956,6 @@
         "label": "斜向双音推弦",
         "description": "一根弦保持推弦、另一根弦保持固定音高，两音同时形成动态双音。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 9 — Second-Position Moves, E Minor Pentatonic, Bend Vibrato and Oblique Bends"
-        ],
         "principles": [
           "两个声部具有不同音高轨迹。"
         ],
@@ -1968,10 +1971,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 9 — Second-Position Moves, E Minor Pentatonic, Bend Vibrato and Oblique Bends",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -1984,7 +1990,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2000,11 +2006,6 @@
         "label": "五声音阶色彩音保护",
         "description": "大三度、大六度等上下文色彩音可暂时进入小五声音阶语境，不能仅因不在五音集合中删除。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 9 — Second-Position Moves, E Minor Pentatonic, Bend Vibrato and Oblique Bends",
-          "Lesson 10 — Mixolydian Tonality and Pentatonic Options",
-          "Lesson 19 — Minor Harmony, Pedal-Tone Riffing and Hybrid Scales"
-        ],
         "principles": [
           "色彩音的合理性取决于目标和弦、位置与解决方向。"
         ],
@@ -2019,10 +2020,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 9 — Second-Position Moves, E Minor Pentatonic, Bend Vibrato and Oblique Bends; Lesson 10 — Mixolydian Tonality and Pentatonic Options; Lesson 19 — Minor Harmony, Pedal-Tone Riffing and Hybrid Scales",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2035,7 +2039,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2051,9 +2055,6 @@
         "label": "Mixolydian 摇滚大调语境",
         "description": "Mixolydian 是降七级的大调型调式，常以 I、IV、V 与 ♭VII 大和弦构成摇滚语汇。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 10 — Mixolydian Tonality and Pentatonic Options"
-        ],
         "principles": [
           "♭7 与 ♭VII 不应被大调校正器自动升高。"
         ],
@@ -2068,10 +2069,13 @@
         "formula": "1, 2, 3, 4, 5, 6, ♭7"
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 10 — Mixolydian Tonality and Pentatonic Options",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2084,7 +2088,7 @@
       "domain": "guitar_playing",
       "kind": "phrase_pattern",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2096,10 +2100,6 @@
         "label": "十二品八度重述",
         "description": "同一五声音阶材料可在相隔十二品的位置重述，以改变音区而保持音级身份。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 10 — Mixolydian Tonality and Pentatonic Options",
-          "Lesson 21 — Phrygian, Pentatonic Wrap-Up and Picking Strategies"
-        ],
         "principles": [
           "音区迁移不必改变动机轮廓。"
         ],
@@ -2114,10 +2114,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 10 — Mixolydian Tonality and Pentatonic Options; Lesson 21 — Phrygian, Pentatonic Wrap-Up and Picking Strategies",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2130,7 +2133,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2147,9 +2150,6 @@
         "label": "大调与关系小调五声音阶",
         "description": "大调五声音阶与关系小调五声音阶共享音高集合，但主音中心不同，功能和听感不能混同。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 11 — Major Pentatonic and Moving Riffs Through a Progression"
-        ],
         "principles": [
           "判断合理音符必须同时估计音高集合和主音中心。"
         ],
@@ -2163,10 +2163,13 @@
         "formula": "major pentatonic: 1, 2, 3, 5, 6"
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 11 — Major Pentatonic and Moving Riffs Through a Progression",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2179,7 +2182,7 @@
       "domain": "guitar_playing",
       "kind": "phrase_pattern",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2195,9 +2198,6 @@
         "label": "Riff 随和声整体平移",
         "description": "勾勒和弦的短 Riff 可保持内部轮廓，随进行根音整体移调。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 11 — Major Pentatonic and Moving Riffs Through a Progression"
-        ],
         "principles": [
           "形状和节奏身份优先于单个绝对音高。"
         ],
@@ -2213,10 +2213,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 11 — Major Pentatonic and Moving Riffs Through a Progression",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2229,7 +2232,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2246,12 +2249,6 @@
         "label": "Blues Scale 降五级",
         "description": "Blues Scale 在小五声音阶中加入 ♭5；该音是核心张力色彩，不应被视为明显错音。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 12 — Blues Scale, Barre Chords, Rhythmic Displacement, Sixteenth Offbeats",
-          "Lesson 15 — Blues Scale Positions, Sextuplets and First Inversion Chords",
-          "Lesson 16 — Pentatonic Boxes, Muted Offbeats, Repeating Licks and Rakes",
-          "Lesson 21 — Phrygian, Pentatonic Wrap-Up and Picking Strategies"
-        ],
         "principles": [
           "♭5 常作为经过、重复或重音张力音使用。"
         ],
@@ -2265,10 +2262,13 @@
         "formula": "1, ♭3, 4, ♭5, 5, ♭7"
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 12 — Blues Scale, Barre Chords, Rhythmic Displacement, Sixteenth Offbeats; Lesson 15 — Blues Scale Positions, Sextuplets and First Inversion Chords; Lesson 16 — Pentatonic Boxes, Muted Offbeats, Repeating Licks and Rakes; Lesson 21 — Phrygian, Pentatonic Wrap-Up and Picking Strategies",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2281,7 +2281,7 @@
       "domain": "guitar_playing",
       "kind": "shape_family",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2297,9 +2297,6 @@
         "label": "小调与小七横按和弦族",
         "description": "可移动小调与小七横按形状，为中高把位伴奏提供封闭和弦候选。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 12 — Blues Scale, Barre Chords, Rhythmic Displacement, Sixteenth Offbeats"
-        ],
         "principles": [
           "根音锚点与形状模板共同决定移调。"
         ],
@@ -2313,10 +2310,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 12 — Blues Scale, Barre Chords, Rhythmic Displacement, Sixteenth Offbeats",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2329,7 +2329,7 @@
       "domain": "guitar_playing",
       "kind": "rhythm_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2346,9 +2346,6 @@
         "label": "动机节奏错位",
         "description": "同一动机可在不同拍内位置重复，使轮廓不变但重音关系移动。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 12 — Blues Scale, Barre Chords, Rhythmic Displacement, Sixteenth Offbeats"
-        ],
         "principles": [
           "不能把错位重复误判为节奏错误或多余音。"
         ],
@@ -2362,10 +2359,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 12 — Blues Scale, Barre Chords, Rhythmic Displacement, Sixteenth Offbeats",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2378,7 +2378,7 @@
       "domain": "guitar_playing",
       "kind": "rhythm_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2397,10 +2397,6 @@
         "label": "十六分反拍连续性",
         "description": "十六分细分的第二、第四格形成反拍；Tie 或漏拨不应打断拨弦和律动相位。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 12 — Blues Scale, Barre Chords, Rhythmic Displacement, Sixteenth Offbeats",
-          "Lesson 16 — Pentatonic Boxes, Muted Offbeats, Repeating Licks and Rakes"
-        ],
         "principles": [
           "反拍位置应保留其微观节奏身份。"
         ],
@@ -2413,10 +2409,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 12 — Blues Scale, Barre Chords, Rhythmic Displacement, Sixteenth Offbeats; Lesson 16 — Pentatonic Boxes, Muted Offbeats, Repeating Licks and Rakes",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2429,7 +2428,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2446,10 +2445,6 @@
         "label": "自然小调语境",
         "description": "自然小调包含小五声音阶并增加二级和降六级，可用于旋律、和声与修音。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 13 — Natural Minor and Harmonization",
-          "Lesson 19 — Minor Harmony, Pedal-Tone Riffing and Hybrid Scales"
-        ],
         "principles": [],
         "hard_constraints": [],
         "soft_preferences": [],
@@ -2461,10 +2456,13 @@
         "formula": "1, 2, ♭3, 4, 5, ♭6, ♭7"
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 13 — Natural Minor and Harmonization; Lesson 19 — Minor Harmony, Pedal-Tone Riffing and Hybrid Scales",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2477,7 +2475,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2493,9 +2491,6 @@
         "label": "顺阶平行五度和声",
         "description": "旋律可按调内关系加入五度声部，形成 Power-Chord 式的双吉他和声。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 13 — Natural Minor and Harmonization"
-        ],
         "principles": [
           "实际声部需保持调内并避免不可演奏冲突。"
         ],
@@ -2508,10 +2503,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 13 — Natural Minor and Harmonization",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2524,7 +2522,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2536,10 +2534,6 @@
         "label": "顺阶三度和声",
         "description": "调内旋律的和声三度会在大三度和小三度之间变化，而不是固定平移。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 13 — Natural Minor and Harmonization",
-          "Lesson 18 — Harmonizing the Major Scale and Partial Chord Shapes"
-        ],
         "principles": [],
         "hard_constraints": [
           "每个和声音必须由当前调内音级计算。"
@@ -2552,10 +2546,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 13 — Natural Minor and Harmonization; Lesson 18 — Harmonizing the Major Scale and Partial Chord Shapes",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2568,7 +2565,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2581,11 +2578,6 @@
         "label": "音阶三和弦化",
         "description": "在每个音级上叠置调内三度形成根音、三度、五度的三和弦。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 13 — Natural Minor and Harmonization",
-          "Lesson 18 — Harmonizing the Major Scale and Partial Chord Shapes",
-          "Lesson 19 — Minor Harmony, Pedal-Tone Riffing and Hybrid Scales"
-        ],
         "principles": [
           "和弦品质随音级改变。"
         ],
@@ -2599,10 +2591,13 @@
         "formula": "root + diatonic third + diatonic fifth"
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 13 — Natural Minor and Harmonization; Lesson 18 — Harmonizing the Major Scale and Partial Chord Shapes; Lesson 19 — Minor Harmony, Pedal-Tone Riffing and Hybrid Scales",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2615,7 +2610,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2631,10 +2626,6 @@
         "label": "左手虚按消音音",
         "description": "左手轻触多根弦而不压到品格，产生无明确音高的节奏性消音声。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 14 — Fret-Hand Muting, Harmonics and Bend Shapes",
-          "Lesson 16 — Pentatonic Boxes, Muted Offbeats, Repeating Licks and Rakes"
-        ],
         "principles": [
           "应避免只触碰单一自然泛音节点而产生意外音高。"
         ],
@@ -2650,10 +2641,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 14 — Fret-Hand Muting, Harmonics and Bend Shapes; Lesson 16 — Pentatonic Boxes, Muted Offbeats, Repeating Licks and Rakes",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2666,7 +2660,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2682,9 +2676,6 @@
         "label": "自然泛音节点",
         "description": "自然泛音由在特定节点轻触琴弦产生，常用强节点包括第 12、7、5、4 品附近。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 14 — Fret-Hand Muting, Harmonics and Bend Shapes"
-        ],
         "principles": [
           "触弦位置位于品丝上方而非正常按弦区域。"
         ],
@@ -2706,10 +2697,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 14 — Fret-Hand Muting, Harmonics and Bend Shapes",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2722,7 +2716,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2738,9 +2732,6 @@
         "label": "人工泛音音色选择",
         "description": "拨片与拇指边缘在拨弦瞬间制造泛音；改变拨弦位置会选择不同泛音分量。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 14 — Fret-Hand Muting, Harmonics and Bend Shapes"
-        ],
         "principles": [
           "它主要是音色和尖啸效果，目标不一定是精确谱写的固定泛音。"
         ],
@@ -2755,10 +2746,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 14 — Fret-Hand Muting, Harmonics and Bend Shapes",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2771,7 +2765,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2787,10 +2781,6 @@
         "label": "渐进推弦曲线",
         "description": "渐进推弦需在指定持续时间末端到达目标音高，不能在起音瞬间完成。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 14 — Fret-Hand Muting, Harmonics and Bend Shapes",
-          "Lesson 21 — Phrygian, Pentatonic Wrap-Up and Picking Strategies"
-        ],
         "principles": [],
         "hard_constraints": [
           "曲线终点与节奏时值共同定义动作。"
@@ -2804,10 +2794,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 14 — Fret-Hand Muting, Harmonics and Bend Shapes; Lesson 21 — Phrygian, Pentatonic Wrap-Up and Picking Strategies",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2820,7 +2813,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2836,12 +2829,6 @@
         "label": "音阶 Box 与对角线路径",
         "description": "五声音阶和 Blues Scale 的多个 Box、上下延伸与对角线可连接成连续指板网络。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 15 — Blues Scale Positions, Sextuplets and First Inversion Chords",
-          "Lesson 16 — Pentatonic Boxes, Muted Offbeats, Repeating Licks and Rakes",
-          "Lesson 17 — Sixteenth Rests, Diagonal Blues Scale and Question/Answer Phrasing",
-          "Lesson 21 — Phrygian, Pentatonic Wrap-Up and Picking Strategies"
-        ],
         "principles": [
           "把位选择应基于乐句路径，而不是每个音独立选最低代价。"
         ],
@@ -2857,10 +2844,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 15 — Blues Scale Positions, Sextuplets and First Inversion Chords; Lesson 16 — Pentatonic Boxes, Muted Offbeats, Repeating Licks and Rakes; Lesson 17 — Sixteenth Rests, Diagonal Blues Scale and Question/Answer Phrasing; Lesson 21 — Phrygian, Pentatonic Wrap-Up and Picking Strategies",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2873,7 +2863,7 @@
       "domain": "guitar_playing",
       "kind": "rhythm_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2888,9 +2878,6 @@
         "label": "六连音机械分组",
         "description": "每拍六个等分音可理解为两个十六分三连音，并形成可重复的拨弦/连奏动作组。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 15 — Blues Scale Positions, Sextuplets and First Inversion Chords"
-        ],
         "principles": [
           "六个音的速度与重音分组必须保持均匀。"
         ],
@@ -2903,10 +2890,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 15 — Blues Scale Positions, Sextuplets and First Inversion Chords",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2919,7 +2909,7 @@
       "domain": "guitar_playing",
       "kind": "shape_family",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2934,9 +2924,6 @@
         "label": "第一转位大三和弦双音暗示",
         "description": "省略根音的三度—五度双音可暗示第一转位大三和弦，其外部音程为小六度。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 15 — Blues Scale Positions, Sextuplets and First Inversion Chords"
-        ],
         "principles": [
           "低音为和弦三度；缺失根音可由上下文补全。"
         ],
@@ -2951,10 +2938,13 @@
         "formula": "third in bass + fifth; root omitted"
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 15 — Blues Scale Positions, Sextuplets and First Inversion Chords",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -2967,7 +2957,7 @@
       "domain": "guitar_playing",
       "kind": "phrase_pattern",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -2982,9 +2972,6 @@
         "label": "快速重复 Lick 单元",
         "description": "短小的拨弦、击勾弦或推弦单元可高速循环，动作一致性比逐音重规划更重要。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 16 — Pentatonic Boxes, Muted Offbeats, Repeating Licks and Rakes"
-        ],
         "principles": [],
         "hard_constraints": [],
         "soft_preferences": [
@@ -2998,10 +2985,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 16 — Pentatonic Boxes, Muted Offbeats, Repeating Licks and Rakes",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3014,7 +3004,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3030,9 +3020,6 @@
         "label": "扫过消音弦进入目标音",
         "description": "String rake 先扫过被双手静音的弦，再落在目标实音上形成攻击感。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 16 — Pentatonic Boxes, Muted Offbeats, Repeating Licks and Rakes"
-        ],
         "principles": [],
         "hard_constraints": [
           "中间扫过的弦必须保持无明确音高。"
@@ -3045,10 +3032,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 16 — Pentatonic Boxes, Muted Offbeats, Repeating Licks and Rakes",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3061,7 +3051,7 @@
       "domain": "guitar_playing",
       "kind": "rhythm_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3077,10 +3067,6 @@
         "label": "十六分休止断句",
         "description": "短十六分休止可定义 Riff 的标点和紧张度，需要双手快速、明确地切断声音。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 17 — Sixteenth Rests, Diagonal Blues Scale and Question/Answer Phrasing",
-          "Lesson 21 — Phrygian, Pentatonic Wrap-Up and Picking Strategies"
-        ],
         "principles": [
           "短休止不可被量化修复为前一音延长。"
         ],
@@ -3094,10 +3080,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 17 — Sixteenth Rests, Diagonal Blues Scale and Question/Answer Phrasing; Lesson 21 — Phrygian, Pentatonic Wrap-Up and Picking Strategies",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3110,7 +3099,7 @@
       "domain": "guitar_playing",
       "kind": "phrase_pattern",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3126,9 +3115,6 @@
         "label": "问答式乐句",
         "description": "两个在时值、音区或终止感上互相回应的短句构成问答结构。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 17 — Sixteenth Rests, Diagonal Blues Scale and Question/Answer Phrasing"
-        ],
         "principles": [
           "回答不必更快或更复杂；对比与呼应比密度更重要。"
         ],
@@ -3142,10 +3128,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 17 — Sixteenth Rests, Diagonal Blues Scale and Question/Answer Phrasing",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3158,7 +3147,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3171,9 +3160,6 @@
         "label": "罗马数字进行移调",
         "description": "和弦进行应以音级功能表达，从而在不同调中保持相同关系与相对指板运动。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 18 — Harmonizing the Major Scale and Partial Chord Shapes"
-        ],
         "principles": [
           "绝对品位改变，功能序列不变。"
         ],
@@ -3187,10 +3173,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 18 — Harmonizing the Major Scale and Partial Chord Shapes",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3203,7 +3192,7 @@
       "domain": "guitar_playing",
       "kind": "shape_family",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3220,9 +3209,6 @@
         "label": "三弦部分三和弦族",
         "description": "从 E、A、D 等完整形状抽取相邻三弦的根、三、五音，形成紧凑可移动和弦。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 18 — Harmonizing the Major Scale and Partial Chord Shapes"
-        ],
         "principles": [
           "只要包含根、三、五即可表达完整三和弦身份。"
         ],
@@ -3238,10 +3224,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 18 — Harmonizing the Major Scale and Partial Chord Shapes",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3254,7 +3243,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3271,9 +3260,6 @@
         "label": "自然小调顺阶和弦族",
         "description": "自然小调上的顺阶三和弦遵循固定品质序列，并与关系大调共享音高和和弦集合。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 19 — Minor Harmony, Pedal-Tone Riffing and Hybrid Scales"
-        ],
         "principles": [
           "共享集合不代表相同主音中心。"
         ],
@@ -3287,10 +3273,13 @@
         "formula": "i ii° ♭III iv v ♭VI ♭VII"
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 19 — Minor Harmony, Pedal-Tone Riffing and Hybrid Scales",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3303,7 +3292,7 @@
       "domain": "guitar_playing",
       "kind": "phrase_pattern",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3318,9 +3307,6 @@
         "label": "Palm-muted 踏板音 Riff",
         "description": "重复低音踏板音与变化和弦交错，是重型摇滚和 Metal 的核心 Riff 组织方式。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 19 — Minor Harmony, Pedal-Tone Riffing and Hybrid Scales"
-        ],
         "principles": [
           "踏板音通常保持稳定把位和紧凑时值。",
           "插入和弦承担和声与重音变化。"
@@ -3338,10 +3324,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 19 — Minor Harmony, Pedal-Tone Riffing and Hybrid Scales",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3354,7 +3343,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3370,9 +3359,6 @@
         "label": "和声小调升七级",
         "description": "和声小调由自然小调升高第七级形成，导音张力不能被自然小调校正器抹除。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 19 — Minor Harmony, Pedal-Tone Riffing and Hybrid Scales"
-        ],
         "principles": [],
         "hard_constraints": [],
         "soft_preferences": [],
@@ -3384,10 +3370,13 @@
         "formula": "1, 2, ♭3, 4, 5, ♭6, 7"
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 19 — Minor Harmony, Pedal-Tone Riffing and Hybrid Scales",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3400,7 +3389,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3417,9 +3406,6 @@
         "label": "Dorian 与 Hybrid Scale 色彩",
         "description": "Dorian 的大六度可与 Blues、自然小调等材料混合形成 Hybrid Scale。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 19 — Minor Harmony, Pedal-Tone Riffing and Hybrid Scales"
-        ],
         "principles": [
           "混合音阶应作为局部色彩模型，而非强迫整段服从单一音阶。"
         ],
@@ -3433,10 +3419,13 @@
         "formula": "Dorian: 1, 2, ♭3, 4, 5, 6, ♭7"
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 19 — Minor Harmony, Pedal-Tone Riffing and Hybrid Scales",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3449,7 +3438,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3468,11 +3457,6 @@
         "label": "半音经过音保护",
         "description": "任意调外音都可能作为短暂连接音；合理性由位置、时值、方向和解决目标共同决定。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 12 — Blues Scale, Barre Chords, Rhythmic Displacement, Sixteenth Offbeats",
-          "Lesson 19 — Minor Harmony, Pedal-Tone Riffing and Hybrid Scales",
-          "Lesson 20 — Sixteenth Shuffle and Sliding Octave Dyads"
-        ],
         "principles": [
           "弱拍、短时、半音邻接并解决到结构音时，优先解释为经过音。"
         ],
@@ -3489,10 +3473,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 12 — Blues Scale, Barre Chords, Rhythmic Displacement, Sixteenth Offbeats; Lesson 19 — Minor Harmony, Pedal-Tone Riffing and Hybrid Scales; Lesson 20 — Sixteenth Shuffle and Sliding Octave Dyads",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3505,7 +3492,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3521,9 +3508,6 @@
         "label": "Power Chord 的上下文和弦属性",
         "description": "Power Chord 不含三度，本身不决定大小调；和弦属性应由调、旋律和前后和声推断。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 19 — Minor Harmony, Pedal-Tone Riffing and Hybrid Scales"
-        ],
         "principles": [
           "不能因缺少三度就任意补成固定大调。"
         ],
@@ -3536,10 +3520,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 19 — Minor Harmony, Pedal-Tone Riffing and Hybrid Scales",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3552,7 +3539,7 @@
       "domain": "guitar_playing",
       "kind": "rhythm_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3569,9 +3556,6 @@
         "label": "Half-time 感与记谱等价",
         "description": "相同音符速度可因脚拍和军鼓重心改变而产生 Half-time 感；不同记谱细分可能听起来等价。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 20 — Sixteenth Shuffle and Sliding Octave Dyads"
-        ],
         "principles": [
           "事件间隔与感知拍速必须分开表示。"
         ],
@@ -3585,10 +3569,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 20 — Sixteenth Shuffle and Sliding Octave Dyads",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3601,7 +3588,7 @@
       "domain": "guitar_playing",
       "kind": "rhythm_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3617,9 +3604,6 @@
         "label": "十六分 Shuffle",
         "description": "将 Shuffle 八分在 Half-time 参照下解释，可形成每半拍内部的长短十六分摆动。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 20 — Sixteenth Shuffle and Sliding Octave Dyads"
-        ],
         "principles": [
           "后半拍/反拍位置向每组最后三连音分量后移。"
         ],
@@ -3634,10 +3618,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 20 — Sixteenth Shuffle and Sliding Octave Dyads",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3650,7 +3637,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3666,9 +3653,6 @@
         "label": "滑动八度与中间弦静音",
         "description": "八度双音跨过一根弦，必须用食指侧面等方式持续静音中间弦，并整体滑动形状。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 20 — Sixteenth Shuffle and Sliding Octave Dyads"
-        ],
         "principles": [
           "八度增加厚度但不引入新的和声品质。"
         ],
@@ -3685,10 +3669,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 20 — Sixteenth Shuffle and Sliding Octave Dyads",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3701,7 +3688,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3717,9 +3704,6 @@
         "label": "Phrygian 降二级张力",
         "description": "Phrygian 是带降二级的自然小调型调式，降二级强烈趋向主音，常见于重型摇滚与 Metal。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 21 — Phrygian, Pentatonic Wrap-Up and Picking Strategies"
-        ],
         "principles": [
           "紧邻主音的 ♭2 是风格核心，不应被自动升高。"
         ],
@@ -3734,10 +3718,13 @@
         "formula": "1, ♭2, ♭3, 4, 5, ♭6, ♭7"
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 21 — Phrygian, Pentatonic Wrap-Up and Picking Strategies",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3750,7 +3737,7 @@
       "domain": "guitar_playing",
       "kind": "rhythm_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3765,9 +3752,6 @@
         "label": "重音拨弦与交替拨弦并存",
         "description": "交替拨弦由节拍细分决定方向；重音拨弦则可由音符物理位置与强拍和弦决定方向，两者都是合法策略。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 21 — Phrygian, Pentatonic Wrap-Up and Picking Strategies"
-        ],
         "principles": [
           "同一 Riff 应整段比较两种动作路径，而非逐音贪心。"
         ],
@@ -3781,10 +3765,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 21 — Phrygian, Pentatonic Wrap-Up and Picking Strategies",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3797,7 +3784,7 @@
       "domain": "guitar_playing",
       "kind": "harmonic_context",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3812,9 +3799,6 @@
         "label": "三全音根音移动",
         "description": "Power Chord 根音相隔六个半音可形成强烈不协和与重型张力，是有效风格材料而非必然错音。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 22 — Tritone Motion, Tremolo Picking and Three-Note-Per-String Runs"
-        ],
         "principles": [
           "应以根音运动识别，不要只检查单个和弦内部协和度。"
         ],
@@ -3829,10 +3813,13 @@
         "formula": "root motion = 6 semitones"
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 22 — Tritone Motion, Tremolo Picking and Three-Note-Per-String Runs",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3845,7 +3832,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3864,9 +3851,6 @@
         "label": "颤音拨弦",
         "description": "单个持续音或同弦旋律可由快速连续上下拨重复发音，形成速度与持续能量。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 22 — Tritone Motion, Tremolo Picking and Three-Note-Per-String Runs"
-        ],
         "principles": [
           "一个记谱音可对应多个拨弦攻击。"
         ],
@@ -3882,10 +3866,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 22 — Tritone Motion, Tremolo Picking and Three-Note-Per-String Runs",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3898,7 +3885,7 @@
       "domain": "guitar_playing",
       "kind": "execution_rule",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3917,9 +3904,6 @@
         "label": "三音一弦音阶跑动",
         "description": "三音一弦的顺阶路径把每组六音组织为重复机械动作，可在全拨与击勾弦版本之间选择。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 22 — Tritone Motion, Tremolo Picking and Three-Note-Per-String Runs"
-        ],
         "principles": [
           "同弦三音组和跨弦换向应共同优化。"
         ],
@@ -3935,10 +3919,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 22 — Tritone Motion, Tremolo Picking and Three-Note-Per-String Runs",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,
@@ -3951,7 +3938,7 @@
       "domain": "guitar_playing",
       "kind": "phrase_pattern",
       "schema_version": "1",
-      "knowledge_version": "2026.08.1",
+      "knowledge_version": "2026.08.2",
       "status": "candidate",
       "scope": {
         "roles": [
@@ -3967,10 +3954,6 @@
         "label": "逐层加入编曲元素",
         "description": "多吉他段落可一次只加入一个新元素，使复杂度增长同时保持可感知连续性。",
         "maturity": "editorial_prior",
-        "source_sections": [
-          "Lesson 13 — Natural Minor and Harmonization",
-          "Lesson 22 — Tritone Motion, Tremolo Picking and Three-Note-Per-String Runs"
-        ],
         "principles": [
           "公共踏板音、动机或节奏可作为层间连续锚点。"
         ],
@@ -3985,10 +3968,13 @@
         ]
       },
       "provenance": {
-        "source_type": "user_provided_reference",
-        "reference": "Troy Stetina, Total Rock Guitar — Lesson 13 — Natural Minor and Harmonization; Lesson 22 — Tritone Motion, Tremolo Picking and Three-Note-Per-String Runs",
-        "license": "User-provided reference; derived abstractions only; redistribution of original notation is not granted.",
-        "notes": "Stores a concise, independently worded musical abstraction only. No song transcription, continuous TAB, page image, or audio is embedded."
+        "source_type": "curated_reference",
+        "reference": null,
+        "license": null,
+        "notes": "Independently worded derived abstraction; no source notation, page image, or audio is embedded.",
+        "source_ids": [
+          "source.book.total_rock_guitar"
+        ]
       },
       "evaluation": {
         "benchmark_version": null,

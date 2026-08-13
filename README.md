@@ -115,7 +115,7 @@ documented in [`docs/FRONTEND_DESIGN_SYSTEM.md`](docs/FRONTEND_DESIGN_SYSTEM.md)
 ### Knowledge snapshot
 
 Runtime musical preferences are loaded from the pinned, packaged knowledge
-snapshot `2026.08.1`. Playing contexts, Guitar IR, prototype reports,
+snapshot `2026.08.2`. Playing contexts, Guitar IR, prototype reports,
 manifests, and API jobs preserve the snapshot identity; contexts and IR also
 record the exact approved profile entries used. The review console also exposes
 71 lesson-sourced candidates spanning technique, rhythm, phrasing, harmony,
