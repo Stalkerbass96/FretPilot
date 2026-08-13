@@ -3,7 +3,11 @@ from pathlib import Path
 import pytest
 
 from fretpilot.exporters.pdf_score import export_score_pdf
-from fretpilot.exporters.pdf_score.renderer import _rhythm_mark
+from fretpilot.exporters.pdf_score.renderer import (
+    _TechniquePlacement,
+    _layout_technique_labels,
+    _rhythm_mark,
+)
 from fretpilot.ir.models import (
     GuitarMeasure,
     GuitarNoteEvent,
@@ -102,3 +106,22 @@ def test_rhythm_mark_maps_written_durations(
     assert mark.beam_count == beams
     assert mark.dotted is dotted
     assert mark.tuplet == tuplet
+
+
+def test_technique_labels_use_lanes_and_condense_repeated_collisions() -> None:
+    draws, condensed = _layout_technique_labels(
+        [
+            _TechniquePlacement(x=10.0, text="let ring", width=18.0),
+            _TechniquePlacement(x=18.0, text="let ring", width=18.0),
+            _TechniquePlacement(x=18.0, text="H", width=4.0),
+            _TechniquePlacement(x=24.0, text="P", width=4.0),
+        ],
+        base_y=100.0,
+    )
+
+    assert condensed == 1
+    assert [(draw.text, draw.y) for draw in draws] == [
+        ("let ring", 100.0),
+        ("H", 106.5),
+        ("P", 100.0),
+    ]

@@ -100,7 +100,8 @@ Long-term architecture:
 - [x] direct PDF renderer exists
 - [x] six-line TAB review output
 - [x] basic rhythm row with note heads, stems, beams, dots, and triplet marks
-- [ ] musician-grade rhythmic grouping and collision avoidance
+- [x] basic technique-label collision avoidance and repeat condensation
+- [ ] musician-grade rhythmic grouping and general collision avoidance
 - [ ] proportional musical spacing
 - [ ] high-quality rests/ties/slides/let-ring presentation
 - [ ] section/phrase-aware system layout

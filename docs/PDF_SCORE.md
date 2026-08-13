@@ -30,6 +30,7 @@ When exactly one likely guitar stream exists, `--stream-id` may be omitted. When
 - measure numbers and beat guides;
 - fret numbers from Guitar IR;
 - compact rhythm row with note heads, stems, beams, dots, and triplet marks;
+- collision-aware technique-label lanes with repeated-label condensation;
 - cross-measure tie marks;
 - generic technique labels such as hammer-on, pull-off, slide, vibrato, let ring, palm mute, and harmonic;
 - warnings for notes without printable string/fret assignments.

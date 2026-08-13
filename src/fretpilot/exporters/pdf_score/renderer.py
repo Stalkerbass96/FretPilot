@@ -55,6 +55,20 @@ class _RhythmPlacement:
     mark: _RhythmMark
 
 
+@dataclass(frozen=True, slots=True)
+class _TechniquePlacement:
+    x: float
+    text: str
+    width: float
+
+
+@dataclass(frozen=True, slots=True)
+class _TechniqueDraw:
+    x: float
+    y: float
+    text: str
+
+
 def _rhythm_mark(beats: float) -> _RhythmMark:
     candidates = [
         (4.0, _RhythmMark("1", stem=False, filled=False)),
@@ -71,6 +85,55 @@ def _rhythm_mark(beats: float) -> _RhythmMark:
         (0.125, _RhythmMark("1/32", stem=True, filled=True, beam_count=3)),
     ]
     return min(candidates, key=lambda item: abs(item[0] - beats))[1]
+
+
+def _layout_technique_labels(
+    placements: list[_TechniquePlacement],
+    *,
+    base_y: float,
+    lane_gap: float = 6.5,
+    maximum_lanes: int = 3,
+    horizontal_gap: float = 2.0,
+) -> tuple[list[_TechniqueDraw], int]:
+    """Place compact technique labels without horizontal collisions.
+
+    Repeated identical labels that would touch are visually condensed; their
+    complete event-level intent remains in Guitar IR. Other labels move through
+    up to three vertical lanes before being condensed as a last resort.
+    """
+
+    lane_ends = [float("-inf")] * maximum_lanes
+    last_right_by_text: dict[str, float] = {}
+    draws: list[_TechniqueDraw] = []
+    condensed = 0
+    for placement in sorted(placements, key=lambda item: item.x):
+        left = placement.x - placement.width / 2
+        right = placement.x + placement.width / 2
+        if left <= last_right_by_text.get(placement.text, float("-inf")) + horizontal_gap:
+            condensed += 1
+            continue
+
+        lane = next(
+            (
+                index
+                for index, lane_end in enumerate(lane_ends)
+                if left > lane_end + horizontal_gap
+            ),
+            None,
+        )
+        if lane is None:
+            condensed += 1
+            continue
+        draws.append(
+            _TechniqueDraw(
+                x=placement.x,
+                y=base_y + lane * lane_gap,
+                text=placement.text,
+            )
+        )
+        lane_ends[lane] = right
+        last_right_by_text[placement.text] = right
+    return draws, condensed
 
 
 def _technique_label(event: GuitarNoteEvent) -> list[str]:
@@ -228,7 +291,7 @@ class _PDFScoreRenderer:
         x1 = self.width - self.margin_x
         measure_width = (x1 - x0) / self.measures_per_system
         line_gap = 8.2
-        tab_top = y - 27
+        tab_top = y - 31
         tab_bottom = tab_top - 5 * line_gap
         tuning_labels = {1: "e", 2: "B", 3: "G", 4: "D", 5: "A", 6: "E"}
 
@@ -270,6 +333,7 @@ class _PDFScoreRenderer:
                 grouped[round(event.score.start_beat, 7)].append(event)
 
             rhythm_placements: list[_RhythmPlacement] = []
+            technique_placements: list[_TechniquePlacement] = []
             for absolute_start, events in sorted(grouped.items()):
                 beat_in_measure = absolute_start - measure.start_beat
                 ratio = max(0.0, min(1.0, beat_in_measure / measure.duration_beats))
@@ -289,12 +353,17 @@ class _PDFScoreRenderer:
                         if label not in labels:
                             labels.append(label)
                 if labels:
-                    self.canvas.setFillColor(colors.HexColor("#1F4B73"))
-                    self.canvas.setFont("Helvetica-Oblique", 5.4)
-                    self.canvas.drawCentredString(
-                        note_x,
-                        tab_top + 17,
-                        ", ".join(labels[:3]),
+                    text = ", ".join(labels[:3])
+                    technique_placements.append(
+                        _TechniquePlacement(
+                            x=note_x,
+                            text=text,
+                            width=self.canvas.stringWidth(
+                                text,
+                                "Helvetica-Oblique",
+                                5.4,
+                            ),
+                        )
                     )
 
                 for event in events:
@@ -340,6 +409,21 @@ class _PDFScoreRenderer:
                 rhythm_placements,
                 y=tab_bottom - 14,
             )
+            technique_draws, condensed = _layout_technique_labels(
+                technique_placements,
+                base_y=tab_top + 17,
+            )
+            self.canvas.setFillColor(colors.HexColor("#1F4B73"))
+            self.canvas.setFont("Helvetica-Oblique", 5.4)
+            for draw in technique_draws:
+                self.canvas.drawCentredString(draw.x, draw.y, draw.text)
+            if condensed:
+                warning = (
+                    "Dense repeated technique labels were condensed in the PDF; "
+                    "complete event-level intent remains in Guitar IR."
+                )
+                if warning not in self.warnings:
+                    self.warnings.append(warning)
 
         self.canvas.setStrokeColor(colors.HexColor("#111827"))
         self.canvas.setLineWidth(0.9)
