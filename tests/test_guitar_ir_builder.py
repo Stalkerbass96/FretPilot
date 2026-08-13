@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fretpilot.analysis import analyze_guitar_track
 from fretpilot.ir import build_guitar_ir
+from fretpilot.knowledge import compose_playing_context
 from fretpilot.midi.models import (
     NormalizedNote,
     NormalizedTimeline,
@@ -72,6 +73,7 @@ def test_builder_splits_cross_measure_note_with_ties() -> None:
 
     assert project.schema_version == "0.1"
     assert project.tracks[0].source_stream_id == "t0:ch0:p27"
+    assert project.tracks[0].playing_context is None
     assert len(project.tracks[0].measures) == 2
 
     first_fragment = next(
@@ -122,3 +124,25 @@ def test_builder_records_onset_and_duration_repairs() -> None:
         "rhythm_onset",
         "rhythm_duration",
     }
+
+
+def test_builder_preserves_playing_context_metadata() -> None:
+    track = NormalizedTrack(
+        index=0,
+        name="Lead Guitar",
+        notes=[
+            _note(pitch=64, start_beat=0.0, duration_beats=0.5),
+            _note(pitch=66, start_beat=0.5, duration_beats=0.5),
+        ],
+    )
+    timeline = _timeline(track)
+    context = compose_playing_context({"solo": 0.9, "metal": 0.8})
+    analysis = analyze_guitar_track(track, playing_context=context)
+
+    project = build_guitar_ir(timeline, track, analysis)
+    ir_context = project.tracks[0].playing_context
+
+    assert ir_context is not None
+    assert ir_context["role_scores"] == {"solo": 0.9}
+    assert ir_context["style_scores"] == {"metal": 0.8}
+    assert ir_context["knowledge_version"] == context.knowledge_version
