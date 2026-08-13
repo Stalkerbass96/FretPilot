@@ -32,7 +32,7 @@ Guitar fingering optimization
 Articulation planning
    ↓
 Canonical Guitar IR
-   ├──→ Score rendering → Guitar Pro
+   ├──→ Score rendering → Guitar Pro 5
    └──→ Performance rendering → Ample Guitar MIDI
 ```
 
@@ -61,7 +61,8 @@ MIDI file
 → phrase-level guitar fingering
 → basic articulation planning
 → measure-aware Guitar IR
-→ JSON output with source timing, score timing, ties and change log
+→ GP5 export
+→ GP5 parse-back round-trip validation
 ```
 
 The MIDI importer preserves original source ticks and durations. Guitar IR stores source/performance timing separately from repaired score timing, so score cleanup does not destroy the original musical performance.
@@ -114,6 +115,16 @@ fretpilot build-ir song.mid \
   -o guitar-ir.json
 ```
 
+Export Guitar Pro 5.1:
+
+```bash
+fretpilot export-gp5 song.mid \
+  --stream-id t0:ch2:p27 \
+  -o song.gp5
+```
+
+The command prints a JSON report with the destination path, measure count, exported note count, and warnings.
+
 Current Guitar IR V0.1 includes:
 
 - schema version
@@ -126,22 +137,31 @@ Current Guitar IR V0.1 includes:
 - ties for notes crossing measure boundaries
 - rhythm transformation/change log
 
+Current GP5 prototype supports:
+
+- one guitar track
+- one notation voice
+- monophonic phrases
+- same-onset chords when all notes have the same duration
+- synthesized rests for silent gaps
+- standard and triplet durations supported by PyGuitarPro
+- string/fret assignments
+- cross-measure ties
+- vibrato
+- hammer-on / pull-off links
+- shift slides
+
+The exporter deliberately stops with an explicit error when overlapping note groups require multiple voices or the current subset cannot represent a duration. It does not silently write a misleading score.
+
 When exactly one high-confidence guitar stream exists, downstream commands can select it automatically. When multiple likely guitar streams exist, FretPilot stops and asks for an explicit `--stream-id` instead of silently choosing the wrong guitar part.
 
 A legacy physical-track selector remains available:
 
 ```bash
-fretpilot build-ir song.mid --track 2 -o guitar-ir.json
+fretpilot export-gp5 song.mid --track 2 -o song.gp5
 ```
 
-Current deterministic articulation vocabulary includes:
-
-- hammer-on
-- pull-off
-- slide
-- vibrato
-
-Plugin-specific Ample Guitar keyswitches are intentionally **not** stored in this layer.
+Plugin-specific Ample Guitar keyswitches are intentionally **not** stored in Guitar IR or the GP5 layer.
 
 Run tests:
 
@@ -149,7 +169,7 @@ Run tests:
 pytest
 ```
 
-GitHub Actions also runs the test suite on pushes to `main` and pull requests.
+GitHub Actions also runs the test suite on pushes to `main` and pull requests. The GP5 test writes a file and parses it back to validate the supported round-trip subset.
 
 ## Repository layout
 
@@ -194,4 +214,4 @@ FretPilot/
 
 ## Status
 
-Early V0.1 implementation. Instrument-stream detection, deterministic guitar analysis, and measure-aware Guitar IR generation are runnable. Track identification will continue to improve incrementally, but the main prototype path now advances toward a minimal GP5 exporter, followed by an Ample Guitar performance-MIDI adapter.
+Early V0.1 prototype. Instrument-stream detection, deterministic guitar analysis, measure-aware Guitar IR, and a limited but round-trip-tested GP5 exporter are runnable. Track identification will continue to improve incrementally. The next main product milestone is the first Ample Guitar performance-MIDI adapter, while GP5 quality is expanded with better rest spelling, dotted values, tuplets, chord/polyphonic handling, and real Guitar Pro inspection.
