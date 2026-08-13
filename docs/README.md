@@ -7,9 +7,19 @@ This page is the navigation entry point for product, architecture, and active de
 - [`../README.md`](../README.md) — product overview, installation, and runnable CLI commands.
 - [`../AGENTS.md`](../AGENTS.md) — required reading and workflow for AI agents and contributors.
 - [`PRODUCT.md`](PRODUCT.md) — product definition, scope, and target user.
-- [`ARCHITECTURE.md`](ARCHITECTURE.md) — module boundaries and pipeline architecture.
-- [`ROADMAP.md`](ROADMAP.md) — overall implementation phases and current priorities.
-- [`MUSIC_IR.md`](MUSIC_IR.md) — planned canonical Guitar IR.
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — current module boundaries and executable architecture.
+- [`LONG_TERM_ARCHITECTURE.md`](LONG_TERM_ARCHITECTURE.md) — stable vs evolvable modules, Runtime/Learning planes, knowledge assets, and self-evolution architecture.
+- [`ROADMAP.md`](ROADMAP.md) — prototype phases and current product priorities.
+- [`MUSIC_IR.md`](MUSIC_IR.md) — canonical Guitar IR contract.
+
+## Umbrella project: system evolution
+
+Use this project for cross-module reproducibility, knowledge snapshots, evaluation identity, feedback loops, and learned-ranker integration:
+
+- [`projects/system-evolution/README.md`](projects/system-evolution/README.md) — project boundary and Runtime/Learning overview.
+- [`projects/system-evolution/BACKLOG.md`](projects/system-evolution/BACKLOG.md) — stable `SE-xxx` tasks.
+
+Do not duplicate specialized work here when it already belongs to `TI-*` or `GK-*`.
 
 ## Active project: guitar playing knowledge
 
@@ -25,9 +35,18 @@ The detailed instrument-stream and guitar-track identification work is managed a
 
 - [`projects/track-identification/README.md`](projects/track-identification/README.md) — project hub and stable concepts.
 - [`projects/track-identification/STATUS.md`](projects/track-identification/STATUS.md) — implemented versus planned behavior.
-- [`projects/track-identification/BACKLOG.md`](projects/track-identification/BACKLOG.md) — prioritized task IDs and acceptance criteria.
+- [`projects/track-identification/BACKLOG.md`](projects/track-identification/BACKLOG.md) — prioritized `TI-xxx` task IDs and acceptance criteria.
 - [`projects/track-identification/TEST_PLAN.md`](projects/track-identification/TEST_PLAN.md) — fixture, regression, evaluation, and quality requirements.
 - [`GUITAR_DETECTION.md`](GUITAR_DETECTION.md) — current layered detection algorithm.
+
+## Task prefixes
+
+```text
+PV-*  prototype/output validation and immediate product quality
+TI-*  instrument-stream / guitar-track identification
+GK-*  guitar-playing knowledge, style, phrasing, and learning
+SE-*  cross-project evolution infrastructure and governance
+```
 
 ## Documentation roles
 
@@ -35,9 +54,10 @@ Use documents for different purposes:
 
 - **Product docs** explain why the feature exists and what users receive.
 - **Architecture docs** define module boundaries and invariants.
+- **Long-term architecture** defines stable/evolvable boundaries and learning governance.
 - **Algorithm docs** define current behavior and scoring semantics.
 - **Project STATUS** records what the code actually supports now.
 - **Project BACKLOG** records work that has not been completed.
-- **TEST_PLAN** defines evidence required before accuracy claims or scoring changes.
+- **TEST_PLAN/evaluation docs** define evidence required before accuracy claims or knowledge promotion.
 
 When code behavior changes, update the narrowest relevant document instead of duplicating the same details across every file.
