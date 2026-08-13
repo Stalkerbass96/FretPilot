@@ -1,5 +1,12 @@
 # FretPilot Guitar Detection
 
+> Project tracking: [`projects/track-identification/README.md`](projects/track-identification/README.md)  
+> Implementation status: [`projects/track-identification/STATUS.md`](projects/track-identification/STATUS.md)  
+> Prioritized tasks: [`projects/track-identification/BACKLOG.md`](projects/track-identification/BACKLOG.md)  
+> Evaluation requirements: [`projects/track-identification/TEST_PLAN.md`](projects/track-identification/TEST_PLAN.md)
+
+This document defines the current algorithm semantics. The project documents above distinguish completed work from future work and should be updated alongside implementation changes.
+
 ## Goal
 
 FretPilot must not blindly trust a MIDI track name or General MIDI program.
@@ -37,7 +44,7 @@ stores a full arrangement in one track and separates instruments by channel.
 Type-1 MIDI often uses separate physical tracks, but may still contain multiple
 channels or program changes.
 
-FretPilot resolves notes by:
+FretPilot currently resolves notes by:
 
 ```text
 physical_track + channel + active_program
@@ -51,6 +58,10 @@ t0:ch2:p27
 
 Internal channels and programs are zero-based. User-facing channel numbers are
 one-based.
+
+Current caveat: some sources may use program changes as articulation controls.
+The raw event timeline is preserved, but the resolver does not yet distinguish
+articulation program changes from true instrument changes.
 
 ## Layer 1 — Track keyword evidence
 
@@ -164,10 +175,13 @@ Initial experimental profiles:
 - Breakdown / Heavy Low Riff
 - Jazz Comping
 
-The current rules are placeholders for a growing knowledge base. Future profile
-features may include:
+The current implementation scores whole-stream summary features. This is a
+baseline only. The intended design is to segment the stream into musical
+sections or phrases and classify each time-bounded region independently.
 
-- phrase segmentation
+Future profile features may include:
+
+- phrase and section segmentation
 - repeated-pattern similarity
 - strum-direction timing signatures
 - chord-shape feasibility
@@ -187,17 +201,24 @@ profiles, but its output should still map to this canonical vocabulary.
 ```bash
 fretpilot tracks song.mid
 fretpilot tracks song.mid -o tracks.json
+fretpilot analyze song.mid --stream-id t0:ch2:p27
 ```
 
-The report ranks logical streams rather than physical tracks.
+The report ranks logical streams rather than physical tracks. Downstream rhythm,
+fingering, and articulation analysis can consume a selected `InstrumentStream`.
 
-## Next implementation steps
+## Development priorities
 
-1. Add `--stream-id` to analysis commands so rhythm/fingering/articulation run on
-   a selected logical stream instead of a physical track.
-2. Add section-level segmentation because one stream may change role between
-   verse, chorus, solo, and breakdown.
-3. Build a labeled regression corpus with correct instrument and role labels.
-4. Calibrate thresholds and profile rules using precision/recall measurements.
-5. Add chord-shape and strumming-timing features before trusting rhythm-guitar
-   style labels.
+The canonical prioritized list is maintained in
+[`projects/track-identification/BACKLOG.md`](projects/track-identification/BACKLOG.md).
+The immediate order is:
+
+1. define a licensed/synthetic labeled fixture manifest;
+2. implement repeatable precision/recall/F1 evaluation;
+3. centralize weights, thresholds, aliases, and assumptions in configuration;
+4. harden stream resolution and physical chord feasibility;
+5. define section/phrase results and baseline segmentation;
+6. calibrate the Layer-4 behavior library on labeled regions.
+
+Do not add production accuracy claims or continually tune heuristics against one
+song before the evaluation harness exists.
