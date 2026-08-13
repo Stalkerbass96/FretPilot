@@ -140,11 +140,23 @@ def _group_measure_events(
     return sorted(grouped.items(), key=lambda item: item[0])
 
 
-def _apply_direct_effects(event: GuitarNoteEvent, note: gp.Note) -> None:
+def _has_articulation(event: GuitarNoteEvent, articulation_type: str) -> bool:
+    return any(
+        articulation.type == articulation_type
+        for articulation in event.articulations
+    )
+
+
+def _apply_direct_effects(
+    event: GuitarNoteEvent,
+    note: gp.Note,
+    *,
+    allow_let_ring: bool,
+) -> None:
     for articulation in event.articulations:
         if articulation.type == "vibrato":
             note.effect.vibrato = True
-        elif articulation.type == "let_ring":
+        elif articulation.type == "let_ring" and allow_let_ring:
             note.effect.letRing = True
 
 
@@ -191,6 +203,21 @@ def _populate_measure(
         total_duration = durations.pop()
         segments = _split_duration_ticks(total_duration)
 
+        # PyGuitarPro 0.11 can emit an unreadable GP5 when only some notes in a
+        # chord beat carry the let-ring flag. Keep the musical intent in Guitar
+        # IR, omit the unsafe partial flag in GP5, and report the downgrade.
+        partial_chord_let_ring = (
+            len(events) > 1
+            and any(_has_articulation(event, "let_ring") for event in events)
+            and not all(_has_articulation(event, "let_ring") for event in events)
+        )
+        if partial_chord_let_ring:
+            warnings.append(
+                "Omitted partial let-ring marking from a chord at measure "
+                f"{ir_measure.number}, beat {start_in_measure:g}; the intent remains "
+                "in Guitar IR and source performance timing."
+            )
+
         for segment_index, duration in enumerate(segments):
             beat = gp.Beat(
                 voice,
@@ -215,7 +242,11 @@ def _populate_measure(
                     type=gp.NoteType.tie if continuation else gp.NoteType.normal,
                 )
                 if segment_index == 0:
-                    _apply_direct_effects(event, note)
+                    _apply_direct_effects(
+                        event,
+                        note,
+                        allow_let_ring=not partial_chord_let_ring,
+                    )
                     note_lookup[event.id] = note
                 beat.notes.append(note)
                 note_count += 1
