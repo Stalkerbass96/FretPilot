@@ -60,6 +60,16 @@ def infer_style_from_features(
             (.35 <= short <= .85, .20, "rhythmic_density"), (.12 <= chord <= .70, .15, "mixed_texture"),
             (10 <= pitch_range <= 36, .20, "guitar_sized_range"),
         ],
+        "pop": [
+            (acoustic or program == 27, .25, "acoustic_or_clean_program"), (.20 <= chord <= .75, .25, "song_chord_texture"),
+            (.25 <= short <= .75, .18, "moderate_rhythm_density"), (10 <= pitch_range <= 36, .17, "arrangement_range"),
+            (repeated >= .08, .15, "repeating_song_pattern"),
+        ],
+        "punk": [
+            (driven, .28, "driven_program"), (short >= .62, .27, "persistent_short_attacks"),
+            (chord >= .25, .20, "frequent_chord_attacks"), (repeated >= .12, .15, "repeated_shape_rhythm"),
+            (pitch_range <= 24, .10, "compact_register"),
+        ],
         "jazz": [
             (program in {26, 27}, .25, "jazz_or_clean_program"), (chord >= .40, .30, "chord_texture"),
             (poly >= 2.3, .25, "voicing_polyphony"), (12 <= pitch_range <= 40, .20, "voicing_range"),
@@ -72,6 +82,16 @@ def infer_style_from_features(
         "funk": [
             (program in {27, 28}, .30, "clean_or_muted_program"), (short >= .55, .30, "percussive_notes"),
             (chord >= .25, .20, "partial_chords"), (poly <= 4.5, .20, "compact_texture"),
+        ],
+        "rnb": [
+            (program in {27, 28}, .26, "clean_or_muted_program"), (chord >= .25, .24, "chordal_accompaniment"),
+            (1.5 <= poly <= 5.0, .18, "partial_chord_polyphony"), (.30 <= short <= .80, .17, "mixed_note_lengths"),
+            (pitch_range >= 12, .15, "extended_voicing_range"),
+        ],
+        "country": [
+            (acoustic or program == 27, .28, "acoustic_or_clean_program"), (mono >= .55, .20, "single_note_roll_texture"),
+            (adjacent >= .80, .18, "compact_cross_string_motion"), (pitch_range >= 12, .17, "wide_register"),
+            (low <= .60, .17, "not_low_register_dominated"),
         ],
         "fingerstyle": [
             (acoustic, .35, "acoustic_program"), (1.2 <= poly <= 3.8, .20, "mixed_polyphony"),
