@@ -1,6 +1,7 @@
 # Track Identification Project
 
 **Project status:** Active backlog, V0 baseline implemented  
+**Tracking issue:** [#1 — Track identification: harden layered guitar-stream detection](https://github.com/Stalkerbass96/FretPilot/issues/1)  
 **Scope:** MIDI instrument-stream resolution, guitar identity classification, and guitar behavior/role classification  
 **Primary code:** `src/fretpilot/detection/`, `src/fretpilot/knowledge/`, and MIDI metadata support in `src/fretpilot/midi/`
 
@@ -65,6 +66,7 @@ When exactly one high-confidence guitar stream exists, downstream commands may s
 - [`../../GUITAR_DETECTION.md`](../../GUITAR_DETECTION.md) — algorithm details and current scoring semantics.
 - [`../../ROADMAP.md`](../../ROADMAP.md) — relationship to the overall FretPilot roadmap.
 - [`../../../AGENTS.md`](../../../AGENTS.md) — mandatory AI/contributor workflow.
+- [GitHub Issue #1](https://github.com/Stalkerbass96/FretPilot/issues/1) — project-level progress and discussion tracker.
 
 ## Stable concepts and names
 
