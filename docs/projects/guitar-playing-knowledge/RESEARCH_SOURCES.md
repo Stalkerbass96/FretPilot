@@ -1,6 +1,6 @@
 # Guitar Playing Knowledge — Research Sources
 
-This file is the human-readable map for the evidence-backed knowledge now being distilled into `src/fretpilot/knowledge/`.
+This file maps the evidence-backed knowledge distilled into `src/fretpilot/knowledge/`.
 
 The runtime knowledge base stores factual summaries and derived soft priors only. It does not copy or redistribute source tablature examples.
 
@@ -33,11 +33,11 @@ The runtime knowledge base stores factual summaries and derived soft priors only
 
 - Blues scale / movable positions — https://www.fender.com/articles/scales/blues-guitar-scale
 - Palm muting — https://www.fender.com/articles/techniques/3-keys-to-ace-your-palm-muting
-- Picking families (alternate, down, tremolo, sweep, fingerstyle) — https://www.fender.com/articles/techniques/what-type-of-picker-are-you
+- Picking families (alternate, down, tremolo, sweep, fingerstyle, hybrid) — https://www.fender.com/articles/techniques/what-type-of-picker-are-you
 - Travis picking — https://www.fender.com/articles/techniques/travis-picking-on-guitar
 - R&B / Soul rhythm and voicing language — https://www.fender.com/articles/songs/r-and-b-soul-path
 
-## Runtime knowledge added from this batch
+## Runtime knowledge added from this research pass
 
 ```text
 src/fretpilot/knowledge/research_sources.py
@@ -47,35 +47,47 @@ src/fretpilot/knowledge/style_blues.py
 src/fretpilot/knowledge/jazz_priors.py
 src/fretpilot/knowledge/metal_priors.py
 src/fretpilot/knowledge/fingerstyle_priors.py
+src/fretpilot/knowledge/country_priors.py
+src/fretpilot/knowledge/punk_priors.py
+src/fretpilot/knowledge/syncopated_rhythm_priors.py
+src/fretpilot/knowledge/picking_research.py
+src/fretpilot/knowledge/rock_pop_priors.py
+src/fretpilot/knowledge/strategy_priors.py
 ```
 
-The initial priors cover:
+The current priors cover:
 
 - persistent hand-position planning;
 - weak 5–12 fret preference for suitable lead material;
 - IOI-aware shift/string-change cost;
-- previous-voicing context;
+- previous-voicing context and texture continuity;
 - same-string legato and slide feasibility;
 - long-note vibrato preference;
 - high-string / duration / cliché bias for bends;
-- blues lead and rhythm tendencies;
+- blues lead and shuffle/rhythm tendencies;
 - jazz voicing/voice-leading tendencies;
 - metal rhythm tendencies;
-- fingerstyle alternating-bass / bass-treble separation tendencies.
+- rock/pop rhythm, arpeggio and lead tendencies;
+- fingerstyle alternating-bass / bass-treble separation tendencies;
+- country/hybrid-picking tendencies;
+- punk power-shape/downstroke tendencies;
+- syncopated/percussive chord-rhythm tendencies for funk/R&B/soul-like material;
+- alternate, downstroke, tremolo, sweep and hybrid picking families;
+- one style/technique strategy registry for future score planning.
 
 ## Next knowledge expansion
 
 Priority additions:
 
-1. rock/pop rhythm and arpeggio families;
-2. funk/R&B percussive rhythm family;
-3. country/hybrid-picking family;
-4. punk/downpicking family;
-5. metal lead/tremolo/sweep subfamilies;
-6. blues lead cliché detector and bend target model;
-7. jazz shell/drop-2/drop-3 voicing library;
-8. chord-shape transition prototypes for western popular music;
-9. right-hand picking-intent model;
-10. song-level style prior feeding section-level strategy.
+1. song-level style prior feeding section-level strategy;
+2. chord-quality inference and reusable chord-shape vocabulary;
+3. blues lead cliché detector and bend target model;
+4. jazz shell/drop-2/drop-3 concrete voicing library;
+5. metal lead/tremolo/sweep phrase detectors;
+6. right-hand picking-intent inference from symbolic rhythm/string motion;
+7. chord-shape transition prototypes for western popular music;
+8. style-conditioned score spelling and Guitar Pro notation strategy;
+9. source-weighted evaluation against open/licensed symbolic examples;
+10. learned candidate rankers after deterministic/evidence-backed baselines stabilize.
 
 All new rules should preserve source IDs and remain soft preferences unless the rule is a true physical/playability constraint.
