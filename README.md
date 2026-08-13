@@ -56,15 +56,15 @@ MIDI file
 → NormalizedTimeline with program metadata
 → InstrumentStream resolution
 → three-layer guitar candidate ranking
-→ experimental guitar behavior profiles
 → selected stream
 → rhythm-grid scoring + onset repair suggestions
 → phrase-level guitar fingering
 → basic articulation planning
-→ JSON analysis
+→ measure-aware Guitar IR
+→ JSON output with source timing, score timing, ties and change log
 ```
 
-The MIDI importer preserves original source ticks and durations. Repair decisions are stored separately so future score cleanup never destroys the original performance timing.
+The MIDI importer preserves original source ticks and durations. Guitar IR stores source/performance timing separately from repaired score timing, so score cleanup does not destroy the original musical performance.
 
 ### Guitar detection layers
 
@@ -73,7 +73,7 @@ The MIDI importer preserves original source ticks and durations. Repair decision
 3. MIDI note behavior and standard-guitar plausibility
 4. Separate experimental behavior library: solo, riff, strumming, breakdown, and jazz comping
 
-The first three layers answer whether a stream is probably guitar. The fourth layer describes the guitar behavior and does not override instrument identity.
+The first three layers answer whether a stream is probably guitar. The fourth layer describes the guitar behavior and does not override instrument identity. Track identification remains an incremental project and is documented separately.
 
 ## Quick start
 
@@ -106,12 +106,32 @@ fretpilot fingering song.mid --stream-id t0:ch2:p27
 fretpilot analyze song.mid --stream-id t0:ch2:p27 -o analysis.json
 ```
 
-When exactly one high-confidence guitar stream exists, the analysis commands can select it automatically. When multiple likely guitar streams exist, FretPilot stops and asks for an explicit `--stream-id` instead of silently choosing the wrong guitar part.
+Build canonical measure-aware Guitar IR:
+
+```bash
+fretpilot build-ir song.mid \
+  --stream-id t0:ch2:p27 \
+  -o guitar-ir.json
+```
+
+Current Guitar IR V0.1 includes:
+
+- schema version
+- tempo and time-signature maps
+- measures and beat-in-measure coordinates
+- score onset and duration
+- original source onset, duration, and velocity
+- string/fret assignments
+- generic articulations
+- ties for notes crossing measure boundaries
+- rhythm transformation/change log
+
+When exactly one high-confidence guitar stream exists, downstream commands can select it automatically. When multiple likely guitar streams exist, FretPilot stops and asks for an explicit `--stream-id` instead of silently choosing the wrong guitar part.
 
 A legacy physical-track selector remains available:
 
 ```bash
-fretpilot analyze song.mid --track 2
+fretpilot build-ir song.mid --track 2 -o guitar-ir.json
 ```
 
 Current deterministic articulation vocabulary includes:
@@ -147,10 +167,6 @@ FretPilot/
 │   ├── ROADMAP.md
 │   └── projects/
 │       └── track-identification/
-│           ├── README.md
-│           ├── STATUS.md
-│           ├── BACKLOG.md
-│           └── TEST_PLAN.md
 ├── src/fretpilot/
 │   ├── midi/
 │   ├── detection/
@@ -159,6 +175,7 @@ FretPilot/
 │   ├── rhythm/
 │   ├── guitar/
 │   ├── articulation/
+│   ├── ir/
 │   ├── ai/
 │   └── exporters/
 │       ├── guitar_pro/
@@ -172,12 +189,9 @@ FretPilot/
 - [`AGENTS.md`](AGENTS.md) — mandatory starting point for AI agents and contributors.
 - [`docs/README.md`](docs/README.md) — documentation index.
 - [`docs/projects/track-identification/README.md`](docs/projects/track-identification/README.md) — track-identification project hub.
-- [`docs/projects/track-identification/STATUS.md`](docs/projects/track-identification/STATUS.md) — implemented versus planned behavior.
-- [`docs/projects/track-identification/BACKLOG.md`](docs/projects/track-identification/BACKLOG.md) — prioritized task IDs and acceptance criteria.
-- [`docs/projects/track-identification/TEST_PLAN.md`](docs/projects/track-identification/TEST_PLAN.md) — fixture and evaluation quality gates.
+- [`docs/MUSIC_IR.md`](docs/MUSIC_IR.md) — canonical score/performance representation.
+- [`docs/ROADMAP.md`](docs/ROADMAP.md) — prototype and product milestones.
 
 ## Status
 
-Early V0.1 implementation. Layered instrument-stream detection and stream-aware deterministic guitar analysis are runnable. The next core milestone is to establish a labeled/evaluable detection corpus and section/phrase segmentation so one stream can change behavior between riff, strumming, solo, and breakdown sections, followed by notation-quality duration spelling and Guitar IR construction.
-
-See [`docs/PRODUCT.md`](docs/PRODUCT.md), [`docs/GUITAR_DETECTION.md`](docs/GUITAR_DETECTION.md), and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the current product and architecture definitions.
+Early V0.1 implementation. Instrument-stream detection, deterministic guitar analysis, and measure-aware Guitar IR generation are runnable. Track identification will continue to improve incrementally, but the main prototype path now advances toward a minimal GP5 exporter, followed by an Ample Guitar performance-MIDI adapter.
