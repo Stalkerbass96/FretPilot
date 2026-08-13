@@ -12,6 +12,7 @@ from fretpilot.articulation.models import ArticulationDecision, ArticulationPlan
 from fretpilot.articulation.planner import plan_articulations
 from fretpilot.detection.models import InstrumentStream
 from fretpilot.guitar import optimize_fingering
+from fretpilot.guitar.chord_voicing import apply_chord_voicing_strategy
 from fretpilot.guitar.hand_position import (
     HandPositionState,
     carry_hand_position_into_section,
@@ -24,6 +25,7 @@ from fretpilot.guitar.models import (
     FingeringResult,
 )
 from fretpilot.knowledge.context_strategy import apply_style_scores_to_context
+from fretpilot.knowledge.strategy_resolver import resolve_style_strategy
 from fretpilot.midi.models import NormalizedTimeline, NormalizedTrack
 from fretpilot.rhythm import analyze_track_rhythm
 
@@ -187,6 +189,19 @@ def analyze_guitar_track_by_sections(
                 preferences=context.fingering,
                 max_fret=max_fret,
             )
+
+        score_strategy = resolve_style_strategy(
+            context.style_scores,
+            role_scores=context.role_scores,
+            technique_scores=context.technique_scores,
+        ).score
+        local_fingering = apply_chord_voicing_strategy(
+            local_track,
+            local_fingering,
+            preferences=context.fingering,
+            score_strategy=score_strategy,
+            max_fret=max_fret,
+        )
 
         hand_position = summarize_hand_position(
             local_fingering,
