@@ -72,7 +72,7 @@ def test_longer_chord_member_becomes_let_ring_and_gp5_exports(tmp_path: Path) ->
     )
 
     output = tmp_path / "unequal-chord.gp5"
-    export_gp5(project, output)
+    report = export_gp5(project, output)
     parsed = gp.parse(output)
     first_normal_beat = next(
         beat
@@ -80,4 +80,5 @@ def test_longer_chord_member_becomes_let_ring_and_gp5_exports(tmp_path: Path) ->
         if beat.status == gp.BeatStatus.normal
     )
     assert len(first_normal_beat.notes) == 2
-    assert any(note.effect.letRing for note in first_normal_beat.notes)
+    assert not any(note.effect.letRing for note in first_normal_beat.notes)
+    assert any("Omitted partial let-ring" in warning for warning in report.warnings)
