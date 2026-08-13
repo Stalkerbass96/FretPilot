@@ -15,6 +15,16 @@ FINGERING_KEYS = {
 ARTICULATION_KEYS = {"hammer_pull", "slide", "bend", "vibrato", "palm_mute", "let_ring", "staccato"}
 PERFORMANCE_KEYS = {"velocity_variation", "timing_looseness", "note_overlap", "accent_strength"}
 
+# Some evidence-backed score concepts already have a close, but not identical,
+# runtime preference. Map them conservatively until dedicated planners exist.
+FINGERING_PROXIES: dict[str, tuple[tuple[str, float], ...]] = {
+    "voice_leading_weight": (("hand_position_stability", .60), ("compact_chord_voicing", .45)),
+    "moveable_voicing_family_bias": (("shape_reuse", .65), ("compact_chord_voicing", .35)),
+    "power_chord_bias": (("shape_reuse", .55), ("compact_chord_voicing", .35)),
+    "cross_string_roll_bias": (("adjacent_string_arpeggio", .65),),
+    "compact_two_string_shapes": (("compact_chord_voicing", .60),),
+}
+
 
 @dataclass(slots=True)
 class ResolvedStrategy:
@@ -55,6 +65,16 @@ def _add_weight(target: dict[str, float], key: str, value: float, evidence: floa
     target[key] = round(max(.25, min(2.5, current + evidence * (value - 1.0))), 6)
 
 
+def _apply_fingering_proxies(
+    result: ResolvedStrategy,
+    key: str,
+    value: float,
+    evidence: float,
+) -> None:
+    for target_key, strength in FINGERING_PROXIES.get(key, ()):
+        _add_weight(result.fingering, target_key, value, evidence * strength)
+
+
 def resolve_style_strategy(
     style_scores: Mapping[str, float],
     *,
@@ -90,6 +110,7 @@ def resolve_style_strategy(
                     _add_weight(result.performance, key, float(value), evidence)
                 else:
                     _add_weight(result.score, key, float(value), evidence)
+                    _apply_fingering_proxies(result, key, float(value), evidence)
             elif isinstance(value, str):
                 result.score.setdefault("strategies", []).append(value)
 
