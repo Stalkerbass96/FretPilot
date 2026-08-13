@@ -21,6 +21,7 @@ dev = [
 
 [project.scripts]
 fretpilot = "fretpilot.cli:main"
+fretpilot-pdf = "fretpilot.pdf_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
