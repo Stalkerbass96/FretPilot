@@ -35,7 +35,7 @@ def infer_style_from_features(
     program: int | None = None,
     scope: str = "section",
 ) -> StyleInference:
-    """Return multiple soft style scores; never a hard genre label."""
+    """Return multiple conservative soft style scores, never a hard genre label."""
 
     mono = float(features.get("monophonic_onset_ratio", 0.0))
     chord = float(features.get("chord_onset_ratio", 0.0))
@@ -49,6 +49,7 @@ def infer_style_from_features(
     clean = program in {26, 27, 28}
     driven = program in {29, 30}
     acoustic = program in {24, 25}
+    arpeggio_like = mono >= .60 and adjacent >= .75 and short <= .55
 
     definitions = {
         "metal": [
@@ -56,47 +57,49 @@ def infer_style_from_features(
             (repeated >= .14, .18, "repeated_riff"), (short >= .50, .17, "short_notes"),
         ],
         "rock": [
-            (clean or driven, .25, "rock_guitar_program"), (repeated >= .10, .20, "pattern_reuse"),
-            (.35 <= short <= .85, .20, "rhythmic_density"), (.12 <= chord <= .70, .15, "mixed_texture"),
-            (10 <= pitch_range <= 36, .20, "guitar_sized_range"),
+            (clean or driven, .20, "rock_guitar_program"), (arpeggio_like, .30, "guitar_arpeggio_texture"),
+            (repeated >= .10, .15, "pattern_reuse"), (.10 <= chord <= .70, .10, "mixed_texture"),
+            (10 <= pitch_range <= 48, .15, "guitar_sized_range"), (.35 <= short <= .85, .10, "rhythmic_density"),
         ],
         "pop": [
-            (acoustic or program == 27, .25, "acoustic_or_clean_program"), (.20 <= chord <= .75, .25, "song_chord_texture"),
-            (.25 <= short <= .75, .18, "moderate_rhythm_density"), (10 <= pitch_range <= 36, .17, "arrangement_range"),
-            (repeated >= .08, .15, "repeating_song_pattern"),
+            (acoustic or program == 27, .15, "acoustic_or_clean_program"), (.20 <= chord <= .75, .20, "song_chord_texture"),
+            (.25 <= short <= .75, .15, "moderate_rhythm_density"), (10 <= pitch_range <= 42, .15, "arrangement_range"),
+            (repeated >= .08, .10, "repeating_song_pattern"),
         ],
         "punk": [
-            (driven, .28, "driven_program"), (short >= .62, .27, "persistent_short_attacks"),
-            (chord >= .25, .20, "frequent_chord_attacks"), (repeated >= .12, .15, "repeated_shape_rhythm"),
+            (driven, .30, "driven_program"), (short >= .62, .30, "persistent_short_attacks"),
+            (chord >= .25, .15, "frequent_chord_attacks"), (repeated >= .12, .15, "repeated_shape_rhythm"),
             (pitch_range <= 24, .10, "compact_register"),
         ],
         "jazz": [
-            (program in {26, 27}, .25, "jazz_or_clean_program"), (chord >= .40, .30, "chord_texture"),
-            (poly >= 2.3, .25, "voicing_polyphony"), (12 <= pitch_range <= 40, .20, "voicing_range"),
+            (program == 26, .20, "jazz_guitar_program"), (program == 27, .08, "clean_guitar_program"),
+            (chord >= .40, .35, "chord_texture"), (poly >= 2.3, .30, "voicing_polyphony"),
+            (12 <= pitch_range <= 40, .12, "voicing_range"),
         ],
         "blues": [
-            (program in {27, 29}, .20, "clean_or_overdrive_program"), (mono >= .65, .25, "lead_texture"),
-            (10 <= pitch_range <= 30, .20, "box_sized_range"), (adjacent >= .75, .20, "compact_intervals"),
-            (short <= .70, .15, "sustained_note_room"),
+            (program in {27, 29}, .10, "clean_or_overdrive_program"), (mono >= .65, .15, "lead_texture"),
+            (10 <= pitch_range <= 30, .30, "box_sized_range"), (adjacent >= .75, .10, "compact_intervals"),
+            (short <= .70, .05, "sustained_note_room"),
         ],
         "funk": [
-            (program in {27, 28}, .30, "clean_or_muted_program"), (short >= .55, .30, "percussive_notes"),
-            (chord >= .25, .20, "partial_chords"), (poly <= 4.5, .20, "compact_texture"),
+            (program == 28, .30, "muted_guitar_program"), (program == 27, .08, "clean_guitar_program"),
+            (short >= .55, .35, "percussive_notes"), (chord >= .25 and short >= .45, .17, "short_partial_chords"),
+            (poly <= 4.5, .10, "compact_texture"),
         ],
         "rnb": [
-            (program in {27, 28}, .26, "clean_or_muted_program"), (chord >= .25, .24, "chordal_accompaniment"),
-            (1.5 <= poly <= 5.0, .18, "partial_chord_polyphony"), (.30 <= short <= .80, .17, "mixed_note_lengths"),
-            (pitch_range >= 12, .15, "extended_voicing_range"),
+            (program in {27, 28}, .10, "clean_or_muted_program"), (chord >= .25 and poly >= 1.5, .20, "chordal_accompaniment"),
+            (1.5 <= poly <= 5.0, .30, "partial_chord_polyphony"), (.30 <= short <= .80, .15, "mixed_note_lengths"),
+            (pitch_range >= 12, .10, "extended_voicing_range"),
         ],
         "country": [
-            (acoustic or program == 27, .28, "acoustic_or_clean_program"), (mono >= .55, .20, "single_note_roll_texture"),
-            (adjacent >= .80, .18, "compact_cross_string_motion"), (pitch_range >= 12, .17, "wide_register"),
-            (low <= .60, .17, "not_low_register_dominated"),
+            (acoustic, .35, "acoustic_program"), (program == 27, .05, "clean_program"),
+            (mono >= .55, .10, "single_note_roll_texture"), (adjacent >= .80, .10, "compact_cross_string_motion"),
+            (pitch_range >= 12, .10, "wide_register"), (low <= .60, .10, "not_low_register_dominated"),
         ],
         "fingerstyle": [
-            (acoustic, .35, "acoustic_program"), (1.2 <= poly <= 3.8, .20, "mixed_polyphony"),
-            (.15 <= chord <= .65, .15, "arpeggio_chord_mix"), (pitch_range >= 18, .15, "wide_register"),
-            (.20 <= low <= .75, .15, "bass_presence"),
+            (acoustic, .45, "acoustic_program"), (1.2 <= poly <= 3.8, .15, "mixed_polyphony"),
+            (.15 <= chord <= .65, .10, "arpeggio_chord_mix"), (pitch_range >= 18, .10, "wide_register"),
+            (.20 <= low <= .75, .10, "bass_presence"),
         ],
     }
 
@@ -104,6 +107,12 @@ def infer_style_from_features(
     reasons: dict[str, list[str]] = {}
     for style, rules in definitions.items():
         scores[style], reasons[style] = _score(rules)
+
+    # Country/fingerstyle need stronger evidence than a generic clean electric
+    # guitar part; otherwise arpeggiated rock/pop material gets contaminated.
+    if not acoustic:
+        scores["country"] = min(scores["country"], .35)
+        scores["fingerstyle"] = min(scores["fingerstyle"], .30)
 
     scores = dict(sorted(scores.items(), key=lambda item: item[1], reverse=True))
     return StyleInference(scope=scope, style_scores=scores, reasons=reasons)
