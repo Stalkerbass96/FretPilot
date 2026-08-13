@@ -44,6 +44,21 @@ class InstrumentStream:
             instrument_name=self.instrument_name,
         )
 
+    def to_summary_dict(self) -> dict[str, Any]:
+        return {
+            "stream_id": self.stream_id,
+            "source_track_index": self.source_track_index,
+            "source_track_name": self.source_track_name,
+            "channel": self.channel,
+            "display_channel": self.display_channel,
+            "program": self.program,
+            "program_name": self.program_name,
+            "program_family": self.program_family,
+            "instrument_name": self.instrument_name,
+            "is_drum_channel": self.is_drum_channel,
+            "note_count": len(self.notes),
+        }
+
 
 @dataclass(slots=True)
 class BehaviorFeatures:
@@ -95,10 +110,16 @@ class GuitarStreamCandidate:
     behavior_profiles: list[BehaviorProfileMatch] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
-        payload = asdict(self)
-        payload["stream"]["display_channel"] = self.stream.display_channel
-        payload["stream"]["is_drum_channel"] = self.stream.is_drum_channel
-        return payload
+        return {
+            "stream": self.stream.to_summary_dict(),
+            "guitar_probability": self.guitar_probability,
+            "confidence": self.confidence,
+            "decision": self.decision,
+            "layers": [asdict(layer) for layer in self.layers],
+            "behavior_profiles": [
+                asdict(profile) for profile in self.behavior_profiles
+            ],
+        }
 
 
 @dataclass(slots=True)
