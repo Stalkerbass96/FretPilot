@@ -57,9 +57,9 @@ def _transition_cost(previous: FretPosition, current: FretPosition) -> float:
     string_distance = abs(current.string - previous.string)
     pitch_interval = abs(current.pitch - previous.pitch)
 
-    # Stepwise melodic material can legitimately stay on one string for
-    # hammer-ons, pull-offs and slides.
-    if pitch_interval <= 4:
+    # Stepwise melodic material, including a single fourth, can legitimately
+    # stay on one string for hammer-ons, pull-offs and slides.
+    if pitch_interval <= 5:
         cost = fret_distance * 0.32 + string_distance * 1.45
         if fret_distance > 5:
             cost += (fret_distance - 5) * 0.45
@@ -67,10 +67,10 @@ def _transition_cost(previous: FretPosition, current: FretPosition) -> float:
             cost -= 0.25
         return max(0.0, cost)
 
-    # Fourth/fifth-like motion is frequently an arpeggio across neighbouring
-    # strings. Penalize "one-string ladders" such as 9 -> 16 -> 23, which are
-    # mathematically playable but rarely sensible for a repeating guitar riff.
-    if 5 <= pitch_interval <= 9:
+    # Sixth/fifth-like motion is frequently an arpeggio across neighbouring
+    # strings. The dedicated arpeggio pass below handles repeated 5-9 semitone
+    # cells, while this pairwise cost avoids obvious one-string ladders.
+    if 6 <= pitch_interval <= 9:
         cost = fret_distance * 0.42 + string_distance * 0.75
         if previous.string == current.string:
             cost += 2.0
@@ -220,8 +220,6 @@ def _enumerate_adjacent_string_shapes(
 
     shapes: list[_ArpeggioShape] = []
     for combination in product(*candidates_per_note):
-        # For an ascending stacked-interval run, a natural guitar shape moves
-        # one physical string toward the treble side for each next note.
         if not all(
             current.string == previous.string - 1
             for previous, current in zip(combination, combination[1:], strict=False)
@@ -243,12 +241,7 @@ def _arpeggio_shape_cost(
     shape: _ArpeggioShape,
     previous_shape: _ArpeggioShape | None,
 ) -> float:
-    # Keep the basic weak low-position preference.
     cost = sum(fret * 0.015 for fret in shape.frets)
-
-    # Open strings are not intrinsically bad, but in a repeating movable riff
-    # they change timbre and destroy the reusable hand shape. A strong local
-    # penalty keeps closed shapes such as E5-A7-D9 ahead of A0-D2-G4.
     cost += sum(1.8 for fret in shape.frets if fret == 0)
 
     fret_span = max(shape.frets) - min(shape.frets)
@@ -259,9 +252,6 @@ def _arpeggio_shape_cost(
     if previous_shape is None or len(previous_shape.frets) != len(shape.frets):
         return cost
 
-    # Repeated arpeggio cells should preserve the same physical string set when
-    # possible. This models a guitarist moving a reusable grip rather than
-    # re-solving every chord independently.
     if shape.strings == previous_shape.strings:
         cost -= 0.9
 
@@ -287,8 +277,6 @@ def _arpeggio_shape_cost(
     if len(set(fret_offsets)) == 1:
         cost -= 0.25
 
-    # Prefer moving a known shape a few frets over collapsing suddenly into a
-    # very different position only because a lower-fret duplicate exists.
     cost += abs(shape.fret_center - previous_shape.fret_center) * 0.10
     return cost
 
