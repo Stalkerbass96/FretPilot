@@ -30,6 +30,12 @@ class SectionContextAnalysis:
     end_beat: float
     behavior_profiles: list[BehaviorProfileMatch]
     playing_context: PlayingContext
+    # Manual/legacy section contexts default to a strong/unknown boundary so
+    # existing callers retain reset behavior unless they explicitly opt in to
+    # cross-section hand-position continuity.
+    boundary_confidence: float = 1.0
+    boundary_strength: float = 2.0
+    boundary_reason: str = "manual_or_unknown_boundary"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -68,6 +74,9 @@ def analyze_section_contexts(
                 end_beat=section.end_beat,
                 behavior_profiles=matches,
                 playing_context=context,
+                boundary_confidence=section.boundary_confidence,
+                boundary_strength=section.boundary_strength,
+                boundary_reason=section.boundary_reason,
             )
         )
 
