@@ -50,6 +50,36 @@ tests/test_guitar_fingering.py
 tests/test_articulation_planner.py
 ```
 
+### Virtual guitar instrument / adapter work (`VI-*`)
+
+Before changing product-specific performance rendering, keyswitches, CC mappings, plugin timing/state behavior, or adding a new virtual guitar target, read:
+
+1. [`docs/projects/virtual-guitar-instruments/README.md`](docs/projects/virtual-guitar-instruments/README.md)
+2. [`docs/projects/virtual-guitar-instruments/BACKLOG.md`](docs/projects/virtual-guitar-instruments/BACKLOG.md)
+3. [`docs/LONG_TERM_ARCHITECTURE.md`](docs/LONG_TERM_ARCHITECTURE.md)
+
+Then inspect:
+
+```text
+src/fretpilot/virtual_instruments/
+src/fretpilot/exporters/ample_guitar/
+src/fretpilot/ir/
+tests/test_virtual_instrument_profiles.py
+tests/test_ample_guitar_renderer.py
+```
+
+Critical boundary:
+
+```text
+Guitar Playing Knowledge
+= how a real guitarist would likely play
+
+Virtual Guitar Instrument Knowledge
+= how a specific software instrument must be controlled
+```
+
+Never change upstream fingering/articulation intent merely to match one plugin's limitations. Use capability negotiation, explicit approximation, or an adapter warning instead.
+
 ### Cross-project self-evolution infrastructure (`SE-*`)
 
 Use `SE-*` only when work crosses specialized module boundaries. Read:
@@ -60,7 +90,7 @@ Use `SE-*` only when work crosses specialized module boundaries. Read:
 
 Examples include runtime reproducibility manifests, knowledge snapshot pinning, shared evaluation identity, cross-module correction envelopes, shadow comparison, and model/knowledge compatibility metadata.
 
-Do **not** create an `SE-*` task if the work clearly belongs to an existing `TI-*` or `GK-*` task.
+Do **not** create an `SE-*` task if the work clearly belongs to an existing `TI-*`, `GK-*`, or `VI-*` task.
 
 ## Task prefixes
 
@@ -68,6 +98,7 @@ Do **not** create an `SE-*` task if the work clearly belongs to an existing `TI-
 PV-*  prototype/output validation and near-term user-facing quality
 TI-*  instrument-stream and guitar-track identification
 GK-*  guitar-playing/style/phrase knowledge and learning
+VI-*  virtual-guitar product knowledge, capabilities, adapters, and compatibility
 SE-*  cross-project system-evolution infrastructure and governance
 ```
 
@@ -85,24 +116,26 @@ SE-*  cross-project system-evolution infrastructure and governance
 - Track names and General MIDI programs are evidence, not absolute truth.
 - Classification must remain explainable: expose per-layer scores, reasons, and raw metrics.
 - Do not silently auto-select when multiple likely guitar streams exist.
-- Do not let plugin-specific Ample Guitar mappings leak into detection or canonical musical intent.
+- Do not let product-specific keyswitch/CC/control mappings leak into detection, Guitar Playing Knowledge, or canonical Guitar IR.
+- Official virtual-instrument mappings and learned expressive calibration are different knowledge types and must be versioned/evidenced separately.
+- Unsupported target-instrument capabilities must be surfaced explicitly rather than silently dropping material musical intent.
 - Do not introduce an LLM dependency into deterministic import, stream resolution, baseline classification, hard fretboard validation, or file-format validation.
 - Canonical Guitar IR must remain versioned and independent of output adapters.
 - Learned knowledge must preserve provenance and versioning. Newly ingested external material must not silently change production behavior.
-- Runtime inference must use an approved/pinned knowledge state; it must not learn directly from arbitrary web pages during a user request.
-- Do not assume publicly visible internet tablature is automatically licensed for crawling, storage, redistribution, or training.
+- Runtime inference must use approved/pinned knowledge and adapter profiles; it must not learn directly from arbitrary web pages during a user request.
+- Do not assume publicly visible internet tablature or vendor documentation can be redistributed/trained on beyond its permitted use.
 
 ## Required workflow
 
 When implementing a backlog item:
 
-1. Pick the correct stable task ID (`PV-*`, `TI-*`, `GK-*`, or `SE-*`).
+1. Pick the correct stable task ID (`PV-*`, `TI-*`, `GK-*`, `VI-*`, or `SE-*`).
 2. Check whether an existing task already owns the work before creating a new one.
-3. Add or update tests before changing scoring/knowledge behavior.
+3. Add or update tests before changing scoring/knowledge/adapter behavior.
 4. Keep existing public JSON fields backward-compatible unless the task explicitly changes the schema.
 5. Run `pytest -q`.
 6. Update the relevant project docs/backlog.
-7. Record evaluation evidence rather than claiming that a heuristic or learned profile is more accurate without measurements.
+7. Record evaluation/verification evidence rather than claiming that a heuristic, learned profile, or plugin mapping is better without measurements or source evidence.
 
 For learned guitar knowledge, use the controlled lifecycle documented in `LEARNING_PIPELINE.md`:
 
@@ -116,12 +149,25 @@ eligible source
 → approved versioned snapshot
 ```
 
+For virtual-instrument adapter knowledge, use:
+
+```text
+manual / version / calibration evidence
+→ adapter knowledge candidate
+→ conformance tests
+→ plugin/manual verification where required
+→ approved versioned instrument profile
+```
+
 Production behavior must never be silently changed by newly ingested material.
 
 ## Current focus
 
 Track identification has an explainable V0 and can improve incrementally.
 
-The immediate prototype focus is still user-visible score/performance quality. In parallel, the playing-knowledge project should become the maintainable connection between phrase behavior/style and decisions such as hand position, movable shapes, string choice, chord voicing, articulation, and performance timing.
+The immediate prototype focus is still user-visible score/performance quality. In parallel:
+
+- `GK-*` should become the maintainable connection between phrase behavior/style and guitarist-like decisions;
+- `VI-*` should generalize the current Ample-specific output into a multi-product adapter architecture without destabilizing the working Ample prototype.
 
 The larger `SE-*` learning/release infrastructure is a long-term enabler and must not block Prototype 0.1.
