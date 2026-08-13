@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fretpilot.guitar import candidate_positions, optimize_fingering
-from fretpilot.knowledge import compose_playing_context
+from fretpilot.knowledge import FingeringPreferences
 from fretpilot.midi.models import NormalizedNote, NormalizedTrack
 
 
@@ -63,24 +63,24 @@ def test_phrase_optimizer_prefers_coherent_same_string_path() -> None:
     assert [note.fret for note in result.notes] == [0, 2, 3, 5]
 
 
-def test_explicit_playing_context_changes_valid_fingering_ranking() -> None:
+def test_fingering_preferences_can_change_valid_candidate_ranking() -> None:
     track = _track([64, 66, 67, 69])
     neutral = optimize_fingering(track)
-    solo = optimize_fingering(
+    closed_position = optimize_fingering(
         track,
-        preferences=compose_playing_context({"solo": 1.0}).fingering,
+        preferences=FingeringPreferences(open_string_usage=0.0),
     )
 
     # Neutral/default output is intentionally backward-compatible and starts on
-    # the open high E string. The solo profile currently avoids open strings
-    # enough to keep the same phrase in a closed position on the B string.
+    # the open high E string. A strong explicit open-string avoidance prior
+    # moves the same physically valid phrase into a closed B-string position.
     assert [(note.string, note.fret) for note in neutral.notes] == [
         (1, 0),
         (1, 2),
         (1, 3),
         (1, 5),
     ]
-    assert [(note.string, note.fret) for note in solo.notes] == [
+    assert [(note.string, note.fret) for note in closed_position.notes] == [
         (2, 5),
         (2, 7),
         (2, 8),
