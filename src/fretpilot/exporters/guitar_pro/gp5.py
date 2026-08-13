@@ -158,6 +158,10 @@ def _apply_direct_effects(
             note.effect.vibrato = True
         elif articulation.type == "let_ring" and allow_let_ring:
             note.effect.letRing = True
+        elif articulation.type == "palm_mute":
+            note.effect.palmMute = True
+        elif articulation.type == "staccato":
+            note.effect.staccato = True
 
 
 def _populate_measure(
@@ -203,9 +207,6 @@ def _populate_measure(
         total_duration = durations.pop()
         segments = _split_duration_ticks(total_duration)
 
-        # PyGuitarPro 0.11 can emit an unreadable GP5 when only some notes in a
-        # chord beat carry the let-ring flag. Keep the musical intent in Guitar
-        # IR, omit the unsafe partial flag in GP5, and report the downgrade.
         partial_chord_let_ring = (
             len(events) > 1
             and any(_has_articulation(event, "let_ring") for event in events)
