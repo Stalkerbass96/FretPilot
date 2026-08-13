@@ -1,12 +1,13 @@
 """Phrase-level guitar fingering optimization.
 
-The V0 engine uses dynamic programming instead of choosing the lowest fret for
-one note at a time. That lets FretPilot prefer a coherent playable path across
-a phrase while keeping the algorithm deterministic and inspectable.
+The V0 engine uses dynamic programming for melodic continuity and a local chord
+shape solver for simultaneous notes. This keeps lead/riff paths coherent while
+ensuring that a written chord never assigns two different frets to one string.
 """
 
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
 
 from fretpilot.guitar.instrument import STANDARD_TUNING, GuitarTuning, candidate_positions
@@ -38,14 +39,12 @@ def _transition_cost(previous: FretPosition, current: FretPosition) -> float:
     # V0 is tuned for lead/riff material. String changes therefore cost more
     # than a modest same-string hand movement because staying on a string keeps
     # hammer-on, pull-off and slide possibilities available to the articulation
-    # stage. Chord/rhythm-guitar modes will use different weights later.
+    # stage. Chord groups are corrected by a separate distinct-string solver.
     cost = fret_distance * 0.32 + string_distance * 1.45
 
-    # Large hand relocations are possible but should need a musical reason.
     if fret_distance > 5:
         cost += (fret_distance - 5) * 0.45
 
-    # Staying on one string is useful for legato/slide possibilities.
     if previous.string == current.string:
         cost -= 0.25
 
@@ -58,7 +57,6 @@ def _optimize_segment(
     if not items:
         return {}, 0.0
 
-    # Each layer maps candidate index -> (best cumulative cost, previous index).
     layers: list[dict[int, tuple[float, int | None]]] = []
 
     first_layer: dict[int, tuple[float, int | None]] = {}
@@ -115,17 +113,170 @@ def _optimize_segment(
     return result, total_cost
 
 
+def _shape_cost(
+    chosen: list[tuple[_SegmentItem, FretPosition]],
+    melodic_assignments: dict[int, tuple[FretPosition, float]],
+) -> float:
+    cost = 0.0
+    frets: list[int] = []
+    strings: list[int] = []
+
+    for item, position in chosen:
+        frets.append(position.fret)
+        strings.append(position.string)
+        cost += _position_cost(position)
+        original = melodic_assignments.get(item.note_index)
+        if original is not None:
+            original_position = original[0]
+            cost += abs(position.string - original_position.string) * 0.55
+            cost += abs(position.fret - original_position.fret) * 0.12
+
+    if frets:
+        fretted = [fret for fret in frets if fret > 0]
+        if fretted:
+            span = max(fretted) - min(fretted)
+            cost += span * 0.18
+            if span > 5:
+                cost += (span - 5) * 1.2
+
+    if strings:
+        cost += (max(strings) - min(strings)) * 0.04
+
+    return cost
+
+
+def _solve_chord_shape(
+    items: list[_SegmentItem],
+    melodic_assignments: dict[int, tuple[FretPosition, float]],
+) -> dict[int, tuple[FretPosition, float]] | None:
+    """Choose one distinct string per simultaneous note.
+
+    The search space is bounded by six guitar strings and typical chord sizes,
+    so a deterministic backtracking search is sufficient for V0.1.
+    """
+
+    if len(items) > 6:
+        return None
+
+    # Notes with fewer possible strings are placed first to prune impossible
+    # combinations early. The final mapping still uses source note indices.
+    ordered = sorted(items, key=lambda item: (len(item.positions), item.note.pitch))
+    best_cost = float("inf")
+    best: list[tuple[_SegmentItem, FretPosition]] | None = None
+
+    def search(
+        item_index: int,
+        used_strings: set[int],
+        chosen: list[tuple[_SegmentItem, FretPosition]],
+    ) -> None:
+        nonlocal best_cost, best
+        if item_index == len(ordered):
+            cost = _shape_cost(chosen, melodic_assignments)
+            if cost < best_cost:
+                best_cost = cost
+                best = list(chosen)
+            return
+
+        item = ordered[item_index]
+        original = melodic_assignments.get(item.note_index)
+        positions = sorted(
+            item.positions,
+            key=lambda position: (
+                0
+                if original is not None and position == original[0]
+                else 1,
+                position.fret,
+                position.string,
+            ),
+        )
+        for position in positions:
+            if position.string in used_strings:
+                continue
+            used_strings.add(position.string)
+            chosen.append((item, position))
+            search(item_index + 1, used_strings, chosen)
+            chosen.pop()
+            used_strings.remove(position.string)
+
+    search(0, set(), [])
+    if best is None:
+        return None
+
+    return {
+        item.note_index: (position, _position_cost(position))
+        for item, position in best
+    }
+
+
+def _repair_simultaneous_chords(
+    track: NormalizedTrack,
+    assignments: dict[int, tuple[FretPosition, float]],
+    *,
+    tuning: GuitarTuning,
+    max_fret: int,
+    diagnostics: list[FingeringDiagnostic],
+) -> None:
+    onset_groups: dict[int, list[int]] = defaultdict(list)
+    for note_index, note in enumerate(track.notes):
+        onset_groups[note.start_tick].append(note_index)
+
+    for note_indices in onset_groups.values():
+        if len(note_indices) < 2:
+            continue
+
+        items: list[_SegmentItem] = []
+        missing = False
+        for note_index in note_indices:
+            note = track.notes[note_index]
+            positions = candidate_positions(
+                note.pitch,
+                tuning=tuning,
+                max_fret=max_fret,
+            )
+            if not positions:
+                missing = True
+                break
+            items.append(
+                _SegmentItem(
+                    note_index=note_index,
+                    note=note,
+                    positions=positions,
+                )
+            )
+
+        if missing:
+            continue
+
+        shape = _solve_chord_shape(items, assignments)
+        if shape is None:
+            first_index = note_indices[0]
+            diagnostics.append(
+                FingeringDiagnostic(
+                    code="unplayable_chord_shape",
+                    message=(
+                        f"Simultaneous onset at tick {track.notes[first_index].start_tick} "
+                        "cannot be assigned to distinct strings in the current tuning."
+                    ),
+                    note_index=first_index,
+                    pitch=track.notes[first_index].pitch,
+                )
+            )
+            continue
+
+        assignments.update(shape)
+
+
 def optimize_fingering(
     track: NormalizedTrack,
     *,
     tuning: GuitarTuning = STANDARD_TUNING,
     max_fret: int = 24,
 ) -> FingeringResult:
-    """Assign a playable string/fret position to each note in a track.
+    """Assign playable string/fret positions to melodic and chord material.
 
-    V0 targets monophonic lead/riff material. Unplayable pitches are retained in
-    the result with ``string=None`` and ``fret=None`` and split the optimization
-    into independent playable phrase segments.
+    The first pass optimizes phrase continuity. The second pass treats notes with
+    the same source onset as a chord and enforces one distinct guitar string per
+    note. Unplayable notes remain visible with ``string=None`` and ``fret=None``.
     """
 
     diagnostics: list[FingeringDiagnostic] = []
@@ -168,6 +319,13 @@ def optimize_fingering(
         )
 
     flush_segment()
+    _repair_simultaneous_chords(
+        track,
+        assignments,
+        tuning=tuning,
+        max_fret=max_fret,
+        diagnostics=diagnostics,
+    )
 
     fingered_notes: list[FingeredNote] = []
     for note_index, note in enumerate(track.notes):
