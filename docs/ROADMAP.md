@@ -27,6 +27,28 @@ GitHub Issue #1
 
 It is no longer the main blocker. The active priority is **prototype validation and output quality**.
 
+## Task families and long-term architecture
+
+FretPilot uses stable task prefixes:
+
+```text
+PV-*  prototype/output validation and immediate product quality
+TI-*  instrument-stream / guitar-track identification
+GK-*  guitar-playing knowledge, style, phrasing, and learning
+SE-*  cross-project self-evolution infrastructure and governance
+```
+
+Long-term architecture and self-evolution are documented separately so they do not block Prototype 0.1:
+
+- `docs/LONG_TERM_ARCHITECTURE.md`
+- `docs/projects/system-evolution/README.md`
+- `docs/projects/system-evolution/BACKLOG.md`
+- `docs/projects/guitar-playing-knowledge/LEARNING_PIPELINE.md`
+
+The core long-term rule is:
+
+> Runtime uses deterministic constraints plus approved/versioned knowledge. New external data, user corrections, or learned models enter production only through offline evaluation and promotion.
+
 ## Prototype status
 
 ### Input and stream selection
@@ -47,10 +69,14 @@ It is no longer the main blocker. The active priority is **prototype validation 
 - [x] measure coordinates
 - [x] cross-measure ties
 - [x] standard six-string fingering
+- [x] movable riff/arpeggio shape repair baseline
 - [x] hammer-on, pull-off, slide, and vibrato inference
 - [x] ringing-overlap normalization
 - [x] unequal same-onset chord-duration normalization
 - [x] `let_ring` intent and transformation log
+- [x] initial composable `PlayingContext` knowledge model
+- [ ] thread `PlayingContext` through fingering/articulation (`GK-002` onward)
+- [ ] phrase/section-aware context
 
 ### Guitar IR
 
@@ -62,6 +88,7 @@ It is no longer the main blocker. The active priority is **prototype validation 
 - [x] generic articulation vocabulary
 - [x] confidence and warnings
 - [x] CLI `fretpilot build-ir`
+- [ ] context/knowledge provenance metadata (`SE-011`)
 
 ### Guitar Pro 5
 
@@ -82,6 +109,16 @@ It is no longer the main blocker. The active priority is **prototype validation 
 - [ ] real-song golden output review
 - [ ] safe representation for partial let-ring markings inside chords
 - [ ] true two-voice notation
+
+### PDF / TAB preview
+
+- [x] direct PDF renderer exists for review without Guitar Pro
+- [x] six-line TAB output
+- [ ] musician-readable rhythmic engraving
+- [ ] better phrase-aware spacing and beaming
+- [ ] rest/tie/slide/bend notation quality
+- [ ] multi-voice TAB rendering
+- [ ] visual golden regression samples
 
 ### Ample Guitar SC 4.x
 
@@ -123,9 +160,11 @@ Acceptance:
 
 > A user can inspect every candidate guitar part without manually reconstructing CLI commands.
 
-### PV-002 — Guitar Pro visual review
+### PV-002 — Score/TAB visual review
 
-Open generated `.gp5` files in Guitar Pro and review:
+Review generated GP5/PDF output and record issues by measure/stream rather than changing heuristics from memory.
+
+Review:
 
 - measure alignment;
 - rests;
@@ -134,14 +173,14 @@ Open generated `.gp5` files in Guitar Pro and review:
 - string/fret choices;
 - chord grouping;
 - let-ring markings;
+- rhythmic readability;
+- hand-position plausibility;
 - excessive articulations;
 - unreadable measures.
 
-Record issues by measure and stream ID instead of changing heuristics from memory.
-
 Acceptance:
 
-> At least one complete real guitar stream is readable as an editable first draft.
+> At least one complete real guitar stream is readable as an editable first draft or reviewable PDF/TAB draft.
 
 ### PV-003 — Ample SC listening review
 
@@ -171,9 +210,10 @@ Add a single machine-readable and human-readable report containing:
 - let-ring conversions;
 - unplayable notes;
 - articulation counts;
-- GP5 warnings;
+- score/PDF/GP5 warnings;
 - Ample warnings;
-- low-confidence measures.
+- low-confidence measures;
+- runtime/knowledge version provenance when available.
 
 Acceptance:
 
@@ -181,7 +221,7 @@ Acceptance:
 
 ### PV-005 — Batch command
 
-Add a command such as:
+Add/use a command such as:
 
 ```bash
 fretpilot prototype song.mid --all-likely-guitars -o output-directory
@@ -205,8 +245,12 @@ Acceptance:
 - [ ] phrase/section segmentation
 - [ ] section-dependent quantization grids
 
-### Guitar performance
+### Guitar performance and knowledge
 
+- [ ] `PlayingContext`-aware fingering costs (`GK-003`)
+- [ ] hand-position state (`GK-013`)
+- [ ] shape memory (`GK-012`)
+- [ ] left-hand finger assignment (`GK-014`)
 - [ ] bend detection and rendering
 - [ ] vibrato controller/keyswitch strategy
 - [ ] palm-mute inference
@@ -226,7 +270,7 @@ Acceptance:
 
 ### Track identification
 
-Continue through the dedicated backlog without blocking output validation:
+Continue through the dedicated `TI-*` backlog without blocking output validation:
 
 - labeled regression corpus;
 - precision/recall/F1 evaluation;
@@ -235,13 +279,28 @@ Continue through the dedicated backlog without blocking output validation:
 - section-level behavior profiles;
 - user override and correction data.
 
+### Self-evolution infrastructure
+
+Continue through `SE-*` and `GK-*` only after the prototype interfaces provide useful real data:
+
+- runtime reproducibility manifest (`SE-002`);
+- shared evaluation identity (`SE-003`);
+- correction/golden-review registry (`SE-020/SE-021`);
+- knowledge snapshot format/pinning (`GK-035`, `SE-030`);
+- candidate vs production lifecycle (`GK-036`, `SE-031`);
+- shadow comparison (`SE-032`);
+- learned fingering ranker (`GK-041/GK-042`);
+- optional model registry/integration (`SE-050/SE-051`).
+
 ## Release definition: Prototype 0.1
 
 Prototype 0.1 is ready for external hands-on testing when:
 
 1. the full CLI pipeline is green in CI;
 2. one real multi-track MIDI can generate output packages for all likely guitars;
-3. at least one generated GP5 has been opened and visually reviewed;
+3. at least one generated score/TAB output has been visually reviewed;
 4. at least one generated Ample SC MIDI has been played through the plugin;
 5. known unsupported cases appear as warnings rather than silent corruption;
 6. the README contains exact reproducible commands.
+
+The long-term learning system is explicitly **not** a Prototype 0.1 release requirement.
