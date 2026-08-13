@@ -1,5 +1,20 @@
 # FretPilot Roadmap
 
+## Current focus
+
+The first vertical slice is now runnable:
+
+```text
+MIDI
+→ NormalizedTimeline
+→ rhythm-grid analysis
+→ phrase-level guitar fingering
+→ basic articulation planning
+→ JSON analysis
+```
+
+The next priority is **notation-quality rhythm**: duration spelling, ties, phrase boundaries, and measure coordinates. Those pieces should be stable before GP5 export is implemented.
+
 ## Phase 0 — Product definition
 
 Goal: lock product boundaries before implementation.
@@ -15,51 +30,63 @@ Goal: lock product boundaries before implementation.
 
 Goal: load real-world MIDI reliably and produce normalized timelines.
 
-- [ ] MIDI parser
-- [ ] tempo map
-- [ ] time-signature map
-- [ ] track listing / selection
-- [ ] note-on/note-off normalization
-- [ ] malformed/hanging-note cleanup
-- [ ] beat + measure coordinate conversion
-- [ ] JSON debug dump
+- [x] MIDI parser
+- [x] tempo map
+- [x] time-signature map
+- [x] track listing / CLI selection
+- [x] note-on/note-off normalization
+- [ ] malformed/hanging-note repair policy
+- [ ] measure coordinate conversion
+- [x] beat coordinate conversion
+- [x] JSON debug dump
+- [x] parser diagnostics
 
 Acceptance test:
 
 > A MIDI file can be imported and represented without losing its musical timing information.
 
+**Status:** Core V0 implemented; representative real-world MIDI corpus still needed.
+
 ## Phase 2 — Rhythm repair
 
 Goal: generate a readable symbolic rhythm while preserving source performance timing.
 
-- [ ] candidate quantization grids
-- [ ] note-start scoring
-- [ ] note-duration scoring
-- [ ] ties
-- [ ] phrase consistency
-- [ ] triplet detection
-- [ ] confidence values
-- [ ] before/after diagnostics
+- [x] candidate quantization grids
+- [x] note-start scoring
+- [ ] note-duration scoring / spelling
+- [ ] rests and ties
+- [ ] phrase segmentation and phrase consistency
+- [x] basic triplet detection
+- [x] per-note confidence values
+- [x] source/target onset deltas
+- [ ] swing interpretation
+- [ ] mixed-grid / tuplet handling
 
 Acceptance test:
 
 > Typical generated/extracted guitar MIDI becomes materially easier to read without flattening intentional rhythm.
 
+**Status:** Onset-repair V0 implemented. Duration and phrase logic are the next core task.
+
 ## Phase 3 — Guitar fingering engine
 
 Goal: assign physically plausible strings/frets at phrase level.
 
-- [ ] standard-tuning fretboard model
-- [ ] pitch → string/fret candidate generator
-- [ ] configurable max fret
-- [ ] transition cost model
-- [ ] dynamic-programming / graph optimizer
-- [ ] same-string preference where musically justified
-- [ ] impossible-note diagnostics
+- [x] standard-tuning fretboard model
+- [x] pitch → string/fret candidate generator
+- [x] configurable max fret
+- [x] transition cost model
+- [x] dynamic-programming optimizer
+- [x] lead/riff same-string preference where musically justified
+- [x] impossible-note diagnostics
+- [ ] polyphonic/chord fingering constraints
+- [ ] alternate tunings
 
 Acceptance test:
 
 > Monophonic lead/riff MIDI exports with no impossible fingerings and substantially fewer awkward jumps than naive lowest-fret assignment.
+
+**Status:** Monophonic lead/riff V0 implemented.
 
 ## Phase 4 — Basic articulation engine
 
@@ -67,23 +94,35 @@ Goal: add useful guitar technique without over-articulating.
 
 Initial set:
 
-- [ ] pick
-- [ ] hammer-on
-- [ ] pull-off
-- [ ] slide
-- [ ] legato slide
-- [ ] vibrato
+- [ ] explicit pick/stroke planning
+- [x] hammer-on
+- [x] pull-off
+- [x] slide
+- [ ] legato slide distinction
+- [x] vibrato
 - [ ] palm mute
 - [ ] natural harmonic
+- [ ] bend
+
+Additional work:
+
+- [x] keep articulation vocabulary independent from plugin keyswitches
+- [ ] phrase/style context
+- [ ] confidence calibration
+- [ ] optional AI ranking of ambiguous candidates
 
 Acceptance test:
 
 > Added articulations are physically valid and improve a majority of reference phrases in blind listening/review.
 
-## Phase 5 — Guitar Pro exporter
+**Status:** Conservative deterministic V0 implemented for hammer-on, pull-off, slide, and vibrato.
 
-Goal: produce an editable readable score.
+## Phase 5 — Guitar IR builder + Guitar Pro exporter
 
+Goal: produce an editable readable score from the canonical representation.
+
+- [ ] build current analysis results into Guitar IR schema v0.1
+- [ ] transformation/change log
 - [ ] GP5 library evaluation / integration
 - [ ] measures / voices
 - [ ] notes / rests / ties
@@ -148,11 +187,14 @@ Upload MIDI
 → Download Ample MIDI
 ```
 
-- [ ] API/CLI first
+- [x] CLI skeleton and JSON inspection
+- [x] end-to-end analysis command
+- [ ] API service
 - [ ] simple web UI
 - [ ] processing report
 - [ ] low-confidence measure list
-- [ ] downloadable outputs
+- [ ] downloadable GP5
+- [ ] downloadable Ample MIDI
 
 ## Dataset / testing strategy
 
