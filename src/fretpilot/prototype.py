@@ -127,6 +127,9 @@ def _build_processing_report(
             "style_scores": item.playing_context.style_scores,
             "technique_scores": item.playing_context.technique_scores,
             "source_profiles": item.playing_context.source_profiles,
+            "boundary_confidence": item.boundary_confidence,
+            "boundary_strength": item.boundary_strength,
+            "boundary_reason": item.boundary_reason,
         }
         for item in analysis.section_contexts
     ]
@@ -170,6 +173,11 @@ def _build_processing_report(
             "unplayable_note_indices": unplayable,
             "unplayable_count": len(unplayable),
             "diagnostics": [asdict(item) for item in analysis.fingering.diagnostics],
+            "hand_position_plan": (
+                analysis.hand_position_plan.to_dict()
+                if analysis.hand_position_plan is not None
+                else None
+            ),
         },
         "articulations": {
             "counts": _count_articulations(analysis),

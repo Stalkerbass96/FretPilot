@@ -169,6 +169,7 @@ Each prototype stream report contains:
 - low-confidence rhythm notes;
 - unplayable fingering notes;
 - articulation counts;
+- per-section entry/exit hand state and explainable cross-section shifts;
 - Guitar IR transformation counts;
 - let-ring conversions;
 - GP5 and Ample output status;

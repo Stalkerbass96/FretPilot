@@ -168,18 +168,25 @@ Examples:
 
 ### GK-013 — hand-position state
 
-Status: **not started — highest-value current music-engine task**
+Status: **implemented baseline**
 
 Track hand center, span, shift boundaries, and phrase-level position plans rather than evaluating only note-to-note transitions.
 
-Section-aware analysis currently treats each section boundary as a safe reset point. GK-013 should make this explicit and selective:
+Section-aware analysis now makes boundary behavior explicit and selective:
 
-- estimate section-entry/exit hand state;
-- carry hand-position state across weak boundaries;
-- allow deliberate repositioning at strong phrase/style boundaries;
-- record shift reason and cost;
-- keep physical fretboard constraints deterministic;
-- preserve current movable-arpeggio golden regression.
+- estimates section-entry/exit center fret, span, anchor string, and note window;
+- combines behavior distance, role/style changes, and phrase silence into boundary strength;
+- carries exit state into melodic and arpeggio ranking across weak boundaries;
+- deliberately resets at strong boundaries;
+- records shift distance, cost, action, boundary strength, and reason;
+- persists the plan in Guitar IR and prototype reports;
+- keeps fretboard/chord constraints deterministic and the movable-arpeggio regression green.
+
+Remaining refinement:
+
+- learn/calibrate boundary and transition costs against reviewed real songs;
+- include reusable chord/shape state from `GK-012`;
+- incorporate future left-hand finger/barre state from `GK-014`.
 
 ### GK-014 — left-hand finger assignment
 

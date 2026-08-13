@@ -110,6 +110,7 @@ class GuitarTrackIR:
     # Time-varying contexts remain generic musical knowledge. Exporters may
     # inspect them, but they must not rewrite their meaning for one plugin.
     section_contexts: list[dict[str, Any]] = field(default_factory=list)
+    hand_position_plan: dict[str, Any] | None = None
 
 
 @dataclass(slots=True)

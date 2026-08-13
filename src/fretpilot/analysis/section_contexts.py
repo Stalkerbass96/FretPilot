@@ -30,6 +30,9 @@ class SectionContextAnalysis:
     end_beat: float
     behavior_profiles: list[BehaviorProfileMatch]
     playing_context: PlayingContext
+    boundary_confidence: float = 0.0
+    boundary_strength: float = 0.0
+    boundary_reason: str = "unspecified_boundary"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -68,6 +71,9 @@ def analyze_section_contexts(
                 end_beat=section.end_beat,
                 behavior_profiles=matches,
                 playing_context=context,
+                boundary_confidence=section.boundary_confidence,
+                boundary_strength=section.boundary_strength,
+                boundary_reason=section.boundary_reason,
             )
         )
 

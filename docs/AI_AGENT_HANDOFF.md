@@ -65,6 +65,8 @@ Implemented and covered by tests/CI:
 - section segmentation using measure windows + behavior feature change distance;
 - independent `PlayingContext` per section;
 - section-aware fingering/articulation execution and global note-index remapping;
+- explicit section entry/exit hand-position state, weak-boundary continuity,
+  strong-boundary resets, and explainable shift records;
 - stable `section_id`-keyed context override hook for future user corrections;
 - canonical Guitar IR v0.1;
 - GP5 write + parse-back validation;
@@ -81,7 +83,8 @@ Do not mistake these for implemented features:
 
 - Section behavior labels are still hand-authored experimental rules, not calibrated truth.
 - Section boundaries currently act as hard phrase/hand-position reset points.
-- No explicit persistent hand-position state yet.
+- Hand-position state is a deterministic baseline and still needs calibration
+  against reviewed real-song fingerings.
 - No left-hand finger numbers / barre / thumb-over planning.
 - `PerformancePreferences` exist in PlayingContext but do not yet drive a generic performance plan.
 - Full section-context provenance is not yet persisted as a first-class Guitar IR contract everywhere.
@@ -178,9 +181,9 @@ Answers: **did a new heuristic/profile/model/adapter actually improve the system
 
 If the user does not specify another task, prefer one of these in order.
 
-### A. `GK-013` — Hand-position state
+### A. `GK-013` — Hand-position calibration
 
-**Highest-value music-engine task.**
+**Baseline implemented; validate and tune before expanding its state model.**
 
 Current section-aware execution solves each section independently. Add an explicit hand-position state / transition layer so weak boundaries can preserve position and strong musical boundaries can allow deliberate repositioning.
 

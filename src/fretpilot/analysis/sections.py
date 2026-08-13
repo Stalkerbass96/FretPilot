@@ -34,6 +34,9 @@ class GuitarSection:
     end_beat: float
     features: dict[str, Any]
     boundary_confidence: float
+    # Musical strength is distinct from confidence that the segmenter found a
+    # boundary. It controls whether downstream hand position should carry.
+    boundary_strength: float
     boundary_reason: str
 
     def to_dict(self) -> dict[str, Any]:
@@ -231,6 +234,9 @@ def segment_instrument_stream(
                     1.0
                     if index == 0
                     else round(min(1.0, distance / max(change_threshold, 1e-9)), 6)
+                ),
+                boundary_strength=(
+                    1.0 if index == 0 else round(min(1.0, distance), 6)
                 ),
                 boundary_reason=(
                     "start_of_stream"

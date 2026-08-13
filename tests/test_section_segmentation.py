@@ -89,6 +89,11 @@ def test_two_measure_windows_detect_three_behavior_regions() -> None:
     assert result.sections[1].features["chord_onset_ratio"] == 1.0
     assert result.sections[2].features["monophonic_onset_ratio"] == 1.0
     assert all(section.boundary_confidence >= 0.0 for section in result.sections)
+    assert result.sections[0].boundary_strength == 1.0
+    assert all(
+        0.0 <= section.boundary_strength <= 1.0
+        for section in result.sections
+    )
 
 
 def test_similar_adjacent_windows_merge_into_one_section() -> None:
@@ -135,5 +140,7 @@ def test_each_section_gets_independent_behavior_and_playing_context() -> None:
     # Layer-4 labels are still experimental evidence. The segmentation identity
     # stays separate and stable regardless of which profile currently ranks top.
     assert first.section_id == segmentation.sections[0].section_id
+    assert first.boundary_strength == segmentation.sections[0].boundary_strength
+    assert second.boundary_reason == segmentation.sections[1].boundary_reason
     assert third.start_measure == 5
     assert third.end_measure == 6

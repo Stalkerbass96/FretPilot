@@ -78,7 +78,7 @@ Long-term architecture:
 - [x] section behavior → PlayingContext (`GK-011` experimental baseline)
 - [x] per-section fingering/articulation execution + global note-index remapping (`GK-015` baseline)
 - [x] adjustable MIDI-fidelity vs guitar-reasonableness note rewrite (`GK-016` baseline)
-- [ ] explicit hand-position state and cross-section continuity (`GK-013`)
+- [x] explicit hand-position state and cross-section continuity (`GK-013` baseline)
 - [ ] reusable explicit shape-memory layer (`GK-012`)
 - [ ] left-hand finger/barre assignment (`GK-014`)
 - [ ] generic Performance Plan consumes `PerformancePreferences` (`GK-005` / remaining `GK-002`)
@@ -166,11 +166,11 @@ Acceptance:
 
 > At least one complete real guitar stream is comfortable to review as a first-draft TAB without Guitar Pro.
 
-### 2. `GK-013` — hand-position state
+### 2. `GK-013` — hand-position state refinement
 
-Current section-aware execution treats each section as an independent phrase reset.
+The deterministic baseline is implemented; current work is calibration on reviewed songs.
 
-Add explicit hand-position planning so:
+The baseline now:
 
 - weak boundaries can carry hand position;
 - strong musical/style boundaries can justify a deliberate shift;

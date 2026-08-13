@@ -22,6 +22,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 from itertools import product
+from statistics import median
 from typing import Protocol
 
 from fretpilot.guitar.instrument import STANDARD_TUNING, GuitarTuning, candidate_positions
@@ -30,6 +31,7 @@ from fretpilot.guitar.models import (
     FingeringDiagnostic,
     FingeringResult,
     FretPosition,
+    HandPositionState,
 )
 from fretpilot.midi.models import NormalizedNote, NormalizedTrack
 
@@ -152,9 +154,28 @@ def _transition_cost(
     return max(0.0, cost)
 
 
+def _entry_position_cost(
+    position: FretPosition,
+    state: HandPositionState | None,
+    continuity_strength: float,
+    preferences: FingeringPreferenceView,
+) -> float:
+    if state is None or continuity_strength <= 0.0:
+        return 0.0
+    # An open string can sound without moving the fretting hand. It therefore
+    # inherits the current hand center for transition-cost purposes.
+    effective_fret = state.center_fret if position.fret == 0 else float(position.fret)
+    distance = abs(effective_fret - state.center_fret)
+    stability = max(0.25, preferences.hand_position_stability)
+    return distance * 0.15 * continuity_strength * stability
+
+
 def _optimize_segment(
     items: list[_SegmentItem],
     preferences: FingeringPreferenceView,
+    *,
+    initial_hand_position: HandPositionState | None = None,
+    continuity_strength: float = 0.0,
 ) -> tuple[dict[int, tuple[FretPosition, float]], float]:
     if not items:
         return {}, 0.0
@@ -163,7 +184,16 @@ def _optimize_segment(
 
     first_layer: dict[int, tuple[float, int | None]] = {}
     for position_index, position in enumerate(items[0].positions):
-        first_layer[position_index] = (_position_cost(position, preferences), None)
+        first_layer[position_index] = (
+            _position_cost(position, preferences)
+            + _entry_position_cost(
+                position,
+                initial_hand_position,
+                continuity_strength,
+                preferences,
+            ),
+            None,
+        )
     layers.append(first_layer)
 
     for item_index in range(1, len(items)):
@@ -207,12 +237,45 @@ def _optimize_segment(
     for item, position_index in zip(items, selected_indices, strict=True):
         position = item.positions[position_index]
         local_cost = _position_cost(position, preferences)
-        if previous_position is not None:
+        if previous_position is None:
+            local_cost += _entry_position_cost(
+                position,
+                initial_hand_position,
+                continuity_strength,
+                preferences,
+            )
+        else:
             local_cost += _transition_cost(previous_position, position, preferences)
         result[item.note_index] = (position, local_cost)
         previous_position = position
 
     return result, total_cost
+
+
+def _estimate_hand_position(
+    notes: list[FingeredNote],
+    *,
+    from_end: bool,
+    window_size: int = 6,
+) -> HandPositionState | None:
+    playable = [item for item in notes if item.playable]
+    if not playable:
+        return None
+    window = playable[-window_size:] if from_end else playable[:window_size]
+    frets = [item.fret for item in window if item.fret is not None and item.fret > 0]
+    if not frets:
+        frets = [0]
+    strings = [item.string for item in window if item.string is not None]
+    minimum = min(frets)
+    maximum = max(frets)
+    return HandPositionState(
+        center_fret=round(float(median(frets)), 3),
+        minimum_fret=minimum,
+        maximum_fret=maximum,
+        fret_span=maximum - minimum,
+        anchor_string=(round(float(median(strings))) if strings else None),
+        note_count=len(window),
+    )
 
 
 def _lowest_note_per_onset(track: NormalizedTrack) -> list[int]:
@@ -303,6 +366,9 @@ def _arpeggio_shape_cost(
     shape: _ArpeggioShape,
     previous_shape: _ArpeggioShape | None,
     preferences: FingeringPreferenceView,
+    *,
+    initial_hand_position: HandPositionState | None = None,
+    continuity_strength: float = 0.0,
 ) -> float:
     cost = sum(
         _position_cost(
@@ -328,7 +394,16 @@ def _arpeggio_shape_cost(
     if fret_span > 5:
         cost += (fret_span - 5) * 0.8 * compactness
 
-    if previous_shape is None or len(previous_shape.frets) != len(shape.frets):
+    if previous_shape is None:
+        if initial_hand_position is not None and continuity_strength > 0.0:
+            cost += (
+                abs(shape.fret_center - initial_hand_position.center_fret)
+                * 0.15
+                * continuity_strength
+                * max(0.25, preferences.hand_position_stability)
+            )
+        return cost
+    if len(previous_shape.frets) != len(shape.frets):
         return cost
 
     shape_reuse = max(0.25, preferences.shape_reuse)
@@ -372,6 +447,8 @@ def _repair_arpeggio_shapes(
     tuning: GuitarTuning,
     max_fret: int,
     preferences: FingeringPreferenceView,
+    initial_hand_position: HandPositionState | None = None,
+    continuity_strength: float = 0.0,
 ) -> None:
     previous_shape: _ArpeggioShape | None = None
 
@@ -392,12 +469,16 @@ def _repair_arpeggio_shapes(
                 shape,
                 previous_shape,
                 preferences,
+                initial_hand_position=initial_hand_position,
+                continuity_strength=continuity_strength,
             ),
         )
         selected_cost = _arpeggio_shape_cost(
             selected,
             previous_shape,
             preferences,
+            initial_hand_position=initial_hand_position,
+            continuity_strength=continuity_strength,
         )
 
         for note_index, string, fret, pitch in zip(
@@ -573,6 +654,8 @@ def optimize_fingering(
     tuning: GuitarTuning = STANDARD_TUNING,
     max_fret: int = 24,
     preferences: FingeringPreferenceView | None = None,
+    initial_hand_position: HandPositionState | None = None,
+    continuity_strength: float = 0.0,
 ) -> FingeringResult:
     """Assign playable string/fret positions to melodic, riff and chord material.
 
@@ -585,18 +668,29 @@ def optimize_fingering(
     intentionally backward-compatible with the pre-PlayingContext optimizer.
     """
     active_preferences = preferences or _NEUTRAL_PREFERENCES
+    if not 0.0 <= continuity_strength <= 1.0:
+        raise ValueError("continuity_strength must be between 0 and 1.")
     diagnostics: list[FingeringDiagnostic] = []
     assignments: dict[int, tuple[FretPosition, float]] = {}
     total_cost = 0.0
     segment: list[_SegmentItem] = []
+    initial_state_available = initial_hand_position
 
     def flush_segment() -> None:
-        nonlocal total_cost
+        nonlocal total_cost, initial_state_available
         if not segment:
             return
-        optimized, segment_cost = _optimize_segment(segment, active_preferences)
+        optimized, segment_cost = _optimize_segment(
+            segment,
+            active_preferences,
+            initial_hand_position=initial_state_available,
+            continuity_strength=(
+                continuity_strength if initial_state_available is not None else 0.0
+            ),
+        )
         assignments.update(optimized)
         total_cost += segment_cost
+        initial_state_available = None
         segment.clear()
 
     for note_index, note in enumerate(track.notes):
@@ -632,6 +726,8 @@ def optimize_fingering(
         tuning=tuning,
         max_fret=max_fret,
         preferences=active_preferences,
+        initial_hand_position=initial_hand_position,
+        continuity_strength=continuity_strength,
     )
     _repair_simultaneous_chords(
         track,
@@ -672,7 +768,7 @@ def optimize_fingering(
             )
         )
 
-    return FingeringResult(
+    result = FingeringResult(
         track_index=track.index,
         track_name=track.name,
         tuning=tuning.name,
@@ -681,3 +777,12 @@ def optimize_fingering(
         diagnostics=diagnostics,
         total_cost=total_cost,
     )
+    result.entry_hand_position = _estimate_hand_position(
+        result.notes,
+        from_end=False,
+    )
+    result.exit_hand_position = _estimate_hand_position(
+        result.notes,
+        from_end=True,
+    )
+    return result

@@ -12,6 +12,7 @@ from fretpilot.rhythm import RhythmAnalysis, analyze_track_rhythm
 
 if TYPE_CHECKING:
     from fretpilot.analysis.section_contexts import SectionContextAnalysis
+    from fretpilot.guitar.models import HandPositionPlan
     from fretpilot.knowledge.playing_contexts import PlayingContext
 
 
@@ -26,6 +27,7 @@ class GuitarTrackAnalysis:
     # A section-aware analysis keeps time-varying musical contexts here.  The
     # legacy/single-context path leaves the list empty, preserving compatibility.
     section_contexts: list[SectionContextAnalysis] = field(default_factory=list)
+    hand_position_plan: HandPositionPlan | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
