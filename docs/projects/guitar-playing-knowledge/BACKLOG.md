@@ -28,10 +28,12 @@ analyze_guitar_track
 → Guitar IR metadata
 ```
 
+Section-level PlayingContexts can now also be derived after GK-010/GK-011 segmentation.
+
 Still pending:
 
 - make `PerformancePreferences` influence the generic performance plan / virtual-instrument rendering path;
-- derive time-varying contexts from phrase/section analysis instead of requiring one explicit whole-track context.
+- route section-varying contexts into per-region fingering/articulation analysis rather than only exposing them as analysis results.
 
 Acceptance:
 
@@ -83,17 +85,51 @@ Acceptance:
 
 ### GK-010 — section/phrase segmentation
 
-Segment a stream before style/role inference. Whole-track labels are insufficient.
+Status: **implemented baseline**
+
+Current deterministic baseline:
+
+```text
+InstrumentStream + time-signature map
+→ non-overlapping measure windows
+→ per-window behavior features
+→ normalized feature distance
+→ change-point boundaries
+→ merge adjacent similar windows
+→ stable GuitarSection records
+```
+
+Each section carries:
+
+- stream/section identity;
+- measure and beat boundaries;
+- feature snapshot;
+- boundary confidence and reason.
+
+The baseline deliberately answers only **where behavior changes**; semantic labels remain GK-011.
 
 ### GK-011 — phrase-level behavior classification
 
-Output multiple context distributions over time, for example:
+Status: **implemented experimental baseline**
+
+Current behavior:
+
+- run the existing experimental Layer-4 behavior library independently for each `GuitarSection`;
+- retain all behavior-profile matches for explainability;
+- only matches above a configurable minimum score contribute to `PlayingContext`;
+- produce independent role/style/technique preference contexts per section.
+
+Example target shape now supported by the data flow:
 
 ```text
-bars 1-8   riff + rock_arpeggio
-bars 9-16  strumming + rock
-bars 17-24 solo + rock
+bars 1-8   riff context
+bars 9-16  strumming context
+bars 17-24 solo context
 ```
+
+Important limitation:
+
+> Current behavior profiles remain hand-authored experimental rules. Section-level evaluation fixes the whole-track modeling mistake, but does not make the labels musically calibrated yet.
 
 ### GK-012 — shape memory
 
