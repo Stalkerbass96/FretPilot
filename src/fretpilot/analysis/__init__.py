@@ -1,7 +1,7 @@
 """High-level musical analysis pipelines."""
 
 from fretpilot.analysis.guitar import GuitarTrackAnalysis, analyze_guitar_track
-from fretpilot.analysis.section_aware import (
+from fretpilot.analysis.section_execution import (
     analyze_guitar_stream_section_aware,
     analyze_guitar_track_by_sections,
 )
