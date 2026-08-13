@@ -19,7 +19,7 @@ Use this project for cross-module reproducibility, knowledge snapshots, evaluati
 - [`projects/system-evolution/README.md`](projects/system-evolution/README.md) — project boundary and Runtime/Learning overview.
 - [`projects/system-evolution/BACKLOG.md`](projects/system-evolution/BACKLOG.md) — stable `SE-xxx` tasks.
 
-Do not duplicate specialized work here when it already belongs to `TI-*` or `GK-*`.
+Do not duplicate specialized work here when it already belongs to `TI-*`, `GK-*`, or `VI-*`.
 
 ## Active project: guitar playing knowledge
 
@@ -28,6 +28,15 @@ This project manages the maintainable bridge between style/behavior understandin
 - [`projects/guitar-playing-knowledge/README.md`](projects/guitar-playing-knowledge/README.md) — project architecture, role/style/technique composition, and current scope.
 - [`projects/guitar-playing-knowledge/BACKLOG.md`](projects/guitar-playing-knowledge/BACKLOG.md) — stable `GK-xxx` work items for style-aware fingering, articulation, phrase context, and learning infrastructure.
 - [`projects/guitar-playing-knowledge/LEARNING_PIPELINE.md`](projects/guitar-playing-knowledge/LEARNING_PIPELINE.md) — controlled provenance, quality, feature extraction, evaluation, and knowledge-promotion workflow for future self-learning.
+
+## Active project: virtual guitar instrument knowledge
+
+This project owns product/version-specific virtual-guitar capability and adapter knowledge:
+
+- [`projects/virtual-guitar-instruments/README.md`](projects/virtual-guitar-instruments/README.md) — boundary between real-guitar playing knowledge and software-instrument control knowledge.
+- [`projects/virtual-guitar-instruments/BACKLOG.md`](projects/virtual-guitar-instruments/BACKLOG.md) — stable `VI-xxx` tasks for profile schemas, capability negotiation, adapter state machines, compatibility, calibration, and future multi-product support.
+
+Current Ample Guitar support is the first implementation example. Future adapters must consume canonical Guitar IR without leaking product-specific keyswitch/CC behavior upstream.
 
 ## Active project: track identification
 
@@ -45,6 +54,7 @@ The detailed instrument-stream and guitar-track identification work is managed a
 PV-*  prototype/output validation and immediate product quality
 TI-*  instrument-stream / guitar-track identification
 GK-*  guitar-playing knowledge, style, phrasing, and learning
+VI-*  virtual-guitar product knowledge, adapters, and compatibility
 SE-*  cross-project evolution infrastructure and governance
 ```
 
