@@ -29,15 +29,19 @@ import {
   type DragEvent,
   type ReactNode,
   useRef,
+  useEffect,
   useState,
 } from "react";
 import { Badge, Button, SectionHeader, Slider, Switch } from "./components/ui";
 import {
   artifactUrl,
   createConversionJob,
+  detectGuitarCandidates,
   getConversionJob,
   type ConversionArtifact,
   type ConversionJob,
+  type ConversionStream,
+  type GuitarDetectionSummary,
   type OutputSelection,
 } from "./api";
 import { cn } from "./lib/utils";
@@ -356,6 +360,61 @@ function formatSize(size: number) {
     : `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
 
+function confidencePercent(value: number) {
+  return `${Math.round(value * 100)}%`;
+}
+
+function DetectionPanel({
+  detection,
+  loading,
+  error,
+}: {
+  detection: GuitarDetectionSummary | null;
+  loading: boolean;
+  error: string;
+}) {
+  if (loading) {
+    return <div className="detection-loading"><LoaderCircle className="spin" size={16} />正在筛选吉他声部…</div>;
+  }
+  if (error) {
+    return <div className="detection-error" role="alert">轨道预检暂时不可用：{error}</div>;
+  }
+  if (!detection) return null;
+  return (
+    <section className="detection-panel" aria-label="吉他轨道建议">
+      <div className="detection-panel__heading">
+        <div>
+          <span>Guitar-only preflight</span>
+          <h2>建议保留 {detection.guitar_part_count} 个吉他声部</h2>
+          <p>从 {detection.total_stream_count} 个逻辑流中自动过滤 {detection.filtered_count} 个低置信或非吉他流。</p>
+        </div>
+        <Badge tone="success"><Guitar size={12} /> 仅处理吉他</Badge>
+      </div>
+      <div className="detection-candidate-list">
+        {detection.candidates.map((candidate) => (
+          <article className="detection-candidate" key={candidate.group_id}>
+            <div className="detection-candidate__title">
+              <div>
+                <strong>{candidate.source_track_name || candidate.group_id}</strong>
+                <span>CH {candidate.display_channel} · {candidate.note_count} notes{candidate.fragment_count > 1 ? ` · ${candidate.fragment_count} 个音色片段` : ""}</span>
+              </div>
+              <Badge tone={candidate.recommendation === "recommended" ? "success" : "warm"}>
+                {candidate.recommendation === "recommended" ? "建议生成" : "可选片段"}
+              </Badge>
+            </div>
+            <div className="detection-scores">
+              <div><span>吉他概率</span><strong>{confidencePercent(candidate.guitar_probability)}</strong><i><b style={{ width: confidencePercent(candidate.guitar_probability) }} /></i></div>
+              <div><span>判断稳定度</span><strong>{confidencePercent(candidate.confidence)}</strong><i><b style={{ width: confidencePercent(candidate.confidence) }} /></i></div>
+            </div>
+            <p className="detection-recommendation">{candidate.recommendation_text}</p>
+            <div className="detection-reasons">{candidate.reasons.map((reason) => <span key={reason}>{reason}</span>)}</div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function ConversionStatus({ job }: { job: ConversionJob }) {
   if (job.status === "failed") {
     return (
@@ -383,50 +442,83 @@ function ConversionStatus({ job }: { job: ConversionJob }) {
     );
   }
 
+  const streamGroups = Array.from(
+    job.streams.reduce<Map<string, ConversionStream[]>>((groups, stream) => {
+      const current = groups.get(stream.group_id) ?? [];
+      current.push(stream);
+      groups.set(stream.group_id, current);
+      return groups;
+    }, new Map()),
+  );
+
   return (
     <section className="conversion-result" aria-live="polite">
       <div className="result-heading">
         <div className="result-heading__icon result-heading__icon--success"><Check size={18} /></div>
         <div><span>Ready to play</span><h2>转换完成</h2></div>
-        <Badge tone="success">{job.streams.length} 个吉他声部</Badge>
+        <div className="result-heading__badges">
+          <Badge tone="success">{streamGroups.length} 个吉他声部</Badge>
+          {job.detection && job.detection.filtered_count > 0 && (
+            <Badge>已过滤 {job.detection.filtered_count} 个</Badge>
+          )}
+        </div>
       </div>
       <div className="stream-results">
-        {job.streams.map((stream, index) => (
-          <article className="stream-card" key={stream.stream_id}>
-            <div className="stream-card__heading">
-              <div><span>GUITAR {String(index + 1).padStart(2, "0")}</span><strong>{stream.stream_id}</strong></div>
-              <Badge tone={stream.review_required ? "warm" : "success"}>
-                {stream.review_required ? "建议审阅" : "已就绪"}
-              </Badge>
-            </div>
-            <div className="artifact-list">
-              {stream.artifacts.map((artifact) => (
-                <a
-                  className="artifact-link"
-                  href={artifactUrl(artifact.download_url)}
-                  download={artifact.name}
-                  key={artifact.id}
-                >
-                  <span><FileMusic size={16} /></span>
-                  <div><strong>{artifactLabels[artifact.kind]}</strong><small>{artifact.name} · {formatSize(artifact.size_bytes)}</small></div>
-                  <span className="artifact-download"><Download size={15} /> 下载 {artifactLabels[artifact.kind]}</span>
-                </a>
-              ))}
-            </div>
-            {stream.outputs.some((output) => output.status === "unsupported") && (
-              <div className="output-warnings">
-                {stream.outputs
-                  .filter((output) => output.status === "unsupported")
-                  .map((output) => (
-                    <p key={output.kind}>
+        {streamGroups.map(([groupId, streams], index) => {
+          const stream = streams[0];
+          const groupNoteCount = streams.reduce((total, item) => total + item.note_count, 0);
+          const reviewRequired = streams.some((item) => item.review_required);
+          const unsupportedOutputs = streams.flatMap((item) =>
+            item.outputs.filter((output) => output.status === "unsupported"),
+          );
+          return (
+            <article className="stream-card" key={groupId}>
+              <div className="stream-card__heading">
+                <div>
+                  <span>GUITAR {String(index + 1).padStart(2, "0")} · CH {stream.display_channel}</span>
+                  <strong>{stream.source_track_name || groupId}</strong>
+                  <small>
+                    吉他概率 {confidencePercent(stream.guitar_probability)} · 判断稳定度 {confidencePercent(stream.confidence)} · {groupNoteCount} notes
+                    {streams.length > 1 ? ` · ${streams.length} 个音色片段已归为同一声部` : ""}
+                  </small>
+                </div>
+                <Badge tone={reviewRequired || stream.recommendation === "optional" ? "warm" : "success"}>
+                  {reviewRequired ? "建议审阅" : stream.recommendation === "optional" ? "可选片段" : "已就绪"}
+                </Badge>
+              </div>
+              {stream.recommendation_text && (
+                <p className="stream-card__recommendation">{stream.recommendation_text}</p>
+              )}
+              <div className="artifact-list">
+                {streams.flatMap((item) => item.artifacts.map((artifact) => (
+                  <a
+                    className="artifact-link"
+                    href={artifactUrl(artifact.download_url)}
+                    download={artifact.name}
+                    key={artifact.id}
+                  >
+                    <span><FileMusic size={16} /></span>
+                    <div>
+                      <strong>{artifactLabels[artifact.kind]}</strong>
+                      <small>{item.program_name || item.stream_id} · {formatSize(artifact.size_bytes)}</small>
+                    </div>
+                    <span className="artifact-download"><Download size={15} /> 下载 {artifactLabels[artifact.kind]}</span>
+                  </a>
+                )))}
+              </div>
+              {unsupportedOutputs.length > 0 && (
+                <div className="output-warnings">
+                  {unsupportedOutputs.map((output, outputIndex) => (
+                    <p key={`${output.kind}-${outputIndex}`}>
                       {artifactLabels[output.kind]} 暂不支持这个声部
                       {output.error ? `：${output.error}` : "。"}
                     </p>
                   ))}
-              </div>
-            )}
-          </article>
-        ))}
+                </div>
+              )}
+            </article>
+          );
+        })}
       </div>
     </section>
   );
@@ -441,11 +533,42 @@ function StudioView() {
     ample: true,
   });
   const [job, setJob] = useState<ConversionJob | null>(null);
+  const [detection, setDetection] = useState<GuitarDetectionSummary | null>(null);
+  const [detecting, setDetecting] = useState(false);
+  const [detectionError, setDetectionError] = useState("");
   const [requestError, setRequestError] = useState("");
   const requestVersion = useRef(0);
+  const detectionVersion = useRef(0);
+
+  useEffect(() => {
+    const version = detectionVersion.current + 1;
+    detectionVersion.current = version;
+    if (!file) {
+      setDetection(null);
+      setDetectionError("");
+      setDetecting(false);
+      return;
+    }
+    setDetection(null);
+    setDetectionError("");
+    setDetecting(true);
+    void detectGuitarCandidates(file)
+      .then((result) => {
+        if (detectionVersion.current === version) setDetection(result);
+      })
+      .catch((error) => {
+        if (detectionVersion.current === version) {
+          setDetectionError(error instanceof Error ? error.message : "无法分析轨道");
+        }
+      })
+      .finally(() => {
+        if (detectionVersion.current === version) setDetecting(false);
+      });
+  }, [file]);
 
   const selectedOutputCount = Object.values(outputs).filter(Boolean).length;
   const isProcessing = job?.status === "queued" || job?.status === "processing";
+  const noGuitarParts = !detecting && detection?.guitar_part_count === 0;
 
   const resetResult = () => {
     requestVersion.current += 1;
@@ -508,17 +631,23 @@ function StudioView() {
           />
           <Button
             className="generate-button"
-            disabled={!file || selectedOutputCount === 0 || isProcessing}
+            disabled={!file || selectedOutputCount === 0 || isProcessing || noGuitarParts}
             onClick={generate}
           >
             {isProcessing ? <><LoaderCircle className="spin" size={16} /> 本地处理中</> : <><Sparkles size={16} /> 开始生成 <ArrowRight size={16} /></>}
           </Button>
           <p className="generate-hint">
-            {file ? `将生成 ${selectedOutputCount} 种输出格式` : "选择 MIDI 后即可开始"}
+            {noGuitarParts
+              ? "没有达到生成阈值的吉他声部"
+              : detection
+                ? `已锁定 ${detection.guitar_part_count} 个吉他声部，并过滤 ${detection.filtered_count} 个低置信流`
+                : file ? `将生成 ${selectedOutputCount} 种输出格式` : "选择 MIDI 后即可开始"}
           </p>
           {requestError && <p className="request-error" role="alert">{requestError}</p>}
         </article>
       </section>
+
+      <DetectionPanel detection={detection} loading={detecting} error={detectionError} />
 
       {job && <ConversionStatus job={job} />}
 

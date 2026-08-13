@@ -15,7 +15,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from fretpilot.api.jobs import JobManager, OutputRequest
+from fretpilot.detection import classify_timeline
+from fretpilot.detection.review import build_guitar_review_summary
 from fretpilot.knowledge import get_builtin_knowledge_registry
+from fretpilot.midi import load_midi
 from fretpilot.rewrite import DEFAULT_MIDI_FIDELITY
 from fretpilot.virtual_instruments import get_builtin_virtual_instrument_registry
 
@@ -60,6 +63,40 @@ def create_app(
         allow_methods=["GET", "POST"],
         allow_headers=["Content-Type"],
     )
+
+    async def save_midi_upload(
+        midi_file: UploadFile,
+        directory: Path,
+    ) -> tuple[str, Path]:
+        filename = Path(midi_file.filename or "").name
+        suffix = Path(filename).suffix.lower()
+        if suffix not in {".mid", ".midi"}:
+            await midi_file.close()
+            raise HTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail="Please upload a .mid or .midi file.",
+            )
+        directory.mkdir(parents=True)
+        source_path = directory / f"source{suffix}"
+        total = 0
+        try:
+            with source_path.open("wb") as destination:
+                while chunk := await midi_file.read(UPLOAD_CHUNK_BYTES):
+                    total += len(chunk)
+                    if total > max_upload_bytes:
+                        raise HTTPException(
+                            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                            detail=(
+                                f"MIDI file exceeds the {max_upload_bytes}-byte limit."
+                            ),
+                        )
+                    destination.write(chunk)
+        except Exception:
+            shutil.rmtree(directory, ignore_errors=True)
+            raise
+        finally:
+            await midi_file.close()
+        return filename, source_path
 
     @app.get("/api/health")
     def health() -> dict[str, str]:
@@ -106,6 +143,22 @@ def create_app(
             )
         return profile.to_dict()
 
+    @app.post("/api/detect")
+    async def detect_guitar_streams(
+        midi_file: Annotated[UploadFile, File()],
+    ) -> dict[str, object]:
+        detection_directory = root / "detections" / uuid4().hex
+        try:
+            filename, source_path = await save_midi_upload(
+                midi_file,
+                detection_directory,
+            )
+            timeline = load_midi(source_path)
+            summary = build_guitar_review_summary(classify_timeline(timeline))
+            return {"source_filename": filename, **summary}
+        finally:
+            shutil.rmtree(detection_directory, ignore_errors=True)
+
     @app.post("/api/jobs", status_code=status.HTTP_202_ACCEPTED)
     async def create_job(
         midi_file: Annotated[UploadFile, File()],
@@ -114,12 +167,6 @@ def create_app(
         include_gp5: Annotated[bool, Form()] = True,
         include_ample_sc_midi: Annotated[bool, Form()] = True,
     ) -> dict[str, object]:
-        filename = Path(midi_file.filename or "").name
-        if Path(filename).suffix.lower() not in {".mid", ".midi"}:
-            raise HTTPException(
-                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                detail="Please upload a .mid or .midi file.",
-            )
         requested = OutputRequest(
             pdf=include_pdf,
             gp5=include_gp5,
@@ -135,24 +182,14 @@ def create_app(
         job_directory = root / job_id
         source_directory = job_directory / "input"
         output_directory = job_directory / "output"
-        source_directory.mkdir(parents=True)
-        source_path = source_directory / f"source{Path(filename).suffix.lower()}"
-        total = 0
         try:
-            with source_path.open("wb") as destination:
-                while chunk := await midi_file.read(UPLOAD_CHUNK_BYTES):
-                    total += len(chunk)
-                    if total > max_upload_bytes:
-                        raise HTTPException(
-                            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-                            detail=f"MIDI file exceeds the {max_upload_bytes}-byte limit.",
-                        )
-                    destination.write(chunk)
+            filename, source_path = await save_midi_upload(
+                midi_file,
+                source_directory,
+            )
         except Exception:
             shutil.rmtree(job_directory, ignore_errors=True)
             raise
-        finally:
-            await midi_file.close()
 
         return manager.submit(
             job_id=job_id,

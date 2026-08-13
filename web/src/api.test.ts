@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createConversionJob, getConversionJob } from "./api";
+import { createConversionJob, detectGuitarCandidates, getConversionJob } from "./api";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -36,5 +36,26 @@ describe("FretPilot API client", () => {
     await expect(getConversionJob("bad-job")).rejects.toThrow(
       "No likely guitar streams were detected.",
     );
+  });
+
+  it("submits a MIDI for guitar-only preflight", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        source_filename: "arrangement.mid",
+        guitar_part_count: 2,
+        candidates: [],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const file = new File(["midi"], "arrangement.mid", { type: "audio/midi" });
+
+    await detectGuitarCandidates(file);
+
+    const [url, request] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://127.0.0.1:8765/api/detect");
+    expect(request.method).toBe("POST");
+    expect(request.body).toBeInstanceOf(FormData);
+    expect(request.body.get("midi_file")).toBe(file);
   });
 });

@@ -1,6 +1,6 @@
 # Track Identification Status
 
-Last reviewed against repository `main`: 2026-08-13.
+Last reviewed against repository `main`: 2026-08-14.
 
 This document distinguishes implemented behavior from planned behavior. Update it whenever a backlog item changes module capabilities.
 
@@ -105,6 +105,27 @@ Selection behavior:
 - multiple likely guitar streams: command requires explicit `--stream-id`;
 - `--track` remains as a legacy physical-track selector.
 
+### Guitar-only product preflight
+
+Implemented across `src/fretpilot/detection/review.py`, `src/fretpilot/api/`,
+and `web/src/`:
+
+- `POST /api/detect` accepts a MIDI upload and returns a compact review summary;
+- only `likely_guitar` streams enter the generated candidate list;
+- `possible_guitar` and `unlikely_guitar` streams are hidden from candidate cards
+  and reported as filtered counts;
+- each candidate includes probability, decision confidence, note count, channel,
+  recommendation, and concise reasons;
+- fragments sharing the same physical track and channel are grouped into one
+  product-facing guitar part while retaining their individual stream IDs;
+- short high-confidence parts are marked `optional`, but remain selected under
+  the current policy;
+- completed conversion results use the same grouping and evidence metadata.
+
+The frontend does not yet provide manual inclusion/exclusion controls. This is
+therefore a guitar-only V0 policy, not completion of the full user-override
+requirements in `TI-050`.
+
 ### Automated tests
 
 Current detection coverage in `tests/test_guitar_detection.py` includes:
@@ -113,6 +134,13 @@ Current detection coverage in `tests/test_guitar_detection.py` includes:
 - guitar versus bass versus General MIDI drums;
 - positive track-name evidence conflicting with a non-guitar program;
 - proof that Layer-4 profiles are separate from the guitar identity decision.
+
+API and frontend tests additionally cover:
+
+- grouping multiple Program fragments into one review card;
+- filtering a non-guitar stream from the candidate list;
+- confidence/recommendation rendering and the `/api/detect` upload contract;
+- propagation of detection metadata into completed conversion jobs.
 
 GitHub Actions runs `pytest -q` on pushes to `main` and pull requests.
 
@@ -124,6 +152,11 @@ GitHub Actions runs `pytest -q` on pushes to `main` and pull requests.
 - No precision, recall, F1, confusion matrix, calibration curve, or source-level error report.
 - No golden JSON snapshots for public output stability.
 - The manually tested `The_Police_-_Message_in_a_Bottle.mid` file is not committed and must not be assumed available to another AI agent.
+- The manually tested `Led_Zeppelin_-_Stairway_to_Heaven.mid` file is not committed
+  and must not be assumed available to another AI agent. On 2026-08-14 the V0
+  policy resolved 15 logical streams into 7 displayed guitar parts: 8 likely
+  stream fragments, 1 possible stream filtered, and 6 unlikely streams filtered.
+  This is a regression observation, not calibration evidence.
 
 ### Layer 1 metadata
 
@@ -180,6 +213,15 @@ src/fretpilot/detection/streams.py
 
 src/fretpilot/detection/guitar_classifier.py
     Layers 1–3, feature extraction, probability/confidence, report ranking
+
+src/fretpilot/detection/review.py
+    Guitar-only selection policy and product-facing grouped candidate summaries
+
+src/fretpilot/api/app.py, src/fretpilot/api/jobs.py
+    Upload preflight and detection metadata in conversion jobs
+
+web/src/App.tsx
+    Candidate confidence, recommendations, filtered counts, and grouped results
 
 src/fretpilot/knowledge/guitar_behaviors.py
     Layer-4 profile registry and matching

@@ -300,6 +300,12 @@ Track recognition will improve incrementally and is not blocking the output prot
 
 When exactly one high-confidence guitar stream exists, downstream commands may select it automatically. When several likely guitars exist, FretPilot requires an explicit `--stream-id` or `--all-likely-guitars`.
 
+The local frontend now runs a guitar-only preflight when a MIDI is selected. It
+shows probability, decision confidence, reasons, and a recommendation for each
+high-confidence guitar part; possible and unlikely streams are excluded from
+generation cards and summarized as a filtered count. Program fragments on the
+same physical track and channel are displayed as one guitar part.
+
 ## Tests
 
 ```bash
