@@ -106,6 +106,9 @@ class GuitarTrackIR:
     # Time-varying contexts remain generic musical knowledge. Exporters may
     # inspect them, but they must not rewrite their meaning for one plugin.
     section_contexts: list[dict[str, Any]] = field(default_factory=list)
+    # Section-level fretting-hand state is generic guitar intent/provenance,
+    # never a target-plugin position-force or keyswitch command.
+    hand_positions: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(slots=True)
