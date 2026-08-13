@@ -46,6 +46,7 @@ class _NotatedNote:
     rhythm_confidence: float
     let_ring_inferred: bool = False
     pre_overlap_duration_beats: float | None = None
+    overlap_reasons: tuple[str, ...] = ()
 
     @property
     def end_beat(self) -> float:
@@ -59,17 +60,43 @@ def _round_to_grid(value: float, step: float) -> float:
     return units * step
 
 
+def _clip_notated_duration(
+    item: _NotatedNote,
+    *,
+    duration_beats: float,
+    reason: str,
+) -> _NotatedNote:
+    if item.duration_beats <= duration_beats + _EPSILON:
+        return item
+    return replace(
+        item,
+        duration_beats=duration_beats,
+        let_ring_inferred=True,
+        pre_overlap_duration_beats=(
+            item.pre_overlap_duration_beats
+            if item.pre_overlap_duration_beats is not None
+            else item.duration_beats
+        ),
+        overlap_reasons=(*item.overlap_reasons, reason),
+    )
+
+
 def _normalize_ringing_overlaps(
     prepared: list[_NotatedNote],
 ) -> list[_NotatedNote]:
-    """Create sequential score timing while preserving ringing performance.
+    """Create readable one-voice score timing while preserving performance.
 
-    Guitar MIDI frequently leaves an arpeggiated note sounding after the next
-    pick attack. Treating every such overlap as a second notation voice creates
-    unreadable scores. V0 clips the written duration to the next distinct onset
-    and marks the note ``let_ring``; source performance timing remains untouched.
+    Two common guitar-MIDI patterns are normalized:
 
-    True independent polyphony still needs the later voice-separation stage.
+    * arpeggiated notes ring beyond the next pick attack;
+    * notes struck as one chord have unequal source note-off times.
+
+    In both cases FretPilot shortens only the written score duration and marks
+    the affected note ``let_ring``. Original source timing remains available to
+    performance renderers such as the Ample Guitar adapter.
+
+    True independent polyphony still belongs to the later voice-separation
+    stage and is not silently flattened here.
     """
 
     onset_groups: dict[float, list[int]] = defaultdict(list)
@@ -78,6 +105,9 @@ def _normalize_ringing_overlaps(
 
     ordered_onsets = sorted(onset_groups)
     normalized = list(prepared)
+
+    # First make successive attacks sequential in written notation. Sustained
+    # source timing is retained in PerformanceTiming and represented as let ring.
     for onset_index, onset in enumerate(ordered_onsets[:-1]):
         next_onset = ordered_onsets[onset_index + 1]
         available_duration = next_onset - onset
@@ -85,14 +115,25 @@ def _normalize_ringing_overlaps(
             continue
 
         for note_index in onset_groups[onset]:
-            item = normalized[note_index]
-            if item.duration_beats <= available_duration + _EPSILON:
-                continue
-            normalized[note_index] = replace(
-                item,
+            normalized[note_index] = _clip_notated_duration(
+                normalized[note_index],
                 duration_beats=available_duration,
-                let_ring_inferred=True,
-                pre_overlap_duration_beats=item.duration_beats,
+                reason="clip_written_duration_at_next_attack",
+            )
+
+    # Guitar Pro represents a same-onset chord most reliably when all notes in
+    # the beat share one written duration. Never extend a shorter source note;
+    # instead shorten longer members and preserve their ring in performance data.
+    for onset in ordered_onsets:
+        indices = onset_groups[onset]
+        if len(indices) < 2:
+            continue
+        common_duration = min(normalized[index].duration_beats for index in indices)
+        for note_index in indices:
+            normalized[note_index] = _clip_notated_duration(
+                normalized[note_index],
+                duration_beats=common_duration,
+                reason="normalize_same_onset_chord_duration",
             )
 
     return normalized
@@ -223,8 +264,8 @@ def build_guitar_ir(
     """Build schema-versioned, measure-aware Guitar IR.
 
     V0.1 quantizes note durations to the selected onset grid, normalizes common
-    ringing overlaps for readable one-voice notation, preserves source timing,
-    and splits notes at measure boundaries with ties.
+    ringing and chord-release differences for readable one-voice notation,
+    preserves source timing, and splits notes at measure boundaries with ties.
     """
 
     if len(track.notes) != len(analysis.rhythm.suggestions):
@@ -312,7 +353,7 @@ def build_guitar_ir(
                     before={"score_duration_beats": item.pre_overlap_duration_beats},
                     after={"score_duration_beats": item.duration_beats},
                     confidence=0.8,
-                    reason="clip_written_duration_at_next_attack_and_mark_let_ring",
+                    reason=";".join(item.overlap_reasons),
                 )
             )
 
@@ -331,8 +372,8 @@ def build_guitar_ir(
                             type="let_ring",
                             confidence=0.8,
                             reason=(
-                                "Source note rings beyond the next pick attack; "
-                                "written duration was clipped for one-voice notation."
+                                "Written duration was shortened for readable one-voice "
+                                "notation while source performance timing keeps the ring."
                             ),
                         )
                     )
