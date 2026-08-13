@@ -1,6 +1,6 @@
 # FretPilot Knowledge Base
 
-> Current built-in snapshot: `2026.08.0`
+> Current built-in snapshot: `2026.08.1`
 
 ## Purpose
 
@@ -70,12 +70,21 @@ describes how mature the musical interpretation is.
 
 ## Current built-in asset
 
-`src/fretpilot/knowledge/assets/knowledge-2026.08.0.json` currently contains:
+`src/fretpilot/knowledge/assets/knowledge-2026.08.1.json` currently contains:
 
 - the six existing Playing Profiles (`solo`, `riff`, `strumming`, `metal`,
   `jazz`, `rock_arpeggio`) as approved runtime entries;
 - candidate shape prototypes for power chord, octave, suspended-second
   arpeggio, and compact triad inversion.
+- 71 candidate abstractions derived from the user-provided *Total Rock Guitar*
+  reference, covering all 22 lessons across execution rules, rhythm rules,
+  phrase patterns, harmonic contexts, and additional shape families.
+
+The reference-derived candidates store concise rules in original wording,
+lesson-level provenance, allowed-use notes, engine targets, hard constraints,
+soft preferences, and exceptions. They do not contain song transcriptions,
+continuous TAB, page images, or audio. See
+[`projects/guitar-playing-knowledge/TRG_SOURCE_REVIEW.md`](projects/guitar-playing-knowledge/TRG_SOURCE_REVIEW.md).
 
 Shape coordinates increment `string_offset` toward higher-pitched strings;
 `fret_offset` is relative to the anchor fret. `interval_semitones` remains an
@@ -83,8 +92,9 @@ independent musical validation value so a later matcher can reject shapes that
 do not fit the active tuning or cross the standard G–B tuning boundary badly.
 
 Playing Profile behavior is unchanged from the previous hand-authored Python
-constants. Shape candidates are queryable but intentionally do not affect the
-fingering optimizer until GK-012 evaluation and integration are complete.
+constants. All candidates are queryable and visible in the review console but
+intentionally do not affect runtime decisions until focused evaluation and
+integration are complete.
 
 ## Runtime provenance
 

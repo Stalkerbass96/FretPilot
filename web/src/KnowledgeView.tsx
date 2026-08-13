@@ -28,6 +28,27 @@ import { cn } from "./lib/utils";
 
 type KnowledgeMode = "playing" | "instruments";
 
+const kindLabels: Record<string, string> = {
+  playing_profile: "演奏 Profile",
+  shape_prototype: "指板形状",
+  shape_family: "形状家族",
+  execution_rule: "演奏动作",
+  rhythm_rule: "节奏与拨弦",
+  phrase_pattern: "乐句组织",
+  harmonic_context: "和声语境",
+};
+
+const payloadFieldLabels: Record<string, string> = {
+  principles: "核心原则",
+  hard_constraints: "硬约束",
+  soft_preferences: "软偏好",
+  exceptions: "例外与边界",
+  engine_targets: "可赋能模块",
+  source_sections: "教材位置",
+  formula: "音程 / 公式",
+  relations: "关系说明",
+};
+
 const labels: Record<string, string> = {
   adjacent_string_arpeggio: "相邻弦琶音",
   same_string_legato: "同弦连奏",
@@ -55,6 +76,8 @@ const titleCase = (value: string) => value
   .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
   .join(" ");
 
+const kindLabel = (kind: string) => kindLabels[kind] ?? titleCase(kind);
+
 function lifecycleTone(status: string): "success" | "warm" | "accent" | "neutral" {
   if (status === "approved" || status === "official") return "success";
   if (status.includes("unverified") || status === "candidate") return "warm";
@@ -74,6 +97,7 @@ function statusLabel(status: string) {
     unsupported: "不支持",
     baseline: "基线",
     untested: "未测试",
+    editorial_prior: "编辑先验",
   };
   return known[status] ?? titleCase(status);
 }
@@ -116,6 +140,18 @@ function Provenance({ entry }: { entry: KnowledgeEntry }) {
   );
 }
 
+function TextKnowledgeSection({ title, values }: { title: string; values: string[] }) {
+  if (!values.length) return null;
+  return (
+    <section className="knowledge-detail-section">
+      <h3>{title}</h3>
+      <div className="knowledge-rule-list">
+        {values.map((value, index) => <p key={`${value}-${index}`}>{value}</p>)}
+      </div>
+    </section>
+  );
+}
+
 function PlayingKnowledgeDetail({ entry }: { entry: KnowledgeEntry }) {
   const payload = entry.payload as {
     label?: string;
@@ -127,6 +163,14 @@ function PlayingKnowledgeDetail({ entry }: { entry: KnowledgeEntry }) {
     performance?: Record<string, number>;
     coordinate_system?: string;
     tuning_families?: string[];
+    principles?: string[];
+    hard_constraints?: string[];
+    soft_preferences?: string[];
+    exceptions?: string[];
+    engine_targets?: string[];
+    source_sections?: string[];
+    formula?: string;
+    relations?: string[];
     notes?: Array<{
       string_offset: number;
       fret_offset: number;
@@ -139,9 +183,9 @@ function PlayingKnowledgeDetail({ entry }: { entry: KnowledgeEntry }) {
     <article className="knowledge-detail">
       <header className="knowledge-detail__header">
         <div>
-          <span className="knowledge-kicker">{entry.kind === "playing_profile" ? "PLAYING PROFILE" : "SHAPE PROTOTYPE"}</span>
+          <span className="knowledge-kicker">{kindLabel(entry.kind).toUpperCase()}</span>
           <h2>{payload.label ?? entry.knowledge_id}</h2>
-          <p>{payload.description ?? "可复用的吉他指板形状候选。"}</p>
+          <p>{payload.description ?? "可审阅的吉他演奏知识候选。"}</p>
         </div>
         <Badge tone={lifecycleTone(entry.status)}>{statusLabel(entry.status)}</Badge>
       </header>
@@ -149,13 +193,31 @@ function PlayingKnowledgeDetail({ entry }: { entry: KnowledgeEntry }) {
       <div className="knowledge-meta-strip">
         <div><span>知识 ID</span><code>{entry.knowledge_id}</code></div>
         <div><span>版本</span><code>{entry.knowledge_version}</code></div>
-        <div><span>维度</span><strong>{titleCase(payload.dimension ?? entry.kind)}</strong></div>
+        <div><span>维度</span><strong>{payload.dimension ? titleCase(payload.dimension) : kindLabel(entry.kind)}</strong></div>
         <div><span>成熟度</span><strong>{statusLabel(payload.maturity ?? entry.status)}</strong></div>
       </div>
 
       {payload.fingering && <PreferenceGroup title="指法偏好" values={payload.fingering} />}
       {payload.articulation && <PreferenceGroup title="演奏法偏好" values={payload.articulation} />}
       {payload.performance && <PreferenceGroup title="演奏参数" values={payload.performance} />}
+
+      <TextKnowledgeSection title={payloadFieldLabels.principles} values={payload.principles ?? []} />
+      <TextKnowledgeSection title={payloadFieldLabels.hard_constraints} values={payload.hard_constraints ?? []} />
+      <TextKnowledgeSection title={payloadFieldLabels.soft_preferences} values={payload.soft_preferences ?? []} />
+      <TextKnowledgeSection title={payloadFieldLabels.exceptions} values={payload.exceptions ?? []} />
+
+      {(payload.formula || payload.relations?.length) && (
+        <section className="knowledge-detail-section">
+          <h3>{payloadFieldLabels.formula}</h3>
+          <div className="knowledge-formula">
+            {payload.formula && <code>{payload.formula}</code>}
+            {payload.relations?.map((relation) => <span key={relation}>{relation}</span>)}
+          </div>
+        </section>
+      )}
+
+      <TextKnowledgeSection title={payloadFieldLabels.engine_targets} values={(payload.engine_targets ?? []).map(titleCase)} />
+      <TextKnowledgeSection title={payloadFieldLabels.source_sections} values={payload.source_sections ?? []} />
 
       {payload.notes && (
         <section className="knowledge-detail-section">
@@ -319,7 +381,7 @@ function EntryIndex({
         return (
           <button className={cn("knowledge-index-item", entry.knowledge_id === selectedId && "knowledge-index-item--active")} onClick={() => onSelect(entry.knowledge_id)} key={entry.knowledge_id}>
             <span className="knowledge-index-icon">{entry.kind === "playing_profile" ? <SlidersHorizontal size={15} /> : <Layers3 size={15} />}</span>
-            <span><strong>{payload.label ?? entry.knowledge_id}</strong><small>{titleCase(payload.dimension ?? entry.kind)}</small></span>
+            <span><strong>{payload.label ?? entry.knowledge_id}</strong><small>{payload.dimension ? titleCase(payload.dimension) : kindLabel(entry.kind)}</small></span>
             <Badge tone={lifecycleTone(entry.status)}>{statusLabel(entry.status)}</Badge>
           </button>
         );
@@ -358,6 +420,7 @@ export function KnowledgeView() {
   const [instrumentProfiles, setInstrumentProfiles] = useState<Record<string, VirtualInstrumentProfile>>({});
   const [selectedEntryId, setSelectedEntryId] = useState<string>();
   const [selectedInstrumentId, setSelectedInstrumentId] = useState<string>();
+  const [kindFilter, setKindFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -390,15 +453,21 @@ export function KnowledgeView() {
     return () => { active = false; };
   }, []);
 
+  const kindCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const entry of snapshot?.entries ?? []) counts.set(entry.kind, (counts.get(entry.kind) ?? 0) + 1);
+    return counts;
+  }, [snapshot]);
+
   const filteredEntries = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return snapshot?.entries ?? [];
     return (snapshot?.entries ?? []).filter((entry) => {
-      const payload = entry.payload as { label?: string; description?: string };
-      return [entry.knowledge_id, entry.kind, payload.label, payload.description]
-        .some((value) => value?.toLowerCase().includes(normalized));
+      if (kindFilter !== "all" && entry.kind !== kindFilter) return false;
+      if (!normalized) return true;
+      return [entry.knowledge_id, entry.kind, JSON.stringify(entry.payload), JSON.stringify(entry.scope)]
+        .some((value) => value.toLowerCase().includes(normalized));
     });
-  }, [query, snapshot]);
+  }, [kindFilter, query, snapshot]);
 
   const filteredInstruments = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -432,6 +501,15 @@ export function KnowledgeView() {
         </div>
         <label className="knowledge-search"><Search size={15} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索知识条目" aria-label="搜索知识条目" /></label>
       </div>
+
+      {mode === "playing" && (
+        <div className="knowledge-kind-filters" aria-label="演奏知识分类">
+          <button aria-label="筛选：全部" aria-pressed={kindFilter === "all"} className={cn(kindFilter === "all" && "active")} onClick={() => setKindFilter("all")}>全部 <span>{snapshot?.entries.length ?? 0}</span></button>
+          {Array.from(kindCounts.entries()).map(([kind, count]) => (
+            <button aria-label={`筛选：${kindLabel(kind)}`} aria-pressed={kindFilter === kind} className={cn(kindFilter === kind && "active")} onClick={() => setKindFilter(kind)} key={kind}>{kindLabel(kind)} <span>{count}</span></button>
+          ))}
+        </div>
+      )}
 
       {loading && <div className="knowledge-loading"><LoaderCircle className="spin" size={18} />正在读取版本化知识快照…</div>}
       {error && <div className="knowledge-error" role="alert"><AlertTriangle size={16} />{error}</div>}

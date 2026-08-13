@@ -49,7 +49,7 @@ describe("FretPilot studio", () => {
         return Promise.resolve({
           ok: true,
           json: async () => ({
-            snapshot_version: "2026.08.0",
+            snapshot_version: "2026.08.1",
             schema_version: "1",
             status: "approved",
             entries: [{
@@ -57,7 +57,7 @@ describe("FretPilot studio", () => {
               domain: "guitar_playing",
               kind: "playing_profile",
               schema_version: "1",
-              knowledge_version: "2026.08.0",
+              knowledge_version: "2026.08.1",
               status: "approved",
               payload: {
                 profile_id: "metal",
@@ -77,6 +77,32 @@ describe("FretPilot studio", () => {
                 notes: "Soft preference baseline.",
               },
               evaluation: { benchmark_version: "builtin-v0", status: "baseline", notes: "" },
+            }, {
+              knowledge_id: "gk.execution.rule.clean_rest_dual_hand_muting",
+              domain: "guitar_playing",
+              kind: "execution_rule",
+              schema_version: "1",
+              knowledge_version: "2026.08.1",
+              status: "candidate",
+              payload: {
+                label: "休止处双手联合止音",
+                description: "休止由左右手共同产生明确静音动作。",
+                maturity: "editorial_prior",
+                principles: ["左手释放压力，右手压制残响。"],
+                hard_constraints: ["休止处不得让前一音自然延续。"],
+                soft_preferences: [],
+                exceptions: [],
+                engine_targets: ["articulation", "performance_plan"],
+                source_sections: ["Lesson 1 — Rests"],
+              },
+              scope: { roles: ["riff"] },
+              provenance: {
+                source_type: "user_provided_reference",
+                reference: "Total Rock Guitar — Lesson 1",
+                license: "Derived abstractions only.",
+                notes: "No source notation embedded.",
+              },
+              evaluation: { benchmark_version: null, status: "untested", notes: "Needs review." },
             }],
           }),
         });
@@ -151,6 +177,11 @@ describe("FretPilot studio", () => {
     expect(await screen.findByRole("heading", { name: "可以被审阅的音乐智能。" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Metal" })).toBeInTheDocument();
     expect(screen.getByText("Palm mute")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "筛选：演奏动作" }));
+    expect(screen.getByRole("heading", { name: "休止处双手联合止音" })).toBeInTheDocument();
+    expect(screen.getByText("休止处不得让前一音自然延续。")).toBeInTheDocument();
+    expect(screen.getByText("Lesson 1 — Rests")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: /音源适配/ }));
     expect(await screen.findByRole("heading", { name: "Ample Metal Eclipse" })).toBeInTheDocument();
