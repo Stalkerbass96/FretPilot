@@ -12,6 +12,8 @@ This page is the navigation entry point for product, architecture, and active de
 - [`LONG_TERM_ARCHITECTURE.md`](LONG_TERM_ARCHITECTURE.md) — stable vs evolvable modules, Runtime/Learning planes, knowledge assets, and self-evolution architecture.
 - [`ROADMAP.md`](ROADMAP.md) — prototype phases and current product priorities.
 - [`MUSIC_IR.md`](MUSIC_IR.md) — canonical Guitar IR contract.
+- [`FRONTEND_DESIGN_SYSTEM.md`](FRONTEND_DESIGN_SYSTEM.md) — product frontend
+  principles, technical baseline, tokens, accessibility, and current scope.
 
 For a new AI agent, read `AI_AGENT_HANDOFF.md` first. Only enter the detailed project documents for the task family being changed.
 

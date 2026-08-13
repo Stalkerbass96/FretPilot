@@ -60,6 +60,25 @@ Long-term architecture:
 - [x] multiple-guitar ambiguity handling
 - [ ] labeled corpus + Precision/Recall/F1 calibration (`TI-*`)
 
+### Product frontend
+
+- [x] React/TypeScript/Vite application baseline
+- [x] light `Quiet Studio 0.1` token and component system
+- [x] responsive conversion workspace, project library, and system reference
+- [x] MIDI file selection/drop validation and `midi_fidelity` control
+- [x] PDF, GP5, and Ample MIDI output selection
+- [x] frontend test/build CI
+- [ ] Python API and real conversion-job execution
+- [ ] resolved `InstrumentStream` selection UI
+- [ ] progress/event streaming and output downloads
+- [ ] score preview and measure-level review/correction
+- [ ] persistent project storage
+
+Desktop (1440px) and mobile (390px) layouts were checked in a real browser on
+2026-08-13. Both reflow without horizontal overflow; the mobile navigation,
+Radix controls, and design-system page were also exercised without browser
+console warnings.
+
 ### Musical understanding / guitar execution
 
 - [x] onset-grid analysis

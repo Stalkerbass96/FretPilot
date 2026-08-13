@@ -78,6 +78,28 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 ```
 
+### Frontend
+
+The `Quiet Studio` frontend is a separate React/TypeScript application. It
+currently provides the responsive product shell and conversion interactions;
+the Python API/job connection is the next integration step.
+
+```bash
+cd web
+pnpm install
+pnpm dev
+```
+
+Open `http://127.0.0.1:4173/`. Frontend checks:
+
+```bash
+pnpm test
+pnpm build
+```
+
+The visual language, tokens, accessibility contract, and research sources are
+documented in [`docs/FRONTEND_DESIGN_SYSTEM.md`](docs/FRONTEND_DESIGN_SYSTEM.md).
+
 ### One-command prototype package
 
 For every likely guitar stream:
@@ -270,6 +292,7 @@ GitHub Actions verifies, among other cases:
 - safe GP5 downgrade for partial chord let ring
 - Ample HP keyswitch timing and source/destination overlap
 - complete multi-guitar prototype package generation
+- frontend interaction tests and production build
 
 ## Repository layout
 
@@ -281,6 +304,7 @@ FretPilot/
 ├── docs/
 │   ├── README.md
 │   ├── PRODUCT.md
+│   ├── FRONTEND_DESIGN_SYSTEM.md
 │   ├── ARCHITECTURE.md
 │   ├── GUITAR_DETECTION.md
 │   ├── MUSIC_IR.md
@@ -301,9 +325,17 @@ FretPilot/
 │       ├── guitar_pro/
 │       └── ample_guitar/
 ├── tests/
+├── web/
+│   ├── src/components/
+│   ├── src/App.tsx
+│   └── src/styles.css
 └── .github/workflows/ci.yml
 ```
 
 ## Status
 
-FretPilot is an early V0.1 prototype with both target output paths and a one-command multi-guitar package workflow implemented. The next milestone is hands-on validation: open generated GP5 files in Guitar Pro, play generated MIDI through Ample Guitar SC, record measure-level issues, then prioritize richer voice separation/PDF engraving, bend/vibrato rendering, and a simple upload/download interface.
+FretPilot is an early V0.1 prototype with both target output paths, a one-command
+multi-guitar package workflow, and a responsive frontend/design-system baseline.
+The frontend is intentionally local-first today; its primary next milestone is
+connecting real upload, stream selection, job progress, and output download to
+the Python engine.

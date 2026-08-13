@@ -76,6 +76,8 @@ Implemented and covered by tests/CI:
   pagination, but engraving quality is not yet musician-grade;
 - generic `VirtualGuitarInstrumentProfile` schema skeleton;
 - multi-guitar one-command prototype package including PDF review output.
+- responsive React/TypeScript frontend and `Quiet Studio 0.1` design-system
+  baseline with local file/output preferences and browser-validated layouts.
 
 The last code-level product regression for section-aware prototype packaging passed CI. Always verify current HEAD CI before merging new changes.
 
@@ -96,6 +98,8 @@ Do not mistake these for implemented features:
 - Bend/vibrato performance rendering is incomplete.
 - Ample is the only implemented virtual-guitar target.
 - Track identification is useful but intentionally not treated as finished.
+- The frontend is a functional interaction/visual baseline, but is not yet
+  connected to a Python API, real job execution, or persistent storage.
 
 ## 5. Task families
 

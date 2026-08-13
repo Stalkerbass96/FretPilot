@@ -33,6 +33,25 @@ docs/projects/system-evolution/              SE-*
 
 `PV-*` prototype work is tracked in `docs/ROADMAP.md`.
 
+### Product frontend (`PV-*`)
+
+Read:
+
+```text
+docs/FRONTEND_DESIGN_SYSTEM.md
+docs/PRODUCT.md
+docs/ROADMAP.md
+```
+
+Inspect:
+
+```text
+web/
+```
+
+The browser client must consume engine/API results and must not duplicate
+fingering, articulation, rewrite, or exporter policy in TypeScript.
+
 ## Module-specific reading
 
 ### Track identification (`TI-*`)
