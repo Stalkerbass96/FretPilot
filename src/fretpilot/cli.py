@@ -5,10 +5,25 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Sequence
 
 from fretpilot import __version__
 from fretpilot.midi import load_midi
+from fretpilot.rhythm import analyze_track_rhythm
+
+
+def _add_json_output_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        help="Write JSON to a file instead of stdout",
+    )
+    parser.add_argument(
+        "--compact",
+        action="store_true",
+        help="Emit compact JSON instead of pretty-printed JSON",
+    )
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -25,37 +40,63 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Parse a MIDI file and emit FretPilot's normalized timeline as JSON",
     )
     inspect_parser.add_argument("midi_file", type=Path, help="Path to a .mid/.midi file")
-    inspect_parser.add_argument(
-        "-o",
-        "--output",
-        type=Path,
-        help="Write JSON to a file instead of stdout",
+    _add_json_output_arguments(inspect_parser)
+
+    rhythm_parser = subparsers.add_parser(
+        "rhythm",
+        help="Analyze likely notation grids and propose repaired note-on positions",
     )
-    inspect_parser.add_argument(
-        "--compact",
-        action="store_true",
-        help="Emit compact JSON instead of pretty-printed JSON",
+    rhythm_parser.add_argument("midi_file", type=Path, help="Path to a .mid/.midi file")
+    rhythm_parser.add_argument(
+        "--track",
+        type=int,
+        help="Zero-based MIDI track index. Defaults to the first track containing notes.",
     )
+    _add_json_output_arguments(rhythm_parser)
 
     return parser
 
 
-def _run_inspect(args: argparse.Namespace) -> int:
-    timeline = load_midi(args.midi_file)
-    indent = None if args.compact else 2
+def _emit_json(data: dict[str, Any], output: Path | None, compact: bool) -> None:
     payload = json.dumps(
-        timeline.to_dict(),
+        data,
         ensure_ascii=False,
-        indent=indent,
+        indent=None if compact else 2,
         sort_keys=False,
     )
 
-    if args.output:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(payload + "\n", encoding="utf-8")
+    if output:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(payload + "\n", encoding="utf-8")
     else:
         print(payload)
 
+
+def _run_inspect(args: argparse.Namespace) -> int:
+    timeline = load_midi(args.midi_file)
+    _emit_json(timeline.to_dict(), args.output, args.compact)
+    return 0
+
+
+def _run_rhythm(args: argparse.Namespace) -> int:
+    timeline = load_midi(args.midi_file)
+
+    if args.track is None:
+        track = next((candidate for candidate in timeline.tracks if candidate.notes), None)
+        if track is None:
+            raise SystemExit("No MIDI track containing notes was found.")
+    else:
+        if args.track < 0 or args.track >= len(timeline.tracks):
+            raise SystemExit(
+                f"Track index {args.track} is out of range; "
+                f"file contains {len(timeline.tracks)} tracks."
+            )
+        track = timeline.tracks[args.track]
+        if not track.notes:
+            raise SystemExit(f"Track {args.track} ({track.name}) contains no notes.")
+
+    analysis = analyze_track_rhythm(track)
+    _emit_json(analysis.to_dict(), args.output, args.compact)
     return 0
 
 
@@ -65,6 +106,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "inspect":
         return _run_inspect(args)
+    if args.command == "rhythm":
+        return _run_rhythm(args)
 
     parser.error(f"Unknown command: {args.command}")
     return 2
