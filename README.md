@@ -7,7 +7,7 @@ FretPilot turns raw or imperfect MIDI into guitar-aware musical data that is bot
 The first product target is:
 
 - Input: MIDI extracted/generated from Suno, other AI music tools, DAWs, or transcription tools
-- Instrument: 6-string guitar
+- Instrument: 6-string standard-tuned guitar
 - Score target: Guitar Pro-compatible output (initial target: GP5)
 - Performance target: Ample Guitar-compatible MIDI
 - Core capabilities: rhythm repair, guitar fingering, articulation planning, and performance rendering
@@ -21,9 +21,7 @@ Raw MIDI
    ↓
 MIDI normalization
    ↓
-Musical structure analysis
-   ↓
-Rhythm repair
+Rhythm analysis / repair
    ↓
 Guitar fingering optimization
    ↓
@@ -42,19 +40,33 @@ FretPilot deliberately separates **score data** from **performance data**. A rea
 2. **AI is an advisor, not the source of truth.** LLMs may help resolve musical ambiguity, infer phrasing/style, or rank articulation candidates.
 3. **Instrument-aware by design.** Notes become strings, frets, positions, techniques, and phrases—not just MIDI pitches.
 4. **One canonical intermediate representation.** Exporters and instrument adapters depend on the FretPilot IR rather than on each other.
-5. **Start narrow.** V0.1 focuses on guitar and Ample Guitar before expanding to other instruments or plugins.
+5. **Start narrow.** V0.1 focuses on monophonic guitar lead/riff material and Ample Guitar before expanding further.
 
-## Current runnable milestone
+## Current runnable vertical slice
 
-The first executable layer is now implemented:
+The repository now implements:
 
 ```text
-MIDI file → lossless timing normalization → NormalizedTimeline → JSON
+MIDI file
+→ NormalizedTimeline
+→ rhythm-grid scoring + onset repair suggestions
+→ phrase-level guitar fingering
+→ basic articulation planning
+→ JSON analysis
 ```
 
-The importer preserves source tick positions and durations. It does **not** quantize notes during import. Rhythm repair is a separate stage so FretPilot can always compare a repaired phrase with the original performance timing.
+The MIDI importer preserves original source ticks and durations. Repair decisions are stored separately so future score cleanup never destroys the original performance timing.
 
-### Quick start
+Current deterministic articulation vocabulary includes:
+
+- hammer-on
+- pull-off
+- slide
+- vibrato
+
+Plugin-specific Ample Guitar keyswitches are intentionally **not** stored in this layer.
+
+## Quick start
 
 Requires Python 3.11+.
 
@@ -64,28 +76,44 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 ```
 
-Inspect a MIDI file:
+Inspect normalized MIDI:
 
 ```bash
 fretpilot inspect song.mid
 ```
 
-Write the normalized representation to JSON:
+Analyze likely notation rhythm:
 
 ```bash
-fretpilot inspect song.mid -o song.json
+fretpilot rhythm song.mid
 ```
 
-The JSON contains:
+Optimize guitar string/fret positions:
 
-- MIDI type and PPQ/ticks-per-beat
-- tempo map
-- time-signature map
-- tracks and track names
-- note pitch, velocity, channel
-- original start/duration in ticks
-- derived start/duration in beats
-- diagnostics for malformed or ambiguous MIDI events
+```bash
+fretpilot fingering song.mid
+```
+
+Run the current end-to-end guitar intelligence stack:
+
+```bash
+fretpilot analyze song.mid -o analysis.json
+```
+
+For a multi-track MIDI file, select a zero-based track index:
+
+```bash
+fretpilot analyze song.mid --track 2
+```
+
+The analysis JSON contains:
+
+- candidate notation-grid scores and selected grid
+- source and suggested note-on positions
+- per-note rhythm confidence
+- standard-guitar string/fret assignments
+- fingering diagnostics for impossible pitches
+- generic guitar articulation decisions and confidence
 
 Run tests:
 
@@ -93,11 +121,14 @@ Run tests:
 pytest
 ```
 
+GitHub Actions also runs the test suite on pushes to `main` and pull requests.
+
 ## Repository layout
 
 ```text
 FretPilot/
 ├── README.md
+├── pyproject.toml
 ├── docs/
 │   ├── PRODUCT.md
 │   ├── ARCHITECTURE.md
@@ -113,11 +144,12 @@ FretPilot/
 │   └── exporters/
 │       ├── guitar_pro/
 │       └── ample_guitar/
-└── tests/
+├── tests/
+└── .github/workflows/ci.yml
 ```
 
 ## Status
 
-Early V0.1 implementation. MIDI normalization and inspection are runnable; rhythm repair is the next engine layer.
+Early V0.1 implementation. The first deterministic analysis vertical slice is runnable. The next core milestone is notation-quality **duration spelling, ties, phrase segmentation, and measure coordinates**, followed by the Guitar IR builder and GP5 export.
 
-See [`docs/PRODUCT.md`](docs/PRODUCT.md) for the product specification and [`docs/ROADMAP.md`](docs/ROADMAP.md) for milestones.
+See [`docs/PRODUCT.md`](docs/PRODUCT.md) for the product specification and [`docs/ROADMAP.md`](docs/ROADMAP.md) for detailed milestones.
