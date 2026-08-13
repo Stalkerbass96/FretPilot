@@ -23,6 +23,7 @@ from fretpilot.guitar.models import (
     FingeringDiagnostic,
     FingeringResult,
 )
+from fretpilot.knowledge.context_strategy import apply_style_scores_to_context
 from fretpilot.midi.models import NormalizedTimeline, NormalizedTrack
 from fretpilot.rhythm import analyze_track_rhythm
 
@@ -143,10 +144,29 @@ def analyze_guitar_track_by_sections(
             )
         seen_note_indices.update(note_indices)
 
+        automatic_context = section.playing_context
+        arpeggio_match = next(
+            (
+                item
+                for item in section.behavior_profiles
+                if item.profile_id == "arpeggio" and item.score >= 0.50
+            ),
+            None,
+        )
+        if arpeggio_match is not None:
+            automatic_context.technique_scores["rock_arpeggio"] = max(
+                automatic_context.technique_scores.get("rock_arpeggio", 0.0),
+                arpeggio_match.score,
+            )
+            apply_style_scores_to_context(
+                automatic_context,
+                dict(automatic_context.style_scores),
+            )
+
         context = (
-            context_overrides.get(section.section_id, section.playing_context)
+            context_overrides.get(section.section_id, automatic_context)
             if context_overrides is not None
-            else section.playing_context
+            else automatic_context
         )
         local_track = _subtrack(track, note_indices)
         local_fingering = optimize_fingering(
