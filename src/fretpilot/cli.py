@@ -9,7 +9,7 @@ from typing import Any, Sequence
 
 from fretpilot import __version__
 from fretpilot.analysis import analyze_guitar_track
-from fretpilot.detection import classify_timeline
+from fretpilot.detection import classify_timeline, resolve_instrument_streams
 from fretpilot.guitar import optimize_fingering
 from fretpilot.midi import load_midi
 from fretpilot.midi.models import NormalizedTimeline, NormalizedTrack
@@ -30,11 +30,19 @@ def _add_json_output_arguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _add_track_argument(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
+def _add_source_selector(parser: argparse.ArgumentParser) -> None:
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--stream-id",
+        help=(
+            "Logical InstrumentStream ID returned by `fretpilot tracks`, "
+            "for example t0:ch2:p27."
+        ),
+    )
+    group.add_argument(
         "--track",
         type=int,
-        help="Zero-based physical MIDI track index. Defaults to the first track containing notes.",
+        help="Legacy zero-based physical MIDI track index.",
     )
 
 
@@ -75,7 +83,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Analyze likely notation grids and propose repaired note-on positions",
     )
     rhythm_parser.add_argument("midi_file", type=Path, help="Path to a .mid/.midi file")
-    _add_track_argument(rhythm_parser)
+    _add_source_selector(rhythm_parser)
     _add_json_output_arguments(rhythm_parser)
 
     fingering_parser = subparsers.add_parser(
@@ -83,16 +91,16 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Assign playable guitar string/fret positions across a phrase",
     )
     fingering_parser.add_argument("midi_file", type=Path, help="Path to a .mid/.midi file")
-    _add_track_argument(fingering_parser)
+    _add_source_selector(fingering_parser)
     _add_max_fret_argument(fingering_parser)
     _add_json_output_arguments(fingering_parser)
 
     analyze_parser = subparsers.add_parser(
         "analyze",
-        help="Run rhythm, fingering, and articulation analysis on a physical MIDI track",
+        help="Run rhythm, fingering, and articulation analysis on a guitar stream",
     )
     analyze_parser.add_argument("midi_file", type=Path, help="Path to a .mid/.midi file")
-    _add_track_argument(analyze_parser)
+    _add_source_selector(analyze_parser)
     _add_max_fret_argument(analyze_parser)
     _add_json_output_arguments(analyze_parser)
 
@@ -114,23 +122,55 @@ def _emit_json(data: dict[str, Any], output: Path | None, compact: bool) -> None
         print(payload)
 
 
-def _select_track(timeline: NormalizedTimeline, track_index: int | None) -> NormalizedTrack:
-    if track_index is None:
-        track = next((candidate for candidate in timeline.tracks if candidate.notes), None)
-        if track is None:
-            raise SystemExit("No MIDI track containing notes was found.")
+def _select_analysis_source(
+    timeline: NormalizedTimeline,
+    *,
+    track_index: int | None,
+    stream_id: str | None,
+) -> NormalizedTrack:
+    if stream_id is not None:
+        streams = resolve_instrument_streams(timeline)
+        stream = next(
+            (candidate for candidate in streams if candidate.stream_id == stream_id),
+            None,
+        )
+        if stream is None:
+            available = ", ".join(candidate.stream_id for candidate in streams)
+            raise SystemExit(
+                f"Unknown stream ID {stream_id!r}. Available streams: {available or 'none'}."
+            )
+        return stream.as_track()
+
+    if track_index is not None:
+        if track_index < 0 or track_index >= len(timeline.tracks):
+            raise SystemExit(
+                f"Track index {track_index} is out of range; "
+                f"file contains {len(timeline.tracks)} physical tracks."
+            )
+        track = timeline.tracks[track_index]
+        if not track.notes:
+            raise SystemExit(f"Track {track_index} ({track.name}) contains no notes.")
         return track
 
-    if track_index < 0 or track_index >= len(timeline.tracks):
+    report = classify_timeline(timeline)
+    likely = [
+        candidate
+        for candidate in report.candidates
+        if candidate.decision == "likely_guitar"
+    ]
+    if len(likely) == 1:
+        return likely[0].stream.as_track()
+    if not likely:
         raise SystemExit(
-            f"Track index {track_index} is out of range; "
-            f"file contains {len(timeline.tracks)} physical tracks."
+            "No high-confidence guitar stream was found. Run `fretpilot tracks` "
+            "and select a candidate with --stream-id."
         )
 
-    track = timeline.tracks[track_index]
-    if not track.notes:
-        raise SystemExit(f"Track {track_index} ({track.name}) contains no notes.")
-    return track
+    options = ", ".join(candidate.stream.stream_id for candidate in likely)
+    raise SystemExit(
+        "Multiple likely guitar streams were found. Run `fretpilot tracks` and "
+        f"choose one with --stream-id. Candidates: {options}."
+    )
 
 
 def _validate_max_fret(max_fret: int) -> None:
@@ -153,7 +193,11 @@ def _run_tracks(args: argparse.Namespace) -> int:
 
 def _run_rhythm(args: argparse.Namespace) -> int:
     timeline = load_midi(args.midi_file)
-    track = _select_track(timeline, args.track)
+    track = _select_analysis_source(
+        timeline,
+        track_index=args.track,
+        stream_id=args.stream_id,
+    )
     analysis = analyze_track_rhythm(track)
     _emit_json(analysis.to_dict(), args.output, args.compact)
     return 0
@@ -162,7 +206,11 @@ def _run_rhythm(args: argparse.Namespace) -> int:
 def _run_fingering(args: argparse.Namespace) -> int:
     _validate_max_fret(args.max_fret)
     timeline = load_midi(args.midi_file)
-    track = _select_track(timeline, args.track)
+    track = _select_analysis_source(
+        timeline,
+        track_index=args.track,
+        stream_id=args.stream_id,
+    )
     result = optimize_fingering(track, max_fret=args.max_fret)
     _emit_json(result.to_dict(), args.output, args.compact)
     return 0
@@ -171,7 +219,11 @@ def _run_fingering(args: argparse.Namespace) -> int:
 def _run_analyze(args: argparse.Namespace) -> int:
     _validate_max_fret(args.max_fret)
     timeline = load_midi(args.midi_file)
-    track = _select_track(timeline, args.track)
+    track = _select_analysis_source(
+        timeline,
+        track_index=args.track,
+        stream_id=args.stream_id,
+    )
     result = analyze_guitar_track(track, max_fret=args.max_fret)
     _emit_json(result.to_dict(), args.output, args.compact)
     return 0
