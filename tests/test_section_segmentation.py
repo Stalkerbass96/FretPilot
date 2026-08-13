@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fretpilot.analysis import segment_instrument_stream
+from fretpilot.analysis import analyze_section_contexts, segment_instrument_stream
 from fretpilot.detection.models import InstrumentStream
 from fretpilot.midi.models import (
     NormalizedNote,
@@ -93,8 +93,6 @@ def test_two_measure_windows_detect_three_behavior_regions() -> None:
 
 def test_similar_adjacent_windows_merge_into_one_section() -> None:
     timeline, stream = _fixture()
-    # Keep only the first four bars of repeated-riff material by duplicating the
-    # same behavior into bars 3-4 instead of the chord block.
     notes = [_note(40 if step % 4 else 43, step * 0.5) for step in range(32)]
     stream.notes = notes
     timeline.tracks[0].notes = notes
@@ -109,3 +107,33 @@ def test_similar_adjacent_windows_merge_into_one_section() -> None:
     assert len(result.sections) == 1
     assert result.sections[0].start_measure == 1
     assert result.sections[0].end_measure == 4
+
+
+def test_each_section_gets_independent_behavior_and_playing_context() -> None:
+    timeline, stream = _fixture()
+    segmentation = segment_instrument_stream(
+        timeline,
+        stream,
+        window_measures=2,
+        change_threshold=0.20,
+    )
+
+    analyses = analyze_section_contexts(segmentation)
+
+    assert len(analyses) == 3
+    assert analyses[0].section_id != analyses[1].section_id
+
+    first = analyses[0]
+    second = analyses[1]
+    third = analyses[2]
+
+    assert first.playing_context.role_scores.get("riff", 0.0) > 0.0
+    assert second.playing_context.role_scores.get("strumming", 0.0) > 0.0
+    assert third.playing_context.role_scores.get("solo", 0.0) > 0.0
+    assert first.playing_context.to_dict() != third.playing_context.to_dict()
+
+    # Layer-4 labels are still experimental evidence. The segmentation identity
+    # stays separate and stable regardless of which profile currently ranks top.
+    assert first.section_id == segmentation.sections[0].section_id
+    assert third.start_measure == 5
+    assert third.end_measure == 6
