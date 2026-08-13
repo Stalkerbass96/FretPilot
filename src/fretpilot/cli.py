@@ -10,6 +10,7 @@ from typing import Any, Sequence
 from fretpilot import __version__
 from fretpilot.analysis import analyze_guitar_track
 from fretpilot.detection import classify_timeline, resolve_instrument_streams
+from fretpilot.exporters.ample_guitar import export_ample_sc_midi
 from fretpilot.exporters.guitar_pro import UnsupportedGuitarIR, export_gp5
 from fretpilot.guitar import optimize_fingering
 from fretpilot.ir import build_guitar_ir
@@ -54,6 +55,25 @@ def _add_max_fret_argument(parser: argparse.ArgumentParser) -> None:
         type=int,
         default=24,
         help="Highest allowed fret (default: 24)",
+    )
+
+
+def _add_file_export_arguments(
+    parser: argparse.ArgumentParser,
+    *,
+    help_text: str,
+) -> None:
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        required=True,
+        help=help_text,
+    )
+    parser.add_argument(
+        "--compact",
+        action="store_true",
+        help="Emit a compact JSON export report",
     )
 
 
@@ -122,17 +142,18 @@ def _build_parser() -> argparse.ArgumentParser:
     gp5_parser.add_argument("midi_file", type=Path, help="Path to a .mid/.midi file")
     _add_source_selector(gp5_parser)
     _add_max_fret_argument(gp5_parser)
-    gp5_parser.add_argument(
-        "-o",
-        "--output",
-        type=Path,
-        required=True,
-        help="Destination .gp5 file",
+    _add_file_export_arguments(gp5_parser, help_text="Destination .gp5 file")
+
+    ample_parser = subparsers.add_parser(
+        "export-ample-sc",
+        help="Build Guitar IR and render performance MIDI for Ample Guitar SC 4.x",
     )
-    gp5_parser.add_argument(
-        "--compact",
-        action="store_true",
-        help="Emit a compact JSON export report",
+    ample_parser.add_argument("midi_file", type=Path, help="Path to a .mid/.midi file")
+    _add_source_selector(ample_parser)
+    _add_max_fret_argument(ample_parser)
+    _add_file_export_arguments(
+        ample_parser,
+        help_text="Destination Ample Guitar performance .mid file",
     )
 
     return parser
@@ -295,6 +316,13 @@ def _run_export_gp5(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_export_ample_sc(args: argparse.Namespace) -> int:
+    project = _build_project(args)
+    result = export_ample_sc_midi(project, args.output)
+    _emit_json(result.to_dict(), None, args.compact)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
@@ -313,6 +341,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_build_ir(args)
     if args.command == "export-gp5":
         return _run_export_gp5(args)
+    if args.command == "export-ample-sc":
+        return _run_export_ample_sc(args)
 
     parser.error(f"Unknown command: {args.command}")
     return 2
