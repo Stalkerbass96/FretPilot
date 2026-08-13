@@ -9,6 +9,10 @@ The engine combines three deterministic passes:
 The arpeggio pass intentionally models a common guitar reality that pure
 note-by-note optimization misses: a guitarist often preserves a movable shape
 across adjacent strings instead of chasing the globally lowest fret.
+
+All physical candidates remain deterministic. Optional ``FingeringPreferences``
+only rank valid alternatives, so style/role knowledge can influence choices
+without bypassing fretboard constraints.
 """
 
 from __future__ import annotations
@@ -24,7 +28,11 @@ from fretpilot.guitar.models import (
     FingeringResult,
     FretPosition,
 )
+from fretpilot.knowledge.playing_contexts import FingeringPreferences
 from fretpilot.midi.models import NormalizedNote, NormalizedTrack
+
+
+_NEUTRAL_PREFERENCES = FingeringPreferences()
 
 
 @dataclass(slots=True)
@@ -46,53 +54,82 @@ class _ArpeggioShape:
         return sum(self.frets) / len(self.frets)
 
 
-def _position_cost(position: FretPosition) -> float:
+def _position_cost(
+    position: FretPosition,
+    preferences: FingeringPreferences,
+) -> float:
     # Lower positions are a weak preference only. Stronger musical structure
     # such as a movable riff shape is allowed to override this.
-    return position.fret * 0.015
+    cost = position.fret * 0.015
+
+    # Neutral value 1.0 is exactly backward-compatible. Values below 1.0 make
+    # open strings less attractive (lead/jazz contexts); values above 1.0 keep
+    # the existing open-string advantage and can be used by riff/strum styles.
+    if position.fret == 0 and preferences.open_string_usage < 1.0:
+        cost += (1.0 - preferences.open_string_usage) * 0.60
+
+    return cost
 
 
-def _transition_cost(previous: FretPosition, current: FretPosition) -> float:
+def _transition_cost(
+    previous: FretPosition,
+    current: FretPosition,
+    preferences: FingeringPreferences,
+) -> float:
     fret_distance = abs(current.fret - previous.fret)
     string_distance = abs(current.string - previous.string)
     pitch_interval = abs(current.pitch - previous.pitch)
+    position_stability = max(0.25, preferences.hand_position_stability)
 
     # Stepwise melodic material, including a single fourth, can legitimately
     # stay on one string for hammer-ons, pull-offs and slides.
     if pitch_interval <= 5:
-        cost = fret_distance * 0.32 + string_distance * 1.45
+        cost = fret_distance * 0.32 * position_stability + string_distance * 1.45
         if fret_distance > 5:
-            cost += (fret_distance - 5) * 0.45
+            cost += (fret_distance - 5) * 0.45 * position_stability
         if previous.string == current.string:
-            cost -= 0.25
+            cost -= 0.25 * max(0.25, preferences.same_string_legato)
         return max(0.0, cost)
 
     # Sixth/fifth-like motion is frequently an arpeggio across neighbouring
     # strings. The dedicated arpeggio pass below handles repeated 5-9 semitone
     # cells, while this pairwise cost avoids obvious one-string ladders.
     if 6 <= pitch_interval <= 9:
-        cost = fret_distance * 0.42 + string_distance * 0.75
+        adjacent_bias = max(0.25, preferences.adjacent_string_arpeggio)
+        cost = fret_distance * 0.42 * position_stability + string_distance * 0.75
         if previous.string == current.string:
-            cost += 2.0
+            cost += 2.0 * adjacent_bias
         elif string_distance == 1:
-            cost -= 0.55
+            cost -= 0.55 * adjacent_bias
         elif string_distance > 1:
-            cost += (string_distance - 1) * 0.85
+            cost += (string_distance - 1) * 0.85 * adjacent_bias
         if fret_distance > 5:
-            cost += (fret_distance - 5) * 0.35
+            cost += (fret_distance - 5) * 0.35 * position_stability
         return max(0.0, cost)
 
     # Large melodic leaps should not force the whole phrase onto one string.
-    cost = fret_distance * 0.38 + string_distance * 0.9
+    # ``wide_interval_position_shift`` above 1 means a context is more willing
+    # to move the hand for a large leap, partially counteracting stability cost.
+    shift_willingness = max(0.25, preferences.wide_interval_position_shift)
+    cost = (
+        fret_distance * 0.38 * position_stability / shift_willingness
+        + string_distance * 0.9
+    )
     if previous.string == current.string:
         cost += 1.4
     if fret_distance > 5:
-        cost += (fret_distance - 5) * 0.45
+        cost += (
+            (fret_distance - 5)
+            * 0.45
+            * position_stability
+            / shift_willingness
+        )
     return max(0.0, cost)
 
 
 def _optimize_segment(
     items: list[_SegmentItem],
+    preferences: FingeringPreferences,
 ) -> tuple[dict[int, tuple[FretPosition, float]], float]:
     if not items:
         return {}, 0.0
@@ -101,7 +138,7 @@ def _optimize_segment(
 
     first_layer: dict[int, tuple[float, int | None]] = {}
     for position_index, position in enumerate(items[0].positions):
-        first_layer[position_index] = (_position_cost(position), None)
+        first_layer[position_index] = (_position_cost(position, preferences), None)
     layers.append(first_layer)
 
     for item_index in range(1, len(items)):
@@ -118,8 +155,8 @@ def _optimize_segment(
                 previous_cost = previous_layer[previous_index][0]
                 candidate_cost = (
                     previous_cost
-                    + _transition_cost(previous_position, current_position)
-                    + _position_cost(current_position)
+                    + _transition_cost(previous_position, current_position, preferences)
+                    + _position_cost(current_position, preferences)
                 )
                 if candidate_cost < best_cost:
                     best_cost = candidate_cost
@@ -144,9 +181,9 @@ def _optimize_segment(
 
     for item, position_index in zip(items, selected_indices, strict=True):
         position = item.positions[position_index]
-        local_cost = _position_cost(position)
+        local_cost = _position_cost(position, preferences)
         if previous_position is not None:
-            local_cost += _transition_cost(previous_position, position)
+            local_cost += _transition_cost(previous_position, position, preferences)
         result[item.note_index] = (position, local_cost)
         previous_position = position
 
@@ -240,20 +277,29 @@ def _enumerate_adjacent_string_shapes(
 def _arpeggio_shape_cost(
     shape: _ArpeggioShape,
     previous_shape: _ArpeggioShape | None,
+    preferences: FingeringPreferences,
 ) -> float:
-    cost = sum(fret * 0.015 for fret in shape.frets)
-    cost += sum(1.8 for fret in shape.frets if fret == 0)
+    cost = sum(_position_cost(
+        FretPosition(string=string, fret=fret, pitch=pitch), preferences
+    ) for string, fret, pitch in zip(shape.strings, shape.frets, shape.pitches, strict=True))
+
+    # Preserve the old neutral 1.8 open-string penalty for movable arpeggio
+    # cells, then modulate it with explicit open-string preference.
+    open_penalty_scale = max(0.25, 2.0 - preferences.open_string_usage)
+    cost += sum(1.8 * open_penalty_scale for fret in shape.frets if fret == 0)
 
     fret_span = max(shape.frets) - min(shape.frets)
-    cost += fret_span * 0.08
+    compactness = max(0.25, preferences.compact_chord_voicing)
+    cost += fret_span * 0.08 * compactness
     if fret_span > 5:
-        cost += (fret_span - 5) * 0.8
+        cost += (fret_span - 5) * 0.8 * compactness
 
     if previous_shape is None or len(previous_shape.frets) != len(shape.frets):
         return cost
 
+    shape_reuse = max(0.25, preferences.shape_reuse)
     if shape.strings == previous_shape.strings:
-        cost -= 0.9
+        cost -= 0.9 * shape_reuse
 
     string_offsets = tuple(
         current - previous
@@ -264,7 +310,7 @@ def _arpeggio_shape_cost(
         )
     )
     if len(set(string_offsets)) == 1:
-        cost -= 0.25
+        cost -= 0.25 * shape_reuse
 
     fret_offsets = tuple(
         current - previous
@@ -275,9 +321,13 @@ def _arpeggio_shape_cost(
         )
     )
     if len(set(fret_offsets)) == 1:
-        cost -= 0.25
+        cost -= 0.25 * shape_reuse
 
-    cost += abs(shape.fret_center - previous_shape.fret_center) * 0.10
+    cost += (
+        abs(shape.fret_center - previous_shape.fret_center)
+        * 0.10
+        * max(0.25, preferences.hand_position_stability)
+    )
     return cost
 
 
@@ -287,6 +337,7 @@ def _repair_arpeggio_shapes(
     *,
     tuning: GuitarTuning,
     max_fret: int,
+    preferences: FingeringPreferences,
 ) -> None:
     previous_shape: _ArpeggioShape | None = None
 
@@ -303,9 +354,17 @@ def _repair_arpeggio_shapes(
 
         selected = min(
             shapes,
-            key=lambda shape: _arpeggio_shape_cost(shape, previous_shape),
+            key=lambda shape: _arpeggio_shape_cost(
+                shape,
+                previous_shape,
+                preferences,
+            ),
         )
-        selected_cost = _arpeggio_shape_cost(selected, previous_shape)
+        selected_cost = _arpeggio_shape_cost(
+            selected,
+            previous_shape,
+            preferences,
+        )
 
         for note_index, string, fret, pitch in zip(
             selected.note_indices,
@@ -323,6 +382,7 @@ def _repair_arpeggio_shapes(
 def _shape_cost(
     chosen: list[tuple[_SegmentItem, FretPosition]],
     melodic_assignments: dict[int, tuple[FretPosition, float]],
+    preferences: FingeringPreferences,
 ) -> float:
     cost = 0.0
     frets: list[int] = []
@@ -331,7 +391,7 @@ def _shape_cost(
     for item, position in chosen:
         frets.append(position.fret)
         strings.append(position.string)
-        cost += _position_cost(position)
+        cost += _position_cost(position, preferences)
         original = melodic_assignments.get(item.note_index)
         if original is not None:
             original_position = original[0]
@@ -342,9 +402,10 @@ def _shape_cost(
         fretted = [fret for fret in frets if fret > 0]
         if fretted:
             span = max(fretted) - min(fretted)
-            cost += span * 0.18
+            compactness = max(0.25, preferences.compact_chord_voicing)
+            cost += span * 0.18 * compactness
             if span > 5:
-                cost += (span - 5) * 1.2
+                cost += (span - 5) * 1.2 * compactness
 
     if strings:
         cost += (max(strings) - min(strings)) * 0.04
@@ -355,6 +416,7 @@ def _shape_cost(
 def _solve_chord_shape(
     items: list[_SegmentItem],
     melodic_assignments: dict[int, tuple[FretPosition, float]],
+    preferences: FingeringPreferences,
 ) -> dict[int, tuple[FretPosition, float]] | None:
     """Choose one distinct string per simultaneous note."""
     if len(items) > 6:
@@ -371,7 +433,7 @@ def _solve_chord_shape(
     ) -> None:
         nonlocal best_cost, best
         if item_index == len(ordered):
-            cost = _shape_cost(chosen, melodic_assignments)
+            cost = _shape_cost(chosen, melodic_assignments, preferences)
             if cost < best_cost:
                 best_cost = cost
                 best = list(chosen)
@@ -383,6 +445,7 @@ def _solve_chord_shape(
             item.positions,
             key=lambda position: (
                 0 if original is not None and position == original[0] else 1,
+                _position_cost(position, preferences),
                 position.fret,
                 position.string,
             ),
@@ -401,7 +464,7 @@ def _solve_chord_shape(
         return None
 
     return {
-        item.note_index: (position, _position_cost(position))
+        item.note_index: (position, _position_cost(position, preferences))
         for item, position in best
     }
 
@@ -413,6 +476,7 @@ def _repair_simultaneous_chords(
     tuning: GuitarTuning,
     max_fret: int,
     diagnostics: list[FingeringDiagnostic],
+    preferences: FingeringPreferences,
 ) -> None:
     onset_groups: dict[int, list[int]] = defaultdict(list)
     for note_index, note in enumerate(track.notes):
@@ -445,7 +509,7 @@ def _repair_simultaneous_chords(
         if missing:
             continue
 
-        shape = _solve_chord_shape(items, assignments)
+        shape = _solve_chord_shape(items, assignments, preferences)
         if shape is None:
             first_index = note_indices[0]
             diagnostics.append(
@@ -469,6 +533,7 @@ def optimize_fingering(
     *,
     tuning: GuitarTuning = STANDARD_TUNING,
     max_fret: int = 24,
+    preferences: FingeringPreferences | None = None,
 ) -> FingeringResult:
     """Assign playable string/fret positions to melodic, riff and chord material.
 
@@ -476,7 +541,11 @@ def optimize_fingering(
     Pass 2 repairs stacked-interval arpeggio/riff cells into reusable adjacent-
     string shapes.
     Pass 3 enforces one distinct guitar string per simultaneous note.
+
+    ``preferences`` is a soft ranking prior. ``None`` uses neutral values and is
+    intentionally backward-compatible with the pre-PlayingContext optimizer.
     """
+    active_preferences = preferences or _NEUTRAL_PREFERENCES
     diagnostics: list[FingeringDiagnostic] = []
     assignments: dict[int, tuple[FretPosition, float]] = {}
     total_cost = 0.0
@@ -486,7 +555,7 @@ def optimize_fingering(
         nonlocal total_cost
         if not segment:
             return
-        optimized, segment_cost = _optimize_segment(segment)
+        optimized, segment_cost = _optimize_segment(segment, active_preferences)
         assignments.update(optimized)
         total_cost += segment_cost
         segment.clear()
@@ -523,6 +592,7 @@ def optimize_fingering(
         assignments,
         tuning=tuning,
         max_fret=max_fret,
+        preferences=active_preferences,
     )
     _repair_simultaneous_chords(
         track,
@@ -530,6 +600,7 @@ def optimize_fingering(
         tuning=tuning,
         max_fret=max_fret,
         diagnostics=diagnostics,
+        preferences=active_preferences,
     )
 
     fingered_notes: list[FingeredNote] = []
