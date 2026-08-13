@@ -10,16 +10,20 @@ The first product target is:
 - Instrument: 6-string standard-tuned guitar
 - Score target: Guitar Pro-compatible output (initial target: GP5)
 - Performance target: Ample Guitar-compatible MIDI
-- Core capabilities: rhythm repair, guitar fingering, articulation planning, and performance rendering
+- Core capabilities: instrument-stream detection, rhythm repair, guitar fingering, articulation planning, and performance rendering
 
 ## Product idea
 
-Raw MIDI describes pitches and timing, but it usually does not describe how a guitarist would actually play the music. FretPilot adds that missing instrument intelligence.
+Raw MIDI describes pitches and timing, but it usually does not reliably describe which stream is guitar or how a guitarist would actually play it. FretPilot adds that missing instrument intelligence.
 
 ```text
 Raw MIDI
    ↓
 MIDI normalization
+   ↓
+Physical track + channel + program stream resolution
+   ↓
+Layered guitar detection
    ↓
 Rhythm analysis / repair
    ↓
@@ -38,9 +42,10 @@ FretPilot deliberately separates **score data** from **performance data**. A rea
 
 1. **Deterministic engine first.** Timing, validation, fingering constraints, file I/O, and instrument mappings must not depend on an LLM.
 2. **AI is an advisor, not the source of truth.** LLMs may help resolve musical ambiguity, infer phrasing/style, or rank articulation candidates.
-3. **Instrument-aware by design.** Notes become strings, frets, positions, techniques, and phrases—not just MIDI pitches.
-4. **One canonical intermediate representation.** Exporters and instrument adapters depend on the FretPilot IR rather than on each other.
-5. **Start narrow.** V0.1 focuses on monophonic guitar lead/riff material and Ample Guitar before expanding further.
+3. **Metadata is evidence, not truth.** Track names and MIDI programs contribute to instrument detection but are checked against note behavior.
+4. **Instrument-aware by design.** Notes become strings, frets, positions, techniques, and phrases—not just MIDI pitches.
+5. **One canonical intermediate representation.** Exporters and instrument adapters depend on the FretPilot IR rather than on each other.
+6. **Start narrow.** V0.1 focuses on guitar lead/riff material and Ample Guitar before expanding further.
 
 ## Current runnable vertical slice
 
@@ -48,7 +53,10 @@ The repository now implements:
 
 ```text
 MIDI file
-→ NormalizedTimeline
+→ NormalizedTimeline with program metadata
+→ InstrumentStream resolution
+→ three-layer guitar candidate ranking
+→ experimental guitar behavior profiles
 → rhythm-grid scoring + onset repair suggestions
 → phrase-level guitar fingering
 → basic articulation planning
@@ -57,14 +65,14 @@ MIDI file
 
 The MIDI importer preserves original source ticks and durations. Repair decisions are stored separately so future score cleanup never destroys the original performance timing.
 
-Current deterministic articulation vocabulary includes:
+### Guitar detection layers
 
-- hammer-on
-- pull-off
-- slide
-- vibrato
+1. Track-name keyword evidence
+2. Channel/program/instrument metadata
+3. MIDI note behavior and standard-guitar plausibility
+4. Separate experimental behavior library: solo, riff, strumming, breakdown, and jazz comping
 
-Plugin-specific Ample Guitar keyswitches are intentionally **not** stored in this layer.
+The first three layers answer whether a stream is probably guitar. The fourth layer describes the guitar behavior and does not override instrument identity.
 
 ## Quick start
 
@@ -80,6 +88,13 @@ Inspect normalized MIDI:
 
 ```bash
 fretpilot inspect song.mid
+```
+
+Resolve physical tracks/channels and rank guitar candidates:
+
+```bash
+fretpilot tracks song.mid
+fretpilot tracks song.mid -o tracks.json
 ```
 
 Analyze likely notation rhythm:
@@ -100,20 +115,16 @@ Run the current end-to-end guitar intelligence stack:
 fretpilot analyze song.mid -o analysis.json
 ```
 
-For a multi-track MIDI file, select a zero-based track index:
+`tracks` already works on logical instrument streams. The older `rhythm`, `fingering`, and `analyze` commands still select physical tracks; adding `--stream-id` is the next integration step.
 
-```bash
-fretpilot analyze song.mid --track 2
-```
+Current deterministic articulation vocabulary includes:
 
-The analysis JSON contains:
+- hammer-on
+- pull-off
+- slide
+- vibrato
 
-- candidate notation-grid scores and selected grid
-- source and suggested note-on positions
-- per-note rhythm confidence
-- standard-guitar string/fret assignments
-- fingering diagnostics for impossible pitches
-- generic guitar articulation decisions and confidence
+Plugin-specific Ample Guitar keyswitches are intentionally **not** stored in this layer.
 
 Run tests:
 
@@ -132,10 +143,13 @@ FretPilot/
 ├── docs/
 │   ├── PRODUCT.md
 │   ├── ARCHITECTURE.md
+│   ├── GUITAR_DETECTION.md
 │   ├── MUSIC_IR.md
 │   └── ROADMAP.md
 ├── src/fretpilot/
 │   ├── midi/
+│   ├── detection/
+│   ├── knowledge/
 │   ├── analysis/
 │   ├── rhythm/
 │   ├── guitar/
@@ -150,6 +164,6 @@ FretPilot/
 
 ## Status
 
-Early V0.1 implementation. The first deterministic analysis vertical slice is runnable. The next core milestone is notation-quality **duration spelling, ties, phrase segmentation, and measure coordinates**, followed by the Guitar IR builder and GP5 export.
+Early V0.1 implementation. Layered instrument-stream detection and the first deterministic guitar-analysis vertical slice are runnable. The next core milestone is to route a selected `InstrumentStream` through rhythm, fingering, and articulation analysis, then add phrase/section segmentation before expanding the behavior library.
 
-See [`docs/PRODUCT.md`](docs/PRODUCT.md) for the product specification and [`docs/ROADMAP.md`](docs/ROADMAP.md) for detailed milestones.
+See [`docs/PRODUCT.md`](docs/PRODUCT.md), [`docs/GUITAR_DETECTION.md`](docs/GUITAR_DETECTION.md), and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the current product and architecture definitions.
