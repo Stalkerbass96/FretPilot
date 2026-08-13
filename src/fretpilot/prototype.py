@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from fretpilot.analysis import analyze_guitar_track
+from fretpilot.analysis import analyze_guitar_stream_section_aware
 from fretpilot.detection import classify_timeline
 from fretpilot.detection.models import GuitarStreamCandidate
 from fretpilot.exporters.ample_guitar import export_ample_sc_midi
@@ -111,6 +111,19 @@ def _build_processing_report(
         }
     )
 
+    section_summary = [
+        {
+            "section_id": item.section_id,
+            "start_measure": item.start_measure,
+            "end_measure": item.end_measure,
+            "role_scores": item.playing_context.role_scores,
+            "style_scores": item.playing_context.style_scores,
+            "technique_scores": item.playing_context.technique_scores,
+            "source_profiles": item.playing_context.source_profiles,
+        }
+        for item in analysis.section_contexts
+    ]
+
     return {
         "format_version": "0.1",
         "source": project.source,
@@ -123,6 +136,10 @@ def _build_processing_report(
             "behavior_profiles": [
                 asdict(profile) for profile in candidate.behavior_profiles
             ],
+        },
+        "sections": {
+            "count": len(section_summary),
+            "items": section_summary,
         },
         "rhythm": {
             "selected_grid": asdict(analysis.rhythm.selected_grid),
@@ -222,7 +239,7 @@ def generate_prototype_package(
     max_fret: int = 24,
     compact_json: bool = False,
 ) -> PrototypeManifest:
-    """Generate analysis, IR, GP5, Ample MIDI, reports, and a manifest."""
+    """Generate section-aware analysis, IR, GP5, Ample MIDI, and reports."""
 
     if stream_id is not None and all_likely_guitars:
         raise ValueError("stream_id and all_likely_guitars are mutually exclusive.")
@@ -245,7 +262,11 @@ def generate_prototype_package(
         prefix = stream_dir / stream_name
 
         track = candidate.stream.as_track()
-        analysis = analyze_guitar_track(track, max_fret=max_fret)
+        analysis = analyze_guitar_stream_section_aware(
+            timeline,
+            candidate.stream,
+            max_fret=max_fret,
+        )
         project = build_guitar_ir(
             timeline,
             track,
