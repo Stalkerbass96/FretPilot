@@ -56,6 +56,8 @@ Long-term architecture:
 - [x] physical Track / Channel / active Program preservation
 - [x] logical `InstrumentStream` resolution
 - [x] layered guitar candidate ranking
+- [x] guitar-only product preflight with confidence and recommendation
+- [x] low-confidence/non-guitar filtering and Program-fragment display grouping
 - [x] explicit `--stream-id`
 - [x] multiple-guitar ambiguity handling
 - [ ] labeled corpus + Precision/Recall/F1 calibration (`TI-*`)
@@ -71,7 +73,8 @@ Long-term architecture:
 - [x] Python API and real conversion-job execution
 - [x] coarse job polling and per-stream output downloads
 - [x] read-only Guitar Playing / Virtual Instrument knowledge review UI
-- [ ] resolved `InstrumentStream` selection UI
+- [x] read-only resolved guitar-part review UI
+- [ ] manual include/exclude override and remembered selection (`TI-050`)
 - [ ] granular progress/event streaming and cancellation
 - [ ] score preview and measure-level review/correction
 - [ ] persistent project storage
@@ -80,7 +83,10 @@ Desktop (1440px) and mobile (390px) layouts were checked in a real browser on
 2026-08-13. The live local API path was also exercised with `Message in a
 Bottle`: five likely guitar streams completed with independent PDF, GP5, and
 Ample MIDI downloads. The UI preserved all five rather than choosing one
-silently.
+silently. On 2026-08-14, `Stairway to Heaven` exercised the guitar-only
+preflight: 15 logical streams became 7 displayed guitar parts, with 7
+possible/unlikely streams filtered. Detailed evidence lives in the track
+identification [`STATUS.md`](projects/track-identification/STATUS.md).
 
 ### Musical understanding / guitar execution
 

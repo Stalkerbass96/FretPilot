@@ -1,6 +1,6 @@
 # FretPilot AI / Codex Handoff
 
-> Consolidated: 2026-08-13
+> Consolidated: 2026-08-14
 >
 > This is the authoritative short handoff for an AI coding agent. Read `AGENTS.md` first, then this file. Detailed design lives in the specialized project docs linked below.
 
@@ -49,6 +49,8 @@ Implemented and covered by tests/CI:
 - preservation of physical Track / Channel / Program / original ticks and timing;
 - logical `InstrumentStream` resolution;
 - three-layer guitar identity ranking;
+- guitar-only product preflight with confidence, recommendations, low-confidence
+  filtering, and same-track/channel Program-fragment grouping;
 - separate experimental Layer-4 guitar behavior profiles;
 - adjustable MIDI-fidelity vs guitar-reasonableness note rewriting, with stable
   source mapping and an explainable per-edit report;
@@ -103,6 +105,8 @@ Do not mistake these for implemented features:
 - Bend/vibrato performance rendering is incomplete.
 - Ample is the only implemented virtual-guitar target.
 - Track identification is useful but intentionally not treated as finished.
+- The frontend cannot yet override the automatic guitar-only selection; short
+  likely parts are labeled optional but remain selected.
 - The frontend is connected to a local Python job API, but project/job metadata
   is not yet persistent across server restarts.
 

@@ -218,13 +218,10 @@ fretpilot analyze song.mid --stream-id t0:ch2:p27
 The report ranks logical streams rather than physical tracks. Downstream rhythm,
 fingering, and articulation analysis can consume a selected `InstrumentStream`.
 
-## Local API and frontend
-
-`POST /api/detect` performs the lightweight guitar-only preflight used when a
-file is selected in the frontend. It returns the grouped candidate summary
-before output generation starts. `POST /api/jobs` reruns the same deterministic
-policy and includes the summary in the job response so result cards cannot drift
-from the preflight decision.
+API/UI implementation details and real-file regression evidence are maintained
+in the track-identification
+[`STATUS.md`](projects/track-identification/STATUS.md), rather than duplicated
+in this algorithm document.
 
 ## Development priorities
 
