@@ -5,7 +5,7 @@ each stable section gets its own PlayingContext, then fingering and articulation
 are solved independently inside that section before results are remapped to the
 original stream-wide note indices.
 
-Section boundaries intentionally act as phrase boundaries in this baseline.  A
+Section boundaries intentionally act as phrase boundaries in this baseline. A
 future hand-position planner may carry explicit state across selected boundaries,
 but the current behavior is safer than allowing a riff/solo context from one
 region to leak into another.
@@ -24,6 +24,7 @@ from fretpilot.analysis.sections import segment_instrument_stream
 from fretpilot.articulation import ArticulationDecision, ArticulationPlan, plan_articulations
 from fretpilot.detection.models import InstrumentStream
 from fretpilot.guitar import optimize_fingering
+from fretpilot.guitar.instrument import STANDARD_TUNING
 from fretpilot.guitar.models import (
     FingeredNote,
     FingeringDiagnostic,
@@ -45,7 +46,9 @@ def _section_note_indices(
     return [
         note_index
         for note_index, note in enumerate(track.notes)
-        if section.start_beat - _EPSILON <= note.start_beat < section.end_beat - _EPSILON
+        if section.start_beat - _EPSILON
+        <= note.start_beat
+        < section.end_beat - _EPSILON
     ]
 
 
@@ -117,7 +120,7 @@ def analyze_guitar_track_by_sections(
 ) -> GuitarTrackAnalysis:
     """Analyze one track using a separate PlayingContext for each section.
 
-    ``context_overrides`` is intentionally keyed by stable ``section_id``.  It
+    ``context_overrides`` is intentionally keyed by stable ``section_id``. It
     supports future user review/correction and makes the context-to-engine
     contract testable without hard-coding one hand-authored style profile as
     musical truth.
@@ -185,10 +188,7 @@ def analyze_guitar_track_by_sections(
     fingering = FingeringResult(
         track_index=track.index,
         track_name=track.name,
-        tuning=(
-            next(iter(merged_notes.values()), None) and "Standard E"
-        )
-        or "Standard E",
+        tuning=STANDARD_TUNING.name,
         max_fret=max_fret,
         notes=[merged_notes[index] for index in range(len(track.notes))],
         diagnostics=sorted(diagnostics, key=lambda item: item.note_index),
