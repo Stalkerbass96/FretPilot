@@ -4,6 +4,7 @@ import {
   ChevronRight,
   CircleHelp,
   Clock3,
+  Download,
   FileAudio2,
   FileMusic,
   FolderClock,
@@ -11,6 +12,7 @@ import {
   Guitar,
   LayoutDashboard,
   LibraryBig,
+  LoaderCircle,
   Menu,
   Music2,
   Plus,
@@ -29,10 +31,18 @@ import {
   useState,
 } from "react";
 import { Badge, Button, SectionHeader, Slider, Switch } from "./components/ui";
+import {
+  artifactUrl,
+  createConversionJob,
+  getConversionJob,
+  type ConversionArtifact,
+  type ConversionJob,
+  type OutputSelection,
+} from "./api";
 import { cn } from "./lib/utils";
 
 type View = "studio" | "projects" | "system";
-type OutputKey = "pdf" | "gp5" | "ample";
+type OutputKey = keyof OutputSelection;
 
 const recentProjects = [
   {
@@ -325,17 +335,137 @@ function OutputSelector({
   );
 }
 
+const artifactLabels: Record<ConversionArtifact["kind"], string> = {
+  pdf: "PDF / TAB",
+  gp5: "Guitar Pro 5",
+  ample_sc_midi: "Ample MIDI",
+};
+
+function formatSize(size: number) {
+  return size < 1024 * 1024
+    ? `${Math.max(size / 1024, 0.1).toFixed(1)} KB`
+    : `${(size / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function ConversionStatus({ job }: { job: ConversionJob }) {
+  if (job.status === "failed") {
+    return (
+      <section className="conversion-result conversion-result--failed" aria-live="polite">
+        <div className="result-heading">
+          <div className="result-heading__icon"><X size={18} /></div>
+          <div><span>Processing stopped</span><h2>这次没有生成成功</h2></div>
+        </div>
+        <p>{job.error ?? "本地引擎遇到未知错误，请检查 MIDI 后重试。"}</p>
+      </section>
+    );
+  }
+
+  if (job.status !== "completed") {
+    return (
+      <section className="conversion-result conversion-result--processing" aria-live="polite">
+        <div className="result-heading">
+          <div className="result-heading__icon"><LoaderCircle className="spin" size={18} /></div>
+          <div><span>Local processing</span><h2>正在理解这段吉他演奏</h2></div>
+          <strong>{job.progress}%</strong>
+        </div>
+        <div className="progress-track"><span style={{ width: `${job.progress}%` }} /></div>
+        <p>识别声部、修正音符、安排指法并生成所选格式。</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="conversion-result" aria-live="polite">
+      <div className="result-heading">
+        <div className="result-heading__icon result-heading__icon--success"><Check size={18} /></div>
+        <div><span>Ready to play</span><h2>转换完成</h2></div>
+        <Badge tone="success">{job.streams.length} 个吉他声部</Badge>
+      </div>
+      <div className="stream-results">
+        {job.streams.map((stream, index) => (
+          <article className="stream-card" key={stream.stream_id}>
+            <div className="stream-card__heading">
+              <div><span>GUITAR {String(index + 1).padStart(2, "0")}</span><strong>{stream.stream_id}</strong></div>
+              <Badge tone={stream.review_required ? "warm" : "success"}>
+                {stream.review_required ? "建议审阅" : "已就绪"}
+              </Badge>
+            </div>
+            <div className="artifact-list">
+              {stream.artifacts.map((artifact) => (
+                <a
+                  className="artifact-link"
+                  href={artifactUrl(artifact.download_url)}
+                  download={artifact.name}
+                  key={artifact.id}
+                >
+                  <span><FileMusic size={16} /></span>
+                  <div><strong>{artifactLabels[artifact.kind]}</strong><small>{artifact.name} · {formatSize(artifact.size_bytes)}</small></div>
+                  <span className="artifact-download"><Download size={15} /> 下载 {artifactLabels[artifact.kind]}</span>
+                </a>
+              ))}
+            </div>
+            {stream.outputs.some((output) => output.status === "unsupported") && (
+              <div className="output-warnings">
+                {stream.outputs
+                  .filter((output) => output.status === "unsupported")
+                  .map((output) => (
+                    <p key={output.kind}>
+                      {artifactLabels[output.kind]} 暂不支持这个声部
+                      {output.error ? `：${output.error}` : "。"}
+                    </p>
+                  ))}
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function StudioView() {
   const [file, setFile] = useState<File | null>(null);
   const [fidelity, setFidelity] = useState(35);
-  const [outputs, setOutputs] = useState<Record<OutputKey, boolean>>({
+  const [outputs, setOutputs] = useState<OutputSelection>({
     pdf: true,
     gp5: true,
     ample: true,
   });
-  const [queued, setQueued] = useState(false);
+  const [job, setJob] = useState<ConversionJob | null>(null);
+  const [requestError, setRequestError] = useState("");
+  const requestVersion = useRef(0);
 
   const selectedOutputCount = Object.values(outputs).filter(Boolean).length;
+  const isProcessing = job?.status === "queued" || job?.status === "processing";
+
+  const resetResult = () => {
+    requestVersion.current += 1;
+    setJob(null);
+    setRequestError("");
+  };
+
+  const generate = async () => {
+    if (!file || selectedOutputCount === 0 || isProcessing) return;
+    const version = requestVersion.current + 1;
+    requestVersion.current = version;
+    setRequestError("");
+    try {
+      let nextJob = await createConversionJob(file, fidelity, outputs);
+      if (requestVersion.current !== version) return;
+      setJob(nextJob);
+      while (nextJob.status === "queued" || nextJob.status === "processing") {
+        await new Promise((resolve) => window.setTimeout(resolve, 650));
+        if (requestVersion.current !== version) return;
+        nextJob = await getConversionJob(nextJob.id);
+        if (requestVersion.current !== version) return;
+        setJob(nextJob);
+      }
+    } catch (error) {
+      if (requestVersion.current !== version) return;
+      setJob(null);
+      setRequestError(error instanceof Error ? error.message : "无法连接本地引擎。请确认 API 已启动。 ");
+    }
+  };
 
   return (
     <div className="page page--studio">
@@ -351,7 +481,7 @@ function StudioView() {
             <div className="step-number">01</div>
             <div><h2>选择音乐</h2><p>支持 Standard MIDI File</p></div>
           </div>
-          <UploadArea file={file} onFile={(nextFile) => { setFile(nextFile); setQueued(false); }} />
+          <UploadArea file={file} onFile={(nextFile) => { setFile(nextFile); resetResult(); }} />
           <div className="privacy-note"><ShieldCheck size={14} /> 文件仅在本地处理，不会上传到云端</div>
         </article>
 
@@ -369,16 +499,19 @@ function StudioView() {
           />
           <Button
             className="generate-button"
-            disabled={!file || selectedOutputCount === 0}
-            onClick={() => setQueued(true)}
+            disabled={!file || selectedOutputCount === 0 || isProcessing}
+            onClick={generate}
           >
-            {queued ? <><Check size={16} /> 已加入本地处理队列</> : <><Sparkles size={16} /> 开始生成 <ArrowRight size={16} /></>}
+            {isProcessing ? <><LoaderCircle className="spin" size={16} /> 本地处理中</> : <><Sparkles size={16} /> 开始生成 <ArrowRight size={16} /></>}
           </Button>
           <p className="generate-hint">
             {file ? `将生成 ${selectedOutputCount} 种输出格式` : "选择 MIDI 后即可开始"}
           </p>
+          {requestError && <p className="request-error" role="alert">{requestError}</p>}
         </article>
       </section>
+
+      {job && <ConversionStatus job={job} />}
 
       <section className="recent-section">
         <SectionHeader

@@ -61,7 +61,7 @@ Target integration boundary:
 
 ```text
 browser File
-→ future local/API upload endpoint
+→ local FastAPI upload endpoint
 → FretPilot prototype service
 → job/output manifest
 → review UI and downloads
@@ -112,14 +112,16 @@ Implemented:
 - MIDI file selection/drop state and validation;
 - MIDI-fidelity preference;
 - PDF, GP5, and Ample MIDI output selection;
+- real local MIDI upload and conversion-job polling;
+- processing, failure, and completed result states;
+- per-stream artifacts and safe downloads;
 - recent-project and project-library presentations;
 - visible design-system reference page;
 - foundational interaction tests.
 
 Not yet implemented:
 
-- Python API/server and real job execution;
-- live progress/event streaming;
+- granular live progress/event streaming (current V0.1 polls coarse job state);
 - score preview and measure-level correction UI;
 - persistent project storage;
 - routing, authentication, localization infrastructure;

@@ -68,16 +68,18 @@ Long-term architecture:
 - [x] MIDI file selection/drop validation and `midi_fidelity` control
 - [x] PDF, GP5, and Ample MIDI output selection
 - [x] frontend test/build CI
-- [ ] Python API and real conversion-job execution
+- [x] Python API and real conversion-job execution
+- [x] coarse job polling and per-stream output downloads
 - [ ] resolved `InstrumentStream` selection UI
-- [ ] progress/event streaming and output downloads
+- [ ] granular progress/event streaming and cancellation
 - [ ] score preview and measure-level review/correction
 - [ ] persistent project storage
 
 Desktop (1440px) and mobile (390px) layouts were checked in a real browser on
-2026-08-13. Both reflow without horizontal overflow; the mobile navigation,
-Radix controls, and design-system page were also exercised without browser
-console warnings.
+2026-08-13. The live local API path was also exercised with `Message in a
+Bottle`: five likely guitar streams completed with independent PDF, GP5, and
+Ample MIDI downloads. The UI preserved all five rather than choosing one
+silently.
 
 ### Musical understanding / guitar execution
 

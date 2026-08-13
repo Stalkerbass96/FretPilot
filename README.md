@@ -81,8 +81,14 @@ pip install -e ".[dev]"
 ### Frontend
 
 The `Quiet Studio` frontend is a separate React/TypeScript application. It
-currently provides the responsive product shell and conversion interactions;
-the Python API/job connection is the next integration step.
+connects to a local FastAPI service and runs the real conversion engine. Start
+the API from the repository root:
+
+```bash
+fretpilot-api
+```
+
+In a second terminal, start the frontend:
 
 ```bash
 cd web
@@ -96,6 +102,12 @@ Open `http://127.0.0.1:4173/`. Frontend checks:
 pnpm test
 pnpm build
 ```
+
+The browser uploads MIDI only to `127.0.0.1:8765`. The local API uses a bounded
+two-worker queue, keeps every likely guitar stream, and exposes generated files
+through opaque artifact IDs. Jobs and artifacts are process-local in V0.1; set
+`FRETPILOT_JOB_ROOT` to choose their on-disk directory. Set
+`VITE_FRETPILOT_API_URL` when the frontend should use a different API origin.
 
 The visual language, tokens, accessibility contract, and research sources are
 documented in [`docs/FRONTEND_DESIGN_SYSTEM.md`](docs/FRONTEND_DESIGN_SYSTEM.md).
@@ -312,6 +324,7 @@ FretPilot/
 │   ├── ROADMAP.md
 │   └── projects/track-identification/
 ├── src/fretpilot/
+│   ├── api/
 │   ├── midi/
 │   ├── detection/
 │   ├── knowledge/
@@ -335,7 +348,7 @@ FretPilot/
 ## Status
 
 FretPilot is an early V0.1 prototype with both target output paths, a one-command
-multi-guitar package workflow, and a responsive frontend/design-system baseline.
-The frontend is intentionally local-first today; its primary next milestone is
-connecting real upload, stream selection, job progress, and output download to
-the Python engine.
+multi-guitar package workflow, and a responsive local-first product shell. The
+frontend now runs real upload, conversion-job polling, multi-stream result
+presentation, and artifact downloads. Its primary next milestone is an explicit
+stream-selection and score-review/correction experience.

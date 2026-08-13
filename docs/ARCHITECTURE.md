@@ -57,11 +57,45 @@ Guitar IR
 
 The prototype also supports batch packaging for likely guitar streams.
 
+The local product shell wraps this pipeline without duplicating music policy:
+
+```text
+React client
+  ↓ multipart MIDI + fidelity + requested formats
+FastAPI `api` module
+  ↓ bounded local job queue
+prototype package generator (all likely guitar streams)
+  ↓ opaque artifact IDs
+per-stream status and downloads
+```
+
+The API owns upload limits, job lifecycle, local file isolation, and delivery.
+The existing engine remains the only owner of detection, rewriting, fingering,
+articulation, IR, and exporter decisions. V0.1 job metadata is in memory; moving
+to a persistent queue must preserve this boundary and the public job contract.
+
 The Ample path is the first implementation of a broader virtual-guitar adapter architecture. The generic provider-neutral profile model now lives in `src/fretpilot/virtual_instruments/`; migration of the working Ample profile is intentionally deferred so the prototype remains stable.
 
 ---
 
 ## Module boundaries
+
+### `api`
+
+**Implemented local V0.1.** Owns product orchestration, not musical reasoning.
+
+Responsibilities include:
+
+- validated, size-limited MIDI uploads;
+- bounded in-process conversion jobs;
+- queued/processing/completed/failed state;
+- all-likely-guitar batch execution;
+- selected-format generation;
+- per-stream output status;
+- artifact lookup through opaque IDs rather than client-supplied paths.
+
+Future work includes persistent job/project storage, cancellation, granular
+progress events, and explicit stream selection before expensive export.
 
 ### `midi`
 

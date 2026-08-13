@@ -208,11 +208,11 @@ def _build_processing_report(
             or low_confidence_rhythm
             or unplayable
             or project.warnings
-            or pdf_status.status != "success"
+            or pdf_status.status not in {"success", "skipped"}
             or pdf_status.warnings
-            or gp5_status.status != "success"
+            or gp5_status.status not in {"success", "skipped"}
             or gp5_status.warnings
-            or ample_status.status != "success"
+            or ample_status.status not in {"success", "skipped"}
             or ample_status.warnings
         ),
     }
@@ -274,8 +274,11 @@ def generate_prototype_package(
     max_fret: int = 24,
     midi_fidelity: float = DEFAULT_MIDI_FIDELITY,
     compact_json: bool = False,
+    include_pdf: bool = True,
+    include_gp5: bool = True,
+    include_ample_sc_midi: bool = True,
 ) -> PrototypeManifest:
-    """Generate section-aware analysis, IR, PDF, GP5, Ample MIDI, and reports."""
+    """Generate analysis, IR, selected end-user formats, and reports."""
 
     if stream_id is not None and all_likely_guitars:
         raise ValueError("stream_id and all_likely_guitars are mutually exclusive.")
@@ -344,47 +347,53 @@ def generate_prototype_package(
         )
         ir_status = PrototypeOutputStatus(path=str(ir_path), status="success")
 
-        try:
-            pdf_result = export_score_pdf(project, pdf_path)
-            pdf_status = PrototypeOutputStatus(
-                path=str(pdf_path),
-                status="success",
-                warnings=pdf_result.warnings,
-            )
-        except ValueError as exc:
-            pdf_status = PrototypeOutputStatus(
-                path=None,
-                status="unsupported",
-                error=str(exc),
-            )
+        pdf_status = PrototypeOutputStatus(path=None, status="skipped")
+        if include_pdf:
+            try:
+                pdf_result = export_score_pdf(project, pdf_path)
+                pdf_status = PrototypeOutputStatus(
+                    path=str(pdf_path),
+                    status="success",
+                    warnings=pdf_result.warnings,
+                )
+            except ValueError as exc:
+                pdf_status = PrototypeOutputStatus(
+                    path=None,
+                    status="unsupported",
+                    error=str(exc),
+                )
 
-        try:
-            gp5_result = export_gp5(project, gp5_path)
-            gp5_status = PrototypeOutputStatus(
-                path=str(gp5_path),
-                status="success",
-                warnings=gp5_result.warnings,
-            )
-        except (UnsupportedGuitarIR, ValueError) as exc:
-            gp5_status = PrototypeOutputStatus(
-                path=None,
-                status="unsupported",
-                error=str(exc),
-            )
+        gp5_status = PrototypeOutputStatus(path=None, status="skipped")
+        if include_gp5:
+            try:
+                gp5_result = export_gp5(project, gp5_path)
+                gp5_status = PrototypeOutputStatus(
+                    path=str(gp5_path),
+                    status="success",
+                    warnings=gp5_result.warnings,
+                )
+            except (UnsupportedGuitarIR, ValueError) as exc:
+                gp5_status = PrototypeOutputStatus(
+                    path=None,
+                    status="unsupported",
+                    error=str(exc),
+                )
 
-        try:
-            ample_result = export_ample_sc_midi(project, ample_path)
-            ample_status = PrototypeOutputStatus(
-                path=str(ample_path),
-                status="success",
-                warnings=ample_result.warnings,
-            )
-        except ValueError as exc:
-            ample_status = PrototypeOutputStatus(
-                path=None,
-                status="unsupported",
-                error=str(exc),
-            )
+        ample_status = PrototypeOutputStatus(path=None, status="skipped")
+        if include_ample_sc_midi:
+            try:
+                ample_result = export_ample_sc_midi(project, ample_path)
+                ample_status = PrototypeOutputStatus(
+                    path=str(ample_path),
+                    status="success",
+                    warnings=ample_result.warnings,
+                )
+            except ValueError as exc:
+                ample_status = PrototypeOutputStatus(
+                    path=None,
+                    status="unsupported",
+                    error=str(exc),
+                )
 
         processing_report = _build_processing_report(
             candidate,
