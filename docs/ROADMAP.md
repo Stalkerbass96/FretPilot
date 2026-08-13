@@ -2,18 +2,21 @@
 
 ## Current focus
 
-The first vertical slice is now runnable:
+The current vertical slice is now:
 
 ```text
 MIDI
-→ NormalizedTimeline
+→ NormalizedTimeline with program metadata
+→ InstrumentStream resolution
+→ layered guitar detection
+→ selected guitar stream
 → rhythm-grid analysis
 → phrase-level guitar fingering
 → basic articulation planning
 → JSON analysis
 ```
 
-The next priority is **notation-quality rhythm**: duration spelling, ties, phrase boundaries, and measure coordinates. Those pieces should be stable before GP5 export is implemented.
+The next priority is **phrase/section segmentation**. One guitar stream may contain riff, strumming, solo, and breakdown sections, so the behavior library must classify musical regions rather than permanently labeling a whole channel. Notation-quality duration spelling, ties, and measure coordinates follow immediately after that.
 
 ## Phase 0 — Product definition
 
@@ -33,7 +36,10 @@ Goal: load real-world MIDI reliably and produce normalized timelines.
 - [x] MIDI parser
 - [x] tempo map
 - [x] time-signature map
-- [x] track listing / CLI selection
+- [x] physical track listing
+- [x] preserve MIDI channel
+- [x] preserve program changes and program active at note-on
+- [x] preserve optional instrument name
 - [x] note-on/note-off normalization
 - [ ] malformed/hanging-note repair policy
 - [ ] measure coordinate conversion
@@ -43,9 +49,66 @@ Goal: load real-world MIDI reliably and produce normalized timelines.
 
 Acceptance test:
 
-> A MIDI file can be imported and represented without losing its musical timing information.
+> A MIDI file can be imported without losing physical track, channel, program, or musical timing information.
 
 **Status:** Core V0 implemented; representative real-world MIDI corpus still needed.
+
+## Phase 1.5 — Instrument stream resolution and guitar detection
+
+Goal: find guitar material reliably even when MIDI metadata is missing or wrong.
+
+- [x] resolve logical streams by physical track + channel + active program
+- [x] Layer 1 track-name keyword evidence
+- [x] Layer 2 channel/program/instrument-name evidence
+- [x] Layer 3 deterministic note-behavior evidence
+- [x] separate probability, confidence, per-layer reasons, and raw metrics
+- [x] exclude General MIDI percussion channel
+- [x] rank multiple guitar candidates
+- [x] require explicit selection when multiple likely guitars exist
+- [x] route rhythm/fingering/analysis through `--stream-id`
+- [ ] labeled instrument-detection regression corpus
+- [ ] precision/recall evaluation and threshold calibration
+- [ ] stronger physical chord-voicing feasibility
+- [ ] alternate-tuning-aware behavior analysis
+- [ ] support program changes that represent intentional articulations rather than instrument changes
+
+Acceptance test:
+
+> Type-0 and Type-1 MIDI files produce correctly separated logical streams, and likely guitar streams rank above bass, drums, and unrelated instruments without blindly trusting metadata.
+
+**Status:** Explainable three-layer V0 implemented.
+
+## Phase 1.6 — Guitar behavior and style knowledge library
+
+Goal: describe the role and performance behavior of guitar sections after guitar identity is established.
+
+Initial profiles:
+
+- [x] Solo / Lead
+- [x] Riff
+- [x] Strumming / Chord Rhythm
+- [x] Breakdown / Heavy Low Riff
+- [x] Jazz Comping
+
+Infrastructure:
+
+- [x] versioned rule/profile registry
+- [x] keep Layer 4 separate from instrument identity
+- [x] expose matched and missing features
+- [ ] phrase/section segmentation
+- [ ] repeated-pattern similarity
+- [ ] strum timing and direction features
+- [ ] power-chord and chord-extension features
+- [ ] palm-mute and accent likelihood
+- [ ] tonal/scale vocabulary
+- [ ] labeled role/style corpus
+- [ ] profile calibration and learned ranking model
+
+Acceptance test:
+
+> A single guitar stream can be segmented and labeled with changing roles such as riff → strumming → solo, with explanations and confidence per region.
+
+**Status:** Whole-stream experimental profile registry implemented; section-level classification is next.
 
 ## Phase 2 — Rhythm repair
 
@@ -180,7 +243,8 @@ Initial user flow:
 
 ```text
 Upload MIDI
-→ Select Track
+→ Detect instrument streams
+→ Select guitar stream
 → Humanize Guitar
 → Review changes / warnings
 → Download GP5
@@ -188,7 +252,8 @@ Upload MIDI
 ```
 
 - [x] CLI skeleton and JSON inspection
-- [x] end-to-end analysis command
+- [x] layered stream detection command
+- [x] stream-aware end-to-end analysis command
 - [ ] API service
 - [ ] simple web UI
 - [ ] processing report
@@ -198,17 +263,31 @@ Upload MIDI
 
 ## Dataset / testing strategy
 
-Before optimizing algorithms, maintain a small curated regression set covering:
+Before optimizing algorithms, maintain a curated regression set covering:
+
+Instrument identity:
+
+- type-0 full arrangement with many channels
+- type-1 one-instrument-per-track arrangement
+- correct guitar metadata
+- incorrect guitar metadata
+- missing program metadata
+- bass guitar vs six-string guitar
+- piano/synth parts that are guitar-playable
+- drums and percussion
+
+Guitar behavior:
 
 - slow melodic lead
 - fast scalar lead
 - repeated riffs
-- triplets
-- syncopation
-- noisy note lengths
-- imperfect note-on timing
+- strummed chords
+- power-chord breakdowns
+- jazz comping
+- sections that change role
+- triplets and syncopation
+- noisy note lengths and imperfect note-on timing
 - large melodic leaps
-- notes with multiple plausible fretboard positions
 - articulation-friendly phrases
 - phrases where articulation should remain minimal
 
