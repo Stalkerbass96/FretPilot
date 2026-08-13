@@ -17,17 +17,21 @@ Acceptance:
 
 ### GK-002 — thread PlayingContext through analysis
 
-Status: **todo**
+Status: **in progress**
 
-Pass an optional/derived PlayingContext through:
+Implemented baseline:
 
 ```text
 analyze_guitar_track
 → optimize_fingering
 → plan_articulations
-→ Guitar IR
-→ performance renderer
+→ Guitar IR metadata
 ```
+
+Still pending:
+
+- make `PerformancePreferences` influence the generic performance plan / virtual-instrument rendering path;
+- derive time-varying contexts from phrase/section analysis instead of requiring one explicit whole-track context.
 
 Acceptance:
 
@@ -37,7 +41,17 @@ Acceptance:
 
 ### GK-003 — replace hard-coded fingering weights with preference-aware costs
 
-Status: **todo**
+Status: **implemented baseline**
+
+Current preference-aware costs include:
+
+- adjacent-string arpeggio bias;
+- same-string legato bias;
+- hand-position stability;
+- movable-shape reuse;
+- open-string preference/avoidance;
+- compact chord/shape voicing;
+- wide-interval position-shift willingness.
 
 Acceptance:
 
@@ -45,16 +59,25 @@ Acceptance:
 - `shape_reuse`, `same_string_legato`, `open_string_usage`, and `hand_position_stability` affect candidate ranking;
 - physical fretboard constraints remain hard constraints.
 
+Future learned/statistical ranking remains `GK-040+` work.
+
 ### GK-004 — articulation planner consumes context
 
-Status: **todo**
+Status: **implemented baseline**
+
+Current behavior:
+
+- deterministic physical/timing eligibility remains unchanged;
+- `hammer_pull`, `slide`, and `vibrato` preferences confidence-weight only already-valid articulation decisions;
+- neutral preferences preserve historical confidence values exactly;
+- style-heavy techniques such as palm mute/staccato are **not** emitted merely because a style profile prefers them; they need their own eligibility/context features first.
 
 Acceptance:
 
 - technique eligibility remains deterministic;
 - context changes ranking/confidence, not physical validity;
-- metal riff increases palm-mute/staccato priors;
-- solo increases bend/vibrato/legato priors.
+- metal/riff profiles carry palm-mute/staccato priors for future eligible decisions;
+- solo profiles carry stronger bend/vibrato/legato priors.
 
 ## P1 — phrase-level knowledge
 
