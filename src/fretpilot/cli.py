@@ -9,6 +9,7 @@ from typing import Any, Sequence
 
 from fretpilot import __version__
 from fretpilot.analysis import analyze_guitar_track
+from fretpilot.detection import classify_timeline
 from fretpilot.guitar import optimize_fingering
 from fretpilot.midi import load_midi
 from fretpilot.midi.models import NormalizedTimeline, NormalizedTrack
@@ -33,7 +34,7 @@ def _add_track_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--track",
         type=int,
-        help="Zero-based MIDI track index. Defaults to the first track containing notes.",
+        help="Zero-based physical MIDI track index. Defaults to the first track containing notes.",
     )
 
 
@@ -62,6 +63,13 @@ def _build_parser() -> argparse.ArgumentParser:
     inspect_parser.add_argument("midi_file", type=Path, help="Path to a .mid/.midi file")
     _add_json_output_arguments(inspect_parser)
 
+    tracks_parser = subparsers.add_parser(
+        "tracks",
+        help="Resolve instrument streams and rank guitar candidates using layered evidence",
+    )
+    tracks_parser.add_argument("midi_file", type=Path, help="Path to a .mid/.midi file")
+    _add_json_output_arguments(tracks_parser)
+
     rhythm_parser = subparsers.add_parser(
         "rhythm",
         help="Analyze likely notation grids and propose repaired note-on positions",
@@ -81,7 +89,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     analyze_parser = subparsers.add_parser(
         "analyze",
-        help="Run rhythm, fingering, and articulation analysis on a guitar track",
+        help="Run rhythm, fingering, and articulation analysis on a physical MIDI track",
     )
     analyze_parser.add_argument("midi_file", type=Path, help="Path to a .mid/.midi file")
     _add_track_argument(analyze_parser)
@@ -116,7 +124,7 @@ def _select_track(timeline: NormalizedTimeline, track_index: int | None) -> Norm
     if track_index < 0 or track_index >= len(timeline.tracks):
         raise SystemExit(
             f"Track index {track_index} is out of range; "
-            f"file contains {len(timeline.tracks)} tracks."
+            f"file contains {len(timeline.tracks)} physical tracks."
         )
 
     track = timeline.tracks[track_index]
@@ -133,6 +141,13 @@ def _validate_max_fret(max_fret: int) -> None:
 def _run_inspect(args: argparse.Namespace) -> int:
     timeline = load_midi(args.midi_file)
     _emit_json(timeline.to_dict(), args.output, args.compact)
+    return 0
+
+
+def _run_tracks(args: argparse.Namespace) -> int:
+    timeline = load_midi(args.midi_file)
+    report = classify_timeline(timeline)
+    _emit_json(report.to_dict(), args.output, args.compact)
     return 0
 
 
@@ -168,6 +183,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "inspect":
         return _run_inspect(args)
+    if args.command == "tracks":
+        return _run_tracks(args)
     if args.command == "rhythm":
         return _run_rhythm(args)
     if args.command == "fingering":
