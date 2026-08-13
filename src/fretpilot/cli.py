@@ -8,8 +8,13 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from fretpilot import __version__
-from fretpilot.analysis import analyze_guitar_track
+from fretpilot.analysis import (
+    analyze_guitar_track,
+    analyze_section_contexts,
+    segment_instrument_stream,
+)
 from fretpilot.detection import classify_timeline, resolve_instrument_streams
+from fretpilot.detection.models import InstrumentStream
 from fretpilot.exporters.ample_guitar import export_ample_sc_midi
 from fretpilot.exporters.guitar_pro import UnsupportedGuitarIR, export_gp5
 from fretpilot.guitar import optimize_fingering
@@ -100,6 +105,38 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     tracks_parser.add_argument("midi_file", type=Path, help="Path to a .mid/.midi file")
     _add_json_output_arguments(tracks_parser)
+
+    sections_parser = subparsers.add_parser(
+        "sections",
+        help=(
+            "Segment a guitar InstrumentStream into behavior regions and derive "
+            "experimental per-section PlayingContext"
+        ),
+    )
+    sections_parser.add_argument("midi_file", type=Path, help="Path to a .mid/.midi file")
+    sections_parser.add_argument(
+        "--stream-id",
+        help="Logical InstrumentStream ID; auto-selects only when exactly one likely guitar exists",
+    )
+    sections_parser.add_argument(
+        "--window-measures",
+        type=int,
+        default=2,
+        help="Non-overlapping measure window size used by the baseline segmenter (default: 2)",
+    )
+    sections_parser.add_argument(
+        "--change-threshold",
+        type=float,
+        default=0.22,
+        help="Normalized behavior-feature change threshold from 0 to 1 (default: 0.22)",
+    )
+    sections_parser.add_argument(
+        "--minimum-behavior-score",
+        type=float,
+        default=0.50,
+        help="Minimum Layer-4 profile score that contributes to PlayingContext (default: 0.50)",
+    )
+    _add_json_output_arguments(sections_parser)
 
     rhythm_parser = subparsers.add_parser(
         "rhythm",
@@ -211,14 +248,13 @@ def _emit_json(data: dict[str, Any], output: Path | None, compact: bool) -> None
         print(payload)
 
 
-def _select_analysis_source(
+def _select_instrument_stream(
     timeline: NormalizedTimeline,
     *,
-    track_index: int | None,
     stream_id: str | None,
-) -> tuple[NormalizedTrack, str | None]:
+) -> InstrumentStream:
+    streams = resolve_instrument_streams(timeline)
     if stream_id is not None:
-        streams = resolve_instrument_streams(timeline)
         stream = next(
             (candidate for candidate in streams if candidate.stream_id == stream_id),
             None,
@@ -228,6 +264,37 @@ def _select_analysis_source(
             raise SystemExit(
                 f"Unknown stream ID {stream_id!r}. Available streams: {available or 'none'}."
             )
+        return stream
+
+    report = classify_timeline(timeline)
+    likely = [
+        candidate.stream
+        for candidate in report.candidates
+        if candidate.decision == "likely_guitar"
+    ]
+    if len(likely) == 1:
+        return likely[0]
+    if not likely:
+        raise SystemExit(
+            "No high-confidence guitar stream was found. Run `fretpilot tracks` "
+            "and select a candidate with --stream-id."
+        )
+
+    options = ", ".join(stream.stream_id for stream in likely)
+    raise SystemExit(
+        "Multiple likely guitar streams were found. Run `fretpilot tracks` and "
+        f"choose one with --stream-id. Candidates: {options}."
+    )
+
+
+def _select_analysis_source(
+    timeline: NormalizedTimeline,
+    *,
+    track_index: int | None,
+    stream_id: str | None,
+) -> tuple[NormalizedTrack, str | None]:
+    if stream_id is not None:
+        stream = _select_instrument_stream(timeline, stream_id=stream_id)
         return stream.as_track(), stream.stream_id
 
     if track_index is not None:
@@ -241,26 +308,8 @@ def _select_analysis_source(
             raise SystemExit(f"Track {track_index} ({track.name}) contains no notes.")
         return track, None
 
-    report = classify_timeline(timeline)
-    likely = [
-        candidate
-        for candidate in report.candidates
-        if candidate.decision == "likely_guitar"
-    ]
-    if len(likely) == 1:
-        candidate = likely[0]
-        return candidate.stream.as_track(), candidate.stream.stream_id
-    if not likely:
-        raise SystemExit(
-            "No high-confidence guitar stream was found. Run `fretpilot tracks` "
-            "and select a candidate with --stream-id."
-        )
-
-    options = ", ".join(candidate.stream.stream_id for candidate in likely)
-    raise SystemExit(
-        "Multiple likely guitar streams were found. Run `fretpilot tracks` and "
-        f"choose one with --stream-id. Candidates: {options}."
-    )
+    stream = _select_instrument_stream(timeline, stream_id=None)
+    return stream.as_track(), stream.stream_id
 
 
 def _validate_max_fret(max_fret: int) -> None:
@@ -296,6 +345,30 @@ def _run_tracks(args: argparse.Namespace) -> int:
     timeline = load_midi(args.midi_file)
     report = classify_timeline(timeline)
     _emit_json(report.to_dict(), args.output, args.compact)
+    return 0
+
+
+def _run_sections(args: argparse.Namespace) -> int:
+    timeline = load_midi(args.midi_file)
+    stream = _select_instrument_stream(timeline, stream_id=args.stream_id)
+    segmentation = segment_instrument_stream(
+        timeline,
+        stream,
+        window_measures=args.window_measures,
+        change_threshold=args.change_threshold,
+    )
+    contexts = analyze_section_contexts(
+        segmentation,
+        minimum_behavior_score=args.minimum_behavior_score,
+    )
+    _emit_json(
+        {
+            "segmentation": segmentation.to_dict(),
+            "section_contexts": [context.to_dict() for context in contexts],
+        },
+        args.output,
+        args.compact,
+    )
     return 0
 
 
@@ -385,6 +458,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_inspect(args)
     if args.command == "tracks":
         return _run_tracks(args)
+    if args.command == "sections":
+        return _run_sections(args)
     if args.command == "rhythm":
         return _run_rhythm(args)
     if args.command == "fingering":
