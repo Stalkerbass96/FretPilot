@@ -13,6 +13,7 @@ from fretpilot.detection import classify_timeline
 from fretpilot.detection.models import GuitarStreamCandidate
 from fretpilot.exporters.ample_guitar import export_ample_sc_midi
 from fretpilot.exporters.guitar_pro import UnsupportedGuitarIR, export_gp5
+from fretpilot.exporters.pdf_score import export_score_pdf
 from fretpilot.ir import build_guitar_ir
 from fretpilot.midi.models import NormalizedTimeline
 from fretpilot.rewrite import (
@@ -37,6 +38,7 @@ class PrototypeStreamResult:
     analysis: PrototypeOutputStatus
     rewrite: PrototypeOutputStatus
     guitar_ir: PrototypeOutputStatus
+    pdf: PrototypeOutputStatus
     gp5: PrototypeOutputStatus
     ample_sc_midi: PrototypeOutputStatus
     report: PrototypeOutputStatus
@@ -91,6 +93,7 @@ def _build_processing_report(
     analysis: Any,
     project: Any,
     *,
+    pdf_status: PrototypeOutputStatus,
     gp5_status: PrototypeOutputStatus,
     ample_status: PrototypeOutputStatus,
 ) -> dict[str, Any]:
@@ -196,6 +199,7 @@ def _build_processing_report(
             "warnings": project.warnings,
         },
         "outputs": {
+            "pdf": asdict(pdf_status),
             "gp5": asdict(gp5_status),
             "ample_sc_midi": asdict(ample_status),
         },
@@ -204,6 +208,8 @@ def _build_processing_report(
             or low_confidence_rhythm
             or unplayable
             or project.warnings
+            or pdf_status.status != "success"
+            or pdf_status.warnings
             or gp5_status.status != "success"
             or gp5_status.warnings
             or ample_status.status != "success"
@@ -269,7 +275,7 @@ def generate_prototype_package(
     midi_fidelity: float = DEFAULT_MIDI_FIDELITY,
     compact_json: bool = False,
 ) -> PrototypeManifest:
-    """Generate section-aware analysis, IR, GP5, Ample MIDI, and reports."""
+    """Generate section-aware analysis, IR, PDF, GP5, Ample MIDI, and reports."""
 
     if stream_id is not None and all_likely_guitars:
         raise ValueError("stream_id and all_likely_guitars are mutually exclusive.")
@@ -319,6 +325,7 @@ def generate_prototype_package(
         rewrite_path = prefix.with_suffix(".rewrite.json")
         analysis_path = prefix.with_suffix(".analysis.json")
         ir_path = prefix.with_suffix(".guitar-ir.json")
+        pdf_path = prefix.with_suffix(".pdf")
         gp5_path = prefix.with_suffix(".gp5")
         ample_path = prefix.with_suffix(".ample-sc.mid")
         report_path = prefix.with_suffix(".report.json")
@@ -336,6 +343,20 @@ def generate_prototype_package(
             status="success",
         )
         ir_status = PrototypeOutputStatus(path=str(ir_path), status="success")
+
+        try:
+            pdf_result = export_score_pdf(project, pdf_path)
+            pdf_status = PrototypeOutputStatus(
+                path=str(pdf_path),
+                status="success",
+                warnings=pdf_result.warnings,
+            )
+        except ValueError as exc:
+            pdf_status = PrototypeOutputStatus(
+                path=None,
+                status="unsupported",
+                error=str(exc),
+            )
 
         try:
             gp5_result = export_gp5(project, gp5_path)
@@ -370,6 +391,7 @@ def generate_prototype_package(
             rewrite,
             analysis,
             project,
+            pdf_status=pdf_status,
             gp5_status=gp5_status,
             ample_status=ample_status,
         )
@@ -386,6 +408,7 @@ def generate_prototype_package(
                 analysis=analysis_status,
                 rewrite=rewrite_status,
                 guitar_ir=ir_status,
+                pdf=pdf_status,
                 gp5=gp5_status,
                 ample_sc_midi=ample_status,
                 report=report_status,

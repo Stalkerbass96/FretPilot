@@ -107,8 +107,17 @@ Long-term architecture:
 - [ ] proportional musical spacing
 - [ ] high-quality rests/ties/slides/let-ring presentation
 - [ ] section/phrase-aware system layout
-- [ ] multi-voice TAB
+- [x] safe two-voice TAB rhythm rows with voice-aware pagination
 - [ ] visual golden regression fixtures
+
+Two-voice PDF evidence (2026-08-13):
+
+- `Story of Despair`, stream `t2:ch1:p0`: generated a 58-measure, 6-page PDF;
+  representative dense V1/V2 pages were rendered at 150 DPI and visually
+  checked for distinct rhythm rows, readable TAB, and footer clearance.
+- `Message in a Bottle`, stream `t0:ch4:p27`: generated a 181-measure, 13-page
+  PDF; the sparse V2 system on page 7 was rendered and visually checked without
+  disturbing surrounding single-voice systems.
 
 ### Guitar Pro 5
 
@@ -229,7 +238,9 @@ fretpilot prototype song.mid \
   -o output/
 ```
 
-Per stream, the package contains analysis JSON, Guitar IR JSON, GP5 when supported, Ample MIDI, and a processing report. Analysis/report include section-context summaries.
+Per stream, the package contains analysis JSON, Guitar IR JSON, PDF and GP5 when
+supported, Ample MIDI, and a processing report. Analysis/report include
+section-context summaries and independent output status.
 
 Section diagnostics:
 

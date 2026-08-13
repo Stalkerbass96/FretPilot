@@ -72,9 +72,10 @@ Implemented and covered by tests/CI:
 - GP5 write + parse-back validation;
 - safe unequal-chord voice separation and two-voice GP5 output;
 - Ample Guitar SC MIDI renderer;
-- PDF/TAB renderer exists, but engraving quality is not yet musician-grade;
+- PDF/TAB renderer supports independent V1/V2 rhythm rows and voice-aware
+  pagination, but engraving quality is not yet musician-grade;
 - generic `VirtualGuitarInstrumentProfile` schema skeleton;
-- multi-guitar one-command prototype package.
+- multi-guitar one-command prototype package including PDF review output.
 
 The last code-level product regression for section-aware prototype packaging passed CI. Always verify current HEAD CI before merging new changes.
 
@@ -90,8 +91,8 @@ Do not mistake these for implemented features:
 - `PerformancePreferences` exist in PlayingContext but do not yet drive a generic performance plan.
 - Full section-context provenance is not yet persisted as a first-class Guitar IR contract everywhere.
 - PDF/TAB is still primarily a review renderer, not Guitar Pro / Songsterr-quality engraving.
-- Two-voice notation currently covers safe unequal chord releases; general
-  contrapuntal voice separation and multi-voice PDF engraving remain incomplete.
+- Two-voice notation currently covers safe unequal chord releases in GP5 and
+  PDF/TAB; general contrapuntal voice separation remains incomplete.
 - Bend/vibrato performance rendering is incomplete.
 - Ample is the only implemented virtual-guitar target.
 - Track identification is useful but intentionally not treated as finished.
@@ -291,7 +292,9 @@ fretpilot prototype song.mid \
   -o output/
 ```
 
-Each selected stream receives analysis, Guitar IR, GP5 when supported, Ample MIDI, and a processing report. Analysis/report now include section-context summaries.
+Each selected stream receives analysis, Guitar IR, PDF and GP5 when supported,
+Ample MIDI, and a processing report. Analysis/report include section-context
+summaries and independent output status.
 
 For section diagnostics:
 

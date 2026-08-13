@@ -92,12 +92,14 @@ def test_all_likely_guitars_receive_complete_output_packages(tmp_path: Path) -> 
         assert result.analysis.status == "success"
         assert result.rewrite.status == "success"
         assert result.guitar_ir.status == "success"
+        assert result.pdf.status == "success"
         assert result.gp5.status == "success"
         assert result.ample_sc_midi.status == "success"
         assert result.report.status == "success"
         assert result.analysis.path and Path(result.analysis.path).exists()
         assert result.rewrite.path and Path(result.rewrite.path).exists()
         assert result.guitar_ir.path and Path(result.guitar_ir.path).exists()
+        assert result.pdf.path and Path(result.pdf.path).exists()
         assert result.gp5.path and Path(result.gp5.path).exists()
         assert result.ample_sc_midi.path and Path(result.ample_sc_midi.path).exists()
         assert result.report.path and Path(result.report.path).exists()
@@ -113,3 +115,4 @@ def test_all_likely_guitars_receive_complete_output_packages(tmp_path: Path) -> 
         assert report_payload["note_rewrite"]["midi_fidelity"] == 0.35
         assert report_payload["fingering"]["hand_position_plan"]["sections"]
         assert report_payload["guitar_ir"]["voice_counts"]["1"] > 0
+        assert report_payload["outputs"]["pdf"]["status"] == "success"

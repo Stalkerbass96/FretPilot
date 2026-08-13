@@ -105,13 +105,17 @@ output/
 │   ├── t0_ch2_p27.analysis.json
 │   ├── t0_ch2_p27.rewrite.json
 │   ├── t0_ch2_p27.guitar-ir.json
+│   ├── t0_ch2_p27.pdf
 │   ├── t0_ch2_p27.gp5
 │   ├── t0_ch2_p27.ample-sc.mid
 │   └── t0_ch2_p27.report.json
 └── ...
 ```
 
-If GP5 cannot represent a stream yet, the package still keeps the analysis, Guitar IR, Ample MIDI, and report. The manifest records the unsupported output instead of failing the whole batch.
+PDF and GP5 are exported independently. If either score format cannot represent
+a stream yet, the package still keeps the analysis, Guitar IR, other supported
+outputs, Ample MIDI, and report. The manifest records the unsupported output
+instead of failing the whole batch.
 
 ### Individual commands
 
@@ -172,7 +176,7 @@ Each prototype stream report contains:
 - per-section entry/exit hand state and explainable cross-section shifts;
 - Guitar IR transformation counts;
 - let-ring conversions;
-- GP5 and Ample output status;
+- PDF, GP5, and Ample output status;
 - warnings and whether manual review is required.
 
 ## Guitar IR V0.1
