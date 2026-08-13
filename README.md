@@ -44,6 +44,55 @@ FretPilot deliberately separates **score data** from **performance data**. A rea
 4. **One canonical intermediate representation.** Exporters and instrument adapters depend on the FretPilot IR rather than on each other.
 5. **Start narrow.** V0.1 focuses on guitar and Ample Guitar before expanding to other instruments or plugins.
 
+## Current runnable milestone
+
+The first executable layer is now implemented:
+
+```text
+MIDI file → lossless timing normalization → NormalizedTimeline → JSON
+```
+
+The importer preserves source tick positions and durations. It does **not** quantize notes during import. Rhythm repair is a separate stage so FretPilot can always compare a repaired phrase with the original performance timing.
+
+### Quick start
+
+Requires Python 3.11+.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+```
+
+Inspect a MIDI file:
+
+```bash
+fretpilot inspect song.mid
+```
+
+Write the normalized representation to JSON:
+
+```bash
+fretpilot inspect song.mid -o song.json
+```
+
+The JSON contains:
+
+- MIDI type and PPQ/ticks-per-beat
+- tempo map
+- time-signature map
+- tracks and track names
+- note pitch, velocity, channel
+- original start/duration in ticks
+- derived start/duration in beats
+- diagnostics for malformed or ambiguous MIDI events
+
+Run tests:
+
+```bash
+pytest
+```
+
 ## Repository layout
 
 ```text
@@ -69,6 +118,6 @@ FretPilot/
 
 ## Status
 
-Product definition / architecture phase.
+Early V0.1 implementation. MIDI normalization and inspection are runnable; rhythm repair is the next engine layer.
 
-See [`docs/PRODUCT.md`](docs/PRODUCT.md) for the current product specification.
+See [`docs/PRODUCT.md`](docs/PRODUCT.md) for the product specification and [`docs/ROADMAP.md`](docs/ROADMAP.md) for milestones.
