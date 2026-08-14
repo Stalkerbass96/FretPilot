@@ -38,13 +38,20 @@ _EVIDENCE = (
 )
 
 
-def _keyswitch(note: int, *, timing: str = "preroll") -> ControlAction:
+def _keyswitch(
+    note: int,
+    *,
+    timing: str = "preroll",
+    offset_ticks: int = 0,
+) -> ControlAction:
     return ControlAction(
         kind="keyswitch_note",
         target=note,
         value=100,
         timing=timing,
         duration_ticks=12,
+        release_value=0,
+        offset_ticks=offset_ticks,
     )
 
 
@@ -58,7 +65,9 @@ def _overlap() -> ControlAction:
 
 
 def _reset_sustain() -> ControlAction:
-    return _keyswitch(24, timing="after_event")
+    # The proven legacy renderer restores Sustain one tick after the destination
+    # note ends. Keep that exact scheduling fact in profile data, not scheduler code.
+    return _keyswitch(24, timing="after_event", offset_ticks=1)
 
 
 def _legacy_handoff_unsupported(intent: str, notes: str) -> ArticulationCapability:
