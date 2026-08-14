@@ -33,8 +33,16 @@ def test_explicitly_unsupported_ample_intent_stays_explicit():
     assert result.actions == ()
 
 
-def test_undeclared_intent_is_not_silently_treated_as_supported():
+def test_current_pick_direction_limitation_is_explicitly_declared():
     result = negotiate_intent(AMPLE_GUITAR_SC_V4_PROFILE, "pick_down")
+    assert result.support == "unsupported"
+    assert result.resolved_intent == "pick_down"
+    assert result.actions == ()
+    assert "does not consume canonical pick-direction intent" in result.notes
+
+
+def test_undeclared_intent_is_not_silently_treated_as_supported():
+    result = negotiate_intent(AMPLE_GUITAR_SC_V4_PROFILE, "pick_scrape")
     assert result.support == "unsupported"
     assert result.resolved_intent is None
     assert result.actions == ()
