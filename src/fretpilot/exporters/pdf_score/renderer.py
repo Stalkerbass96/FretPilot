@@ -1,9 +1,9 @@
 """Render canonical Guitar IR as a review-friendly PDF TAB score.
 
 The PDF output is intentionally independent of Guitar Pro. V0.1 renders six-line
-TAB, measure positions, duration labels, ties, generic guitar techniques, and
-canonical harmony labels. It is designed for review and prototype validation
-rather than final publishing.
+TAB, measure positions, duration labels, ties, generic guitar techniques,
+canonical harmony labels, and explicit rest spans. It is designed for review
+and prototype validation rather than final publishing.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 
+from fretpilot.exporters.pdf_score.rhythm import measure_rest_spans
 from fretpilot.ir.models import (
     GuitarMeasure,
     GuitarNoteEvent,
@@ -226,6 +227,7 @@ class _PDFScoreRenderer:
         self.canvas.setFillColor(colors.HexColor("#374151"))
         legend = [
             "Chord symbols above TAB come from canonical Guitar IR harmony regions.",
+            "R + duration marks explicit silent score spans, for example R 1/4.",
             "Duration labels: 1/4 quarter, 1/8 eighth, 1/16 sixteenth, 8T eighth-note triplet.",
             "Technique labels: H hammer-on, P pull-off, S slide, LS legato slide, vib., let ring, P.M.",
             "Fret numbers are positioned on standard six-line TAB. Ties are drawn at measure boundaries.",
@@ -299,6 +301,22 @@ class _PDFScoreRenderer:
                 self.canvas.setFillColor(colors.HexColor("#111827"))
                 self.canvas.setFont("Helvetica-Bold", 7.4)
                 self.canvas.drawCentredString(chord_x, tab_top + 29, symbol)
+
+            for rest in measure_rest_spans(measure):
+                midpoint = rest.start_beat + rest.duration_beats / 2.0
+                beat_in_measure = midpoint - measure.start_beat
+                ratio = max(
+                    0.0,
+                    min(1.0, beat_in_measure / measure.duration_beats),
+                )
+                rest_x = measure_x + 7 + (measure_width - 14) * ratio
+                self.canvas.setFillColor(colors.HexColor("#6B7280"))
+                self.canvas.setFont("Helvetica-Oblique", 5.8)
+                self.canvas.drawCentredString(
+                    rest_x,
+                    tab_top + 2.5,
+                    f"R {_duration_label(rest.duration_beats)}",
+                )
 
             grouped: dict[float, list[GuitarNoteEvent]] = defaultdict(list)
             for event in measure.events:
