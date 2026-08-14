@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from fretpilot.articulation import ArticulationPlan, plan_articulations
 from fretpilot.guitar import FingeringResult, optimize_fingering
 from fretpilot.midi.models import NormalizedTrack
+from fretpilot.picking import PickingPlan, plan_picking
 from fretpilot.rhythm import RhythmAnalysis, analyze_track_rhythm
 
 if TYPE_CHECKING:
@@ -23,12 +24,9 @@ class GuitarTrackAnalysis:
     rhythm: RhythmAnalysis
     fingering: FingeringResult
     articulations: ArticulationPlan
+    picking: PickingPlan | None = None
     playing_context: PlayingContext | None = None
-    # A section-aware analysis keeps time-varying musical contexts here. The
-    # legacy/single-context path leaves the list empty, preserving compatibility.
     section_contexts: list[SectionContextAnalysis] = field(default_factory=list)
-    # Explicit hand-position state is produced only by the section-aware path.
-    # It is analysis knowledge, not a virtual-instrument control mapping.
     hand_positions: list[HandPositionState] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -41,17 +39,7 @@ def analyze_guitar_track(
     max_fret: int = 24,
     playing_context: PlayingContext | None = None,
 ) -> GuitarTrackAnalysis:
-    """Run the deterministic FretPilot intelligence stack on a guitar track.
-
-    ``playing_context`` is optional so existing callers remain backward-
-    compatible. When supplied, its fingering preferences rank physically valid
-    string/fret candidates, while articulation preferences confidence-weight
-    only techniques that pass deterministic eligibility rules.
-
-    This function intentionally represents one context across the whole track.
-    Use ``analyze_guitar_stream_section_aware`` when a stream may change role or
-    style over time.
-    """
+    """Run one-context deterministic guitar analysis."""
 
     rhythm = analyze_track_rhythm(track)
     fingering = optimize_fingering(
@@ -66,6 +54,7 @@ def analyze_guitar_track(
             playing_context.articulation if playing_context is not None else None
         ),
     )
+    picking = plan_picking(track, fingering, context=playing_context)
 
     return GuitarTrackAnalysis(
         track_index=track.index,
@@ -73,5 +62,6 @@ def analyze_guitar_track(
         rhythm=rhythm,
         fingering=fingering,
         articulations=articulations,
+        picking=picking,
         playing_context=playing_context,
     )
