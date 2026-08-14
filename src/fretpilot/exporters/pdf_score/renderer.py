@@ -19,7 +19,7 @@ from reportlab.pdfgen import canvas
 
 from fretpilot.exporters.pdf_score.rhythm import (
     measure_beam_segments,
-    measure_rest_spans,
+    measure_notated_rests,
     measure_rhythm_onsets,
 )
 from fretpilot.ir.models import (
@@ -65,7 +65,10 @@ def _duration_label(beats: float) -> str:
         (1 / 6, "16T"),
         (0.125, "1/32"),
     ]
-    return min(candidates, key=lambda item: abs(item[0] - beats))[1]
+    value, label = min(candidates, key=lambda item: abs(item[0] - beats))
+    if abs(value - beats) <= 1e-6:
+        return label
+    return f"{beats:.3g}b"
 
 
 def _technique_label(event: GuitarNoteEvent) -> list[str]:
@@ -245,7 +248,7 @@ class _PDFScoreRenderer:
             "Chord symbols above TAB come from canonical Guitar IR harmony regions.",
             "R + duration marks explicit silent score spans, for example R 1/4.",
             "Stems, flags, and beams below TAB show the written rhythmic skeleton.",
-            "Duration labels: 1/4 quarter, 1/8 eighth, 1/16 sixteenth, 8T eighth-note triplet.",
+            "Duration labels use exact written values; unsupported values show their beat length instead of being rounded.",
             "Technique labels: H hammer-on, P pull-off, S slide, LS legato slide, vib., let ring, P.M.",
             "Fret numbers are positioned on standard six-line TAB. Ties are drawn at measure boundaries.",
             "This V0.1 PDF is a review format; standard notation and advanced engraving remain future work.",
@@ -319,7 +322,7 @@ class _PDFScoreRenderer:
                 self.canvas.setFont("Helvetica-Bold", 7.4)
                 self.canvas.drawCentredString(chord_x, tab_top + 29, symbol)
 
-            for rest in measure_rest_spans(measure):
+            for rest in measure_notated_rests(measure):
                 midpoint = rest.start_beat + rest.duration_beats / 2.0
                 rest_x = _time_x(
                     measure_x,
