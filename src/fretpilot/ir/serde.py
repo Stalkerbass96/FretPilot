@@ -11,6 +11,7 @@ from fretpilot.ir.models import (
     GuitarTrackIR,
     IRArticulation,
     IRFingering,
+    IRHarmonyRegion,
     IRRightHandIntent,
     IRTempoEvent,
     IRTimeSignatureEvent,
@@ -76,6 +77,10 @@ def project_from_dict(data: dict[str, Any]) -> GuitarProjectIR:
                 playing_context=raw_track.get("playing_context"),
                 section_contexts=list(raw_track.get("section_contexts", [])),
                 hand_positions=list(raw_track.get("hand_positions", [])),
+                harmony_regions=[
+                    IRHarmonyRegion(**item)
+                    for item in raw_track.get("harmony_regions", [])
+                ],
             )
         )
 
