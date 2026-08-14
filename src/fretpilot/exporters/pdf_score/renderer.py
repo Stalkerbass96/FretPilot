@@ -1,8 +1,9 @@
 """Render canonical Guitar IR as a review-friendly PDF TAB score.
 
 The PDF output is intentionally independent of Guitar Pro. V0.1 renders six-line
-TAB, measure positions, duration labels, ties, and generic guitar techniques.
-It is designed for review and prototype validation rather than final publishing.
+TAB, measure positions, duration labels, ties, generic guitar techniques, and
+canonical harmony labels. It is designed for review and prototype validation
+rather than final publishing.
 """
 
 from __future__ import annotations
@@ -15,7 +16,12 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 
-from fretpilot.ir.models import GuitarMeasure, GuitarNoteEvent, GuitarProjectIR
+from fretpilot.ir.models import (
+    GuitarMeasure,
+    GuitarNoteEvent,
+    GuitarProjectIR,
+    GuitarTrackIR,
+)
 
 
 @dataclass(slots=True)
@@ -67,12 +73,38 @@ def _technique_label(event: GuitarNoteEvent) -> list[str]:
         "palm_mute": "P.M.",
         "natural_harmonic": "N.H.",
         "bend": "bend",
+        "pitch_raise": "bend",
     }
     labels: list[str] = []
     for articulation in event.articulations:
         label = mapping.get(articulation.type, articulation.type.replace("_", " "))
         if label not in labels:
             labels.append(label)
+    return labels
+
+
+def _harmony_label_map(track: GuitarTrackIR) -> dict[float, str]:
+    """Map canonical harmony regions to their first score-time anchor."""
+
+    events = [
+        event
+        for measure in track.measures
+        for event in measure.events
+        if not event.score.tie_in
+    ]
+    labels: dict[float, str] = {}
+    for region in track.harmony_regions:
+        source_indices = set(region.source_note_indices)
+        anchor = next(
+            (
+                event
+                for event in events
+                if event.source_note_index in source_indices
+            ),
+            None,
+        )
+        beat = anchor.score.start_beat if anchor is not None else region.start_beat
+        labels.setdefault(round(beat, 7), region.symbol)
     return labels
 
 
@@ -193,6 +225,7 @@ class _PDFScoreRenderer:
         self.canvas.setFont("Helvetica", 8.5)
         self.canvas.setFillColor(colors.HexColor("#374151"))
         legend = [
+            "Chord symbols above TAB come from canonical Guitar IR harmony regions.",
             "Duration labels: 1/4 quarter, 1/8 eighth, 1/16 sixteenth, 8T eighth-note triplet.",
             "Technique labels: H hammer-on, P pull-off, S slide, LS legato slide, vib., let ring, P.M.",
             "Fret numbers are positioned on standard six-line TAB. Ties are drawn at measure boundaries.",
@@ -206,6 +239,7 @@ class _PDFScoreRenderer:
         self,
         measures: list[GuitarMeasure],
         y: float,
+        harmony_labels: dict[float, str],
     ) -> float:
         x0 = self.margin_x + 38
         x1 = self.width - self.margin_x
@@ -247,6 +281,24 @@ class _PDFScoreRenderer:
             for beat in range(1, measure.numerator):
                 guide_x = measure_x + measure_width * (beat / measure.numerator)
                 self.canvas.line(guide_x, tab_top + 2, guide_x, tab_bottom - 2)
+
+            measure_end = measure.start_beat + measure.duration_beats
+            for absolute_start, symbol in sorted(harmony_labels.items()):
+                if not (
+                    measure.start_beat - 1e-7
+                    <= absolute_start
+                    < measure_end - 1e-7
+                ):
+                    continue
+                beat_in_measure = absolute_start - measure.start_beat
+                ratio = max(
+                    0.0,
+                    min(1.0, beat_in_measure / measure.duration_beats),
+                )
+                chord_x = measure_x + 7 + (measure_width - 14) * ratio
+                self.canvas.setFillColor(colors.HexColor("#111827"))
+                self.canvas.setFont("Helvetica-Bold", 7.4)
+                self.canvas.drawCentredString(chord_x, tab_top + 29, symbol)
 
             grouped: dict[float, list[GuitarNoteEvent]] = defaultdict(list)
             for event in measure.events:
@@ -326,6 +378,7 @@ class _PDFScoreRenderer:
     def draw_tracks(self) -> None:
         for track in self.project.tracks:
             section = track.name or track.id
+            harmony_labels = _harmony_label_map(track)
             self._new_page(section)
             self.canvas.setFillColor(colors.HexColor("#111827"))
             self.canvas.setFont("Helvetica-Bold", 15)
@@ -346,7 +399,11 @@ class _PDFScoreRenderer:
                     self._new_page(section)
                     systems = 0
                 chunk = track.measures[offset : offset + self.measures_per_system]
-                self.current_y = self._draw_system(chunk, self.current_y) - 8
+                self.current_y = self._draw_system(
+                    chunk,
+                    self.current_y,
+                    harmony_labels,
+                ) - 8
                 systems += 1
 
     def save(self) -> None:
