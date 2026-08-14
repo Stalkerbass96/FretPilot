@@ -9,7 +9,6 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-
 SCHEMA_VERSION = "0.1"
 
 
@@ -63,6 +62,14 @@ class IRArticulation:
 
 
 @dataclass(slots=True)
+class IRRightHandIntent:
+    motion: str
+    direction: str
+    confidence: float
+    reason: str
+
+
+@dataclass(slots=True)
 class NoteConfidence:
     rhythm: float
     fingering: float
@@ -79,6 +86,7 @@ class GuitarNoteEvent:
     fingering: IRFingering
     articulations: list[IRArticulation] = field(default_factory=list)
     confidence: NoteConfidence | None = None
+    right_hand: IRRightHandIntent | None = None
 
 
 @dataclass(slots=True)
@@ -100,14 +108,8 @@ class GuitarTrackIR:
     tuning: list[int]
     fret_count: int
     measures: list[GuitarMeasure] = field(default_factory=list)
-    # Musical context/provenance is generic data. Product-specific keyswitches,
-    # CCs, or virtual-instrument capabilities must remain downstream of IR.
     playing_context: dict[str, Any] | None = None
-    # Time-varying contexts remain generic musical knowledge. Exporters may
-    # inspect them, but they must not rewrite their meaning for one plugin.
     section_contexts: list[dict[str, Any]] = field(default_factory=list)
-    # Section-level fretting-hand state is generic guitar intent/provenance,
-    # never a target-plugin position-force or keyswitch command.
     hand_positions: list[dict[str, Any]] = field(default_factory=list)
 
 
