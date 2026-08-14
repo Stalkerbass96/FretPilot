@@ -97,7 +97,7 @@ def test_gp5_round_trips_pick_direction(tmp_path: Path) -> None:
     assert beat.effect.pickStroke == gp.BeatStrokeDirection.down
 
 
-def test_gp5_round_trips_pitch_raise_curve(tmp_path: Path) -> None:
+def _pitch_raise_project(semitones: float) -> GuitarProjectIR:
     event = GuitarNoteEvent(
         id="n-raise",
         source_note_index=0,
@@ -111,7 +111,7 @@ def test_gp5_round_trips_pitch_raise_curve(tmp_path: Path) -> None:
                 confidence=0.94,
                 reason="fixture",
                 parameters={
-                    "semitones": 1.0,
+                    "semitones": semitones,
                     "peak_position": 0.25,
                     "return_position": 0.5,
                     "returned_to_center": 1.0,
@@ -119,7 +119,7 @@ def test_gp5_round_trips_pitch_raise_curve(tmp_path: Path) -> None:
             )
         ],
     )
-    project = GuitarProjectIR(
+    return GuitarProjectIR(
         title="pitch-raise",
         source="fixture.mid",
         tempo_map=[IRTempoEvent(0.0, 120.0)],
@@ -134,6 +134,10 @@ def test_gp5_round_trips_pitch_raise_curve(tmp_path: Path) -> None:
             measures=[GuitarMeasure(1, 0.0, 4.0, 4, 4, [event])],
         )],
     )
+
+
+def test_gp5_round_trips_pitch_raise_curve(tmp_path: Path) -> None:
+    project = _pitch_raise_project(1.0)
     output = tmp_path / "pitch-raise.gp5"
     export_gp5(project, output)
     parsed = gp.parse(output)
@@ -150,3 +154,18 @@ def test_gp5_round_trips_pitch_raise_curve(tmp_path: Path) -> None:
         (6, 0),
         (12, 0),
     ]
+
+
+def test_gp5_omits_fractional_pitch_raise_instead_of_rounding(tmp_path: Path) -> None:
+    project = _pitch_raise_project(0.5)
+    output = tmp_path / "fractional-pitch-raise.gp5"
+    result = export_gp5(project, output)
+    parsed = gp.parse(output)
+    note = next(
+        note
+        for beat in parsed.tracks[0].measures[0].voices[0].beats
+        for note in beat.notes
+    )
+    assert note.effect.bend is None
+    assert any("Omitted non-integer pitch raise" in warning for warning in result.warnings)
+    assert project.tracks[0].measures[0].events[0].articulations[0].parameters["semitones"] == 0.5
