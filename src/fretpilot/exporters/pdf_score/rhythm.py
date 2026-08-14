@@ -14,6 +14,21 @@ from fretpilot.ir.models import GuitarMeasure
 
 
 _EPSILON = 1e-9
+_REST_GRID = 24
+_REST_VALUES: tuple[tuple[int, float], ...] = (
+    (96, 4.0),
+    (72, 3.0),
+    (48, 2.0),
+    (36, 1.5),
+    (24, 1.0),
+    (18, 0.75),
+    (16, 2 / 3),
+    (12, 0.5),
+    (8, 1 / 3),
+    (6, 0.25),
+    (4, 1 / 6),
+    (3, 0.125),
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,12 +67,11 @@ class BeamSegment:
 
 
 def measure_rest_spans(measure: GuitarMeasure) -> list[RestSpan]:
-    """Return deterministic silent spans after merging all score-event coverage.
+    """Return raw silent spans after merging all score-event coverage.
 
     The current PDF renderer is a single-voice review layout, so overlapping
     notes/chords are treated as one occupied score interval. Event intervals
-    are clipped to the measure; gaps are emitted as rests in absolute score
-    beats.
+    are clipped to the measure; gaps are emitted in absolute score beats.
     """
 
     measure_start = float(measure.start_beat)
@@ -95,6 +109,56 @@ def measure_rest_spans(measure: GuitarMeasure) -> list[RestSpan]:
     if measure_end > cursor + _EPSILON:
         rests.append(RestSpan(cursor, measure_end - cursor))
     return rests
+
+
+def _rest_decomposition(duration_beats: float) -> list[float] | None:
+    units = round(duration_beats * _REST_GRID)
+    if units <= 0:
+        return []
+    if abs(units / _REST_GRID - duration_beats) > 1e-7:
+        return None
+
+    best: list[list[int] | None] = [None] * (units + 1)
+    best[0] = []
+    for total in range(1, units + 1):
+        candidates: list[list[int]] = []
+        for value_units, _ in _REST_VALUES:
+            if value_units > total or best[total - value_units] is None:
+                continue
+            candidates.append([value_units, *best[total - value_units]])
+        if candidates:
+            best[total] = min(
+                candidates,
+                key=lambda path: (len(path), tuple(-item for item in path)),
+            )
+
+    path = best[units]
+    if path is None:
+        return None
+    value_by_units = dict(_REST_VALUES)
+    return [value_by_units[item] for item in path]
+
+
+def measure_notated_rests(measure: GuitarMeasure) -> list[RestSpan]:
+    """Split raw silent spans into exact displayable durations when possible.
+
+    The decomposition is solved on a 1/24-beat grid, which exactly represents
+    the binary, dotted, and triplet values used by the V0.1 renderer. If a raw
+    span cannot be represented on that grid it is kept exact as one span; the
+    renderer must then display its numeric beat length rather than rounding it.
+    """
+
+    result: list[RestSpan] = []
+    for raw in measure_rest_spans(measure):
+        parts = _rest_decomposition(raw.duration_beats)
+        if parts is None:
+            result.append(raw)
+            continue
+        cursor = raw.start_beat
+        for duration in parts:
+            result.append(RestSpan(cursor, duration))
+            cursor += duration
+    return result
 
 
 def _beam_level(duration_beats: float) -> int:
