@@ -55,13 +55,11 @@ Logical stream resolution, guitar identity evidence, calibration, and selection 
 
 ```text
 PV-*  prototype/output quality
-aTI-*  instrument-stream / guitar-track identification
+TI-*  instrument-stream / guitar-track identification
 GK-*  guitarist-like playing knowledge and learning
 VI-*  virtual-guitar product knowledge/adapters
 SE-*  reproducibility/evaluation/evolution governance
 ```
-
-> Note: the TI prefix is `TI-*`; the leading `a` above is not part of a task id.
 
 ## Documentation ownership
 
