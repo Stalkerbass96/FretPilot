@@ -37,8 +37,14 @@ def _identify(pitches: list[int]) -> tuple[int, str, str] | None:
     for root in roots:
         intervals = frozenset((pc - root) % 12 for pc in pitch_classes)
         for quality, template, suffix in _TEMPLATES:
-            if intervals == template:
-                return root, quality, _NOTE_NAMES[root] + suffix
+            if intervals != template:
+                continue
+            if quality == "power" and root != bass_pc:
+                continue
+            symbol = _NOTE_NAMES[root] + suffix
+            if len(pitch_classes) >= 3 and bass_pc != root:
+                symbol += "/" + _NOTE_NAMES[bass_pc]
+            return root, quality, symbol
     return None
 
 
@@ -70,7 +76,7 @@ def _simultaneous_decisions(track: NormalizedTrack) -> list[HarmonyDecision]:
     return decisions
 
 
-def _adjacent_string_run(
+def _guitar_arpeggio_path(
     fingering: FingeringResult,
     indices: list[int],
 ) -> bool:
@@ -81,26 +87,47 @@ def _adjacent_string_run(
         int(current) - int(previous)
         for previous, current in zip(strings, strings[1:], strict=False)
     ]
-    return bool(deltas) and all(delta == deltas[0] for delta in deltas) and abs(deltas[0]) == 1
+    if not deltas or any(abs(delta) > 1 for delta in deltas):
+        return False
+    nonzero = [delta for delta in deltas if delta != 0]
+    if not nonzero:
+        return False
+    direction = 1 if nonzero[0] > 0 else -1
+    if any((1 if delta > 0 else -1) != direction for delta in nonzero):
+        return False
+    return deltas.count(0) <= 1
+
+
+def _four_note_pitch_classes_are_safe(notes) -> bool:
+    pitch_classes = [note.pitch % 12 for note in notes]
+    unique_count = len(set(pitch_classes))
+    if unique_count == 4:
+        return True
+    return unique_count == 3 and pitch_classes[-1] == pitch_classes[0]
 
 
 def _sequential_decisions(
     track: NormalizedTrack,
     fingering: FingeringResult,
 ) -> list[HarmonyDecision]:
-    order = sorted(range(len(track.notes)), key=lambda index: (track.notes[index].start_beat, index))
+    order = sorted(
+        range(len(track.notes)),
+        key=lambda index: (track.notes[index].start_beat, index),
+    )
     decisions: list[HarmonyDecision] = []
     cursor = 0
 
     while cursor < len(order):
         matched = None
-        for length in (4, 3, 2):
+        for length in (4, 3):
             window = order[cursor : cursor + length]
             if len(window) != length:
                 continue
             notes = [track.notes[index] for index in window]
             starts = [note.start_beat for note in notes]
             if len(set(starts)) != length:
+                continue
+            if length == 4 and not _four_note_pitch_classes_are_safe(notes):
                 continue
             if starts[-1] - starts[0] > 1.5 + 1e-9:
                 continue
@@ -109,7 +136,7 @@ def _sequential_decisions(
                 for previous, current in zip(notes, notes[1:], strict=False)
             ):
                 continue
-            if not _adjacent_string_run(fingering, window):
+            if not _guitar_arpeggio_path(fingering, window):
                 continue
             identified = _identify([note.pitch for note in notes])
             if identified is None:
@@ -132,8 +159,8 @@ def _sequential_decisions(
                 quality=quality,
                 confidence=0.90,
                 reason=(
-                    "Sequential notes match a known chord template and follow a monotonic "
-                    "adjacent-string path in the final fingering."
+                    "Sequential notes match a known chord template and follow a "
+                    "monotonic adjacent-string guitar path in the final fingering."
                 ),
             )
         )
