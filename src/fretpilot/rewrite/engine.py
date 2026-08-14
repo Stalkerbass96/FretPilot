@@ -8,10 +8,11 @@ gated by the user-controlled MIDI-fidelity continuum.
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from itertools import combinations
 from statistics import median
 
 from fretpilot.detection.models import InstrumentStream
-from fretpilot.guitar.instrument import STANDARD_TUNING
+from fretpilot.guitar.instrument import STANDARD_TUNING, candidate_positions
 from fretpilot.midi.models import NormalizedNote
 from fretpilot.rewrite.models import (
     DEFAULT_MIDI_FIDELITY,
@@ -46,10 +47,18 @@ def _note_sort_key(item: _WorkingNote) -> tuple[float, int, int]:
     return (item.note.start_beat, item.note.pitch, item.source_note_index)
 
 
-def _onset_groups(notes: list[_WorkingNote]) -> list[list[_WorkingNote]]:
+def _onset_groups(
+    notes: list[_WorkingNote],
+    *,
+    tolerance_beats: float = _EPSILON,
+) -> list[list[_WorkingNote]]:
     groups: list[list[_WorkingNote]] = []
     for item in sorted(notes, key=_note_sort_key):
-        if not groups or abs(groups[-1][0].note.start_beat - item.note.start_beat) > _EPSILON:
+        if (
+            not groups
+            or abs(groups[-1][0].note.start_beat - item.note.start_beat)
+            > tolerance_beats
+        ):
             groups.append([item])
         else:
             groups[-1].append(item)
@@ -216,6 +225,120 @@ def _remove_exact_duplicates(
     return [item for item in notes if id(item) not in deleted]
 
 
+def _has_distinct_string_assignment(
+    items: tuple[_WorkingNote, ...],
+    *,
+    max_fret: int,
+) -> bool:
+    candidates = [
+        {
+            position.string
+            for position in candidate_positions(item.note.pitch, max_fret=max_fret)
+        }
+        for item in items
+    ]
+    if any(not strings for strings in candidates):
+        return False
+
+    ordered = sorted(candidates, key=lambda strings: (len(strings), sorted(strings)))
+
+    def assign(index: int, used: set[int]) -> bool:
+        if index == len(ordered):
+            return True
+        return any(
+            assign(index + 1, {*used, string})
+            for string in sorted(ordered[index])
+            if string not in used
+        )
+
+    return assign(0, set())
+
+
+def _chord_subset_score(
+    subset: tuple[_WorkingNote, ...],
+    group: list[_WorkingNote],
+) -> tuple[float, tuple[int, ...]]:
+    """Prefer outer voices, then stronger/longer source notes."""
+
+    lowest = min(group, key=lambda item: (item.note.pitch, item.source_note_index))
+    highest = max(group, key=lambda item: (item.note.pitch, -item.source_note_index))
+    score = sum(
+        item.note.velocity / 127.0 + min(item.note.duration_beats, 4.0) * 0.08
+        for item in subset
+    )
+    if lowest in subset:
+        score += 4.0
+    if highest in subset:
+        score += 3.0
+    return score, tuple(-item.source_note_index for item in subset)
+
+
+def _remove_unplayable_chord_excess(
+    notes: list[_WorkingNote],
+    *,
+    rationality: float,
+    max_fret: int,
+    changes: list[NoteRewriteChange],
+) -> list[_WorkingNote]:
+    """Delete the minimum notes needed for a distinct-string chord assignment."""
+
+    deleted: set[int] = set()
+    # The rhythm analyzer may snap a 1/16-beat rolled/late chord member onto the
+    # main attack. Use the same conservative perceptual neighborhood here so
+    # rewrite cannot approve seven notes that the notation path then treats as
+    # simultaneous.
+    for group in _onset_groups(notes, tolerance_beats=0.075):
+        if len(group) < 2:
+            continue
+        full = tuple(group)
+        if len(full) <= 6 and _has_distinct_string_assignment(
+            full,
+            max_fret=max_fret,
+        ):
+            continue
+
+        confidence = 0.995 if len(full) > 6 else 0.92
+        if not _should_apply(rationality, confidence):
+            continue
+
+        selected: tuple[_WorkingNote, ...] = ()
+        maximum_size = min(6, len(full))
+        for size in range(maximum_size, 0, -1):
+            feasible = [
+                subset
+                for subset in combinations(full, size)
+                if _has_distinct_string_assignment(subset, max_fret=max_fret)
+            ]
+            if feasible:
+                selected = max(
+                    feasible,
+                    key=lambda subset: _chord_subset_score(subset, group),
+                )
+                break
+
+        retained = {id(item) for item in selected}
+        for item in group:
+            if id(item) in retained:
+                continue
+            deleted.add(id(item))
+            _record_change(
+                changes,
+                operation="delete",
+                item=item,
+                before={
+                    "pitch": item.note.pitch,
+                    "start_beat": item.note.start_beat,
+                    "duration_beats": item.note.duration_beats,
+                    "velocity": item.note.velocity,
+                },
+                after={},
+                confidence=confidence,
+                reason="reduce_chord_to_distinct_guitar_strings",
+            )
+
+    return [item for item in notes if id(item) not in deleted]
+
+
 def _remove_short_spike_outliers(
     notes: list[_WorkingNote],
     *,
@@ -379,6 +502,12 @@ def rewrite_instrument_stream(
         working = _remove_exact_duplicates(
             working,
             rationality=rationality,
+            changes=changes,
+        )
+        working = _remove_unplayable_chord_excess(
+            working,
+            rationality=rationality,
+            max_fret=max_fret,
             changes=changes,
         )
         working = _remove_short_spike_outliers(
