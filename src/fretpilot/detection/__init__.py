@@ -24,6 +24,7 @@ __all__ = [
     "classify_timeline",
     "extract_behavior_features",
     "resolve_instrument_streams",
+    "build_guitar_review_summary",
 ]
 
 
@@ -41,5 +42,10 @@ def __getattr__(name: str) -> Any:
         from fretpilot.detection.streams import resolve_instrument_streams
 
         return resolve_instrument_streams
+
+    if name == "build_guitar_review_summary":
+        from fretpilot.detection.review import build_guitar_review_summary
+
+        return build_guitar_review_summary
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

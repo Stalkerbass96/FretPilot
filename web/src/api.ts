@@ -22,9 +22,49 @@ export type ConversionOutput = {
 
 export type ConversionStream = {
   stream_id: string;
+  group_id: string;
+  source_track_name: string;
+  display_channel: number;
+  program_name: string | null;
+  note_count: number;
+  guitar_probability: number;
+  confidence: number;
+  recommendation: "recommended" | "optional" | "review";
+  recommendation_text: string;
+  reasons: string[];
   review_required: boolean;
   outputs: ConversionOutput[];
   artifacts: ConversionArtifact[];
+};
+
+export type GuitarCandidateGroup = {
+  group_id: string;
+  source_track_index: number;
+  source_track_name: string;
+  display_channel: number;
+  stream_ids: string[];
+  fragment_count: number;
+  programs: Array<{ program: number | null; program_name: string | null }>;
+  note_count: number;
+  guitar_probability: number;
+  confidence: number;
+  decision: "likely_guitar";
+  recommendation: "recommended" | "optional";
+  recommendation_text: string;
+  reasons: string[];
+};
+
+export type GuitarDetectionSummary = {
+  source_filename: string;
+  policy_version: string;
+  total_stream_count: number;
+  guitar_part_count: number;
+  selected_stream_count: number;
+  filtered_count: number;
+  possible_count: number;
+  unlikely_count: number;
+  recommended_stream_ids: string[];
+  candidates: GuitarCandidateGroup[];
 };
 
 export type ConversionJob = {
@@ -42,6 +82,7 @@ export type ConversionJob = {
   error: string | null;
   created_at: string;
   completed_at: string | null;
+  detection: Omit<GuitarDetectionSummary, "source_filename"> | null;
   streams: ConversionStream[];
 };
 
@@ -202,6 +243,15 @@ export async function createConversionJob(
   form.append("include_gp5", String(outputs.gp5));
   form.append("include_ample_sc_midi", String(outputs.ample));
   return readJson<ConversionJob>(await fetch(`${API_BASE}/api/jobs`, {
+    method: "POST",
+    body: form,
+  }));
+}
+
+export async function detectGuitarCandidates(file: File): Promise<GuitarDetectionSummary> {
+  const form = new FormData();
+  form.append("midi_file", file);
+  return readJson<GuitarDetectionSummary>(await fetch(`${API_BASE}/api/detect`, {
     method: "POST",
     body: form,
   }));

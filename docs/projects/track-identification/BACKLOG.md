@@ -314,7 +314,13 @@ Acceptance criteria:
 
 ## P2 — Product integration
 
-### [ ] TI-050 — Define auto-selection policy
+### [~] TI-050 — Define auto-selection policy
+
+Partial implementation (2026-08-14): the local API and frontend use
+`guitar-only-v1`, which selects only `likely_guitar`, filters possible/unlikely
+streams from generation cards, groups same-track/channel Program fragments, and
+marks sparse likely parts as optional. CLI unification, manual override, and
+remembered choices remain open.
 
 Document and implement policies for:
 
@@ -330,7 +336,12 @@ Acceptance criteria:
 - no silent selection in ambiguous cases;
 - user-visible explanation identifies why confirmation is required.
 
-### [ ] TI-051 — Add review-friendly detection report
+### [~] TI-051 — Add review-friendly detection report
+
+Partial implementation (2026-08-14): `/api/detect` and completed jobs expose a
+compact grouped summary with track name, channel, programs, note count,
+probability, confidence, recommendation, and top reasons. Layer-4 profiles,
+metadata-conflict warnings, and unsupported-assumption warnings remain open.
 
 Produce a compact product-facing summary in addition to the full debug JSON.
 

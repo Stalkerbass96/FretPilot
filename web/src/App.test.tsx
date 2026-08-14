@@ -7,9 +7,59 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+const detectionSummary = {
+  source_filename: "riff.mid",
+  policy_version: "guitar-only-v1",
+  total_stream_count: 5,
+  guitar_part_count: 2,
+  selected_stream_count: 3,
+  filtered_count: 2,
+  possible_count: 1,
+  unlikely_count: 1,
+  recommended_stream_ids: ["t0:ch0:p25", "t0:ch0:p28", "t2:ch2:p30"],
+  candidates: [{
+    group_id: "t0:ch0",
+    source_track_index: 0,
+    source_track_name: "Guitar Layers",
+    display_channel: 1,
+    stream_ids: ["t0:ch0:p25", "t0:ch0:p28"],
+    fragment_count: 2,
+    programs: [
+      { program: 25, program_name: "Acoustic Guitar (steel)" },
+      { program: 28, program_name: "Electric Guitar (muted)" },
+    ],
+    note_count: 128,
+    guitar_probability: 0.94,
+    confidence: 0.96,
+    decision: "likely_guitar" as const,
+    recommendation: "recommended" as const,
+    recommendation_text: "高置信吉他声部，建议生成。",
+    reasons: ["轨道名称明确标记为吉他。", "同一轨道和通道包含 2 个 Program 片段，按一个吉他声部展示。"],
+  }, {
+    group_id: "t2:ch2",
+    source_track_index: 2,
+    source_track_name: "Short Lead",
+    display_channel: 3,
+    stream_ids: ["t2:ch2:p30"],
+    fragment_count: 1,
+    programs: [{ program: 30, program_name: "Distortion Guitar" }],
+    note_count: 20,
+    guitar_probability: 0.91,
+    confidence: 0.93,
+    decision: "likely_guitar" as const,
+    recommendation: "optional" as const,
+    recommendation_text: "高置信吉他，但内容很短；建议试听后决定是否保留。",
+    reasons: ["MIDI 音色属于吉他族：Distortion Guitar。"],
+  }],
+};
+
 describe("FretPilot studio", () => {
   it("accepts a MIDI file and enables generation", async () => {
     const user = userEvent.setup();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => detectionSummary,
+    }));
     render(<App />);
     const file = new File(["midi"], "riff.mid", { type: "audio/midi" });
 
@@ -19,6 +69,10 @@ describe("FretPilot studio", () => {
 
     expect(screen.getByText("riff.mid")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /开始生成/ })).toBeEnabled();
+    expect(await screen.findByRole("heading", { name: "建议保留 2 个吉他声部" })).toBeInTheDocument();
+    expect(screen.getByText(/自动过滤 2 个低置信或非吉他流/)).toBeInTheDocument();
+    expect(screen.getByText("Guitar Layers")).toBeInTheDocument();
+    expect(screen.getByText("94%")).toBeInTheDocument();
   });
 
   it("rejects a non-MIDI file", () => {
@@ -30,6 +84,30 @@ describe("FretPilot studio", () => {
     });
 
     expect(screen.getByRole("alert")).toHaveTextContent("请选择 .mid 或 .midi 文件");
+  });
+
+  it("blocks generation when every stream is below the guitar threshold", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ...detectionSummary,
+        guitar_part_count: 0,
+        selected_stream_count: 0,
+        filtered_count: 5,
+        recommended_stream_ids: [],
+        candidates: [],
+      }),
+    }));
+    render(<App />);
+
+    await user.upload(
+      screen.getByLabelText("选择 MIDI 文件"),
+      new File(["midi"], "keyboard.mid", { type: "audio/midi" }),
+    );
+
+    expect(await screen.findByText("没有达到生成阈值的吉他声部")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /开始生成/ })).toBeDisabled();
   });
 
   it("exposes the design system from primary navigation", async () => {
@@ -202,9 +280,13 @@ describe("FretPilot studio", () => {
 
   it("runs a conversion and renders downloadable stream artifacts", async () => {
     const user = userEvent.setup();
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((input: string) => {
+      if (input.endsWith("/api/detect")) {
+        return Promise.resolve({ ok: true, json: async () => detectionSummary });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
         id: "job-1",
         status: "completed",
         progress: 100,
@@ -214,8 +296,19 @@ describe("FretPilot studio", () => {
         error: null,
         created_at: "2026-08-13T00:00:00Z",
         completed_at: "2026-08-13T00:00:01Z",
+        detection: detectionSummary,
         streams: [{
           stream_id: "t0:ch0:p27",
+          group_id: "t0:ch0",
+          source_track_name: "Electric Guitar",
+          display_channel: 1,
+          program_name: "Electric Guitar (clean)",
+          note_count: 64,
+          guitar_probability: 0.95,
+          confidence: 0.97,
+          recommendation: "recommended",
+          recommendation_text: "高置信吉他声部，建议生成。",
+          reasons: ["轨道名称明确标记为吉他。"],
           review_required: true,
           outputs: [],
           artifacts: [{
@@ -227,6 +320,7 @@ describe("FretPilot studio", () => {
           }],
         }],
       }),
+      });
     }));
     render(<App />);
     await user.upload(
@@ -237,7 +331,8 @@ describe("FretPilot studio", () => {
     await user.click(screen.getByRole("button", { name: /开始生成/ }));
 
     expect(await screen.findByRole("heading", { name: "转换完成" })).toBeInTheDocument();
-    expect(screen.getByText("t0:ch0:p27")).toBeInTheDocument();
+    expect(screen.getByText("Electric Guitar")).toBeInTheDocument();
+    expect(screen.getByText(/吉他概率 95%/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /下载 Guitar Pro 5/ })).toHaveAttribute(
       "href",
       "http://127.0.0.1:8765/api/jobs/job-1/artifacts/artifact-1",

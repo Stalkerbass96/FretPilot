@@ -156,8 +156,19 @@ Every result includes:
 - human-readable reasons
 - raw behavior metrics
 
-The UI should auto-select only high-confidence candidates and always allow the
-user to override the choice.
+The current local product UI applies the versioned `guitar-only-v1` policy:
+
+- `likely_guitar` streams are selected;
+- `possible_guitar` and `unlikely_guitar` streams are filtered from the
+  candidate list and reported only in aggregate counts;
+- streams on the same physical track and MIDI channel are grouped for display,
+  while their original stream IDs remain available to the engine;
+- high-confidence parts with fewer than 32 notes are labeled optional and
+  recommended for listening review.
+
+Manual user override is still planned. Until it exists, the UI must describe
+the result as an automatic recommendation and must not imply calibrated
+statistical accuracy.
 
 ## Layer 4 — Guitar behavior knowledge library
 
@@ -206,6 +217,14 @@ fretpilot analyze song.mid --stream-id t0:ch2:p27
 
 The report ranks logical streams rather than physical tracks. Downstream rhythm,
 fingering, and articulation analysis can consume a selected `InstrumentStream`.
+
+## Local API and frontend
+
+`POST /api/detect` performs the lightweight guitar-only preflight used when a
+file is selected in the frontend. It returns the grouped candidate summary
+before output generation starts. `POST /api/jobs` reruns the same deterministic
+policy and includes the summary in the job response so result cards cannot drift
+from the preflight decision.
 
 ## Development priorities
 

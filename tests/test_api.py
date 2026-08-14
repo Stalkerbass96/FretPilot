@@ -25,6 +25,34 @@ def _guitar_midi() -> bytes:
     return output.getvalue()
 
 
+def _layered_guitar_and_piano_midi() -> bytes:
+    output = BytesIO()
+    midi = mido.MidiFile(type=1, ticks_per_beat=480)
+
+    guitar = mido.MidiTrack()
+    guitar.append(mido.MetaMessage("track_name", name="Guitar Layers", time=0))
+    guitar.append(mido.Message("program_change", program=25, channel=0, time=0))
+    for pitch in [64, 66, 67, 69]:
+        guitar.append(mido.Message("note_on", note=pitch, velocity=90, time=0))
+        guitar.append(mido.Message("note_off", note=pitch, velocity=0, time=240))
+    guitar.append(mido.Message("program_change", program=28, channel=0, time=0))
+    for pitch in [69, 67, 66, 64]:
+        guitar.append(mido.Message("note_on", note=pitch, velocity=90, time=0))
+        guitar.append(mido.Message("note_off", note=pitch, velocity=0, time=240))
+    midi.tracks.append(guitar)
+
+    piano = mido.MidiTrack()
+    piano.append(mido.MetaMessage("track_name", name="Piano", time=0))
+    piano.append(mido.Message("program_change", program=0, channel=1, time=0))
+    for pitch in [48, 55, 60, 64, 67, 72, 76, 79]:
+        piano.append(mido.Message("note_on", note=pitch, velocity=80, time=0))
+        piano.append(mido.Message("note_off", note=pitch, velocity=0, time=240))
+    midi.tracks.append(piano)
+
+    midi.save(file=output)
+    return output.getvalue()
+
+
 def _wait_for_job(client: TestClient, job_id: str) -> dict[str, object]:
     deadline = time.monotonic() + 10
     while time.monotonic() < deadline:
@@ -126,6 +154,39 @@ def test_api_returns_not_found_for_unknown_virtual_instrument_profile(
     assert response.status_code == 404
 
 
+def test_detection_preflight_groups_guitar_program_fragments_and_filters_piano(
+    tmp_path: Path,
+) -> None:
+    with TestClient(create_app(job_root=tmp_path)) as client:
+        response = client.post(
+            "/api/detect",
+            files={
+                "midi_file": (
+                    "layers.mid",
+                    _layered_guitar_and_piano_midi(),
+                    "audio/midi",
+                )
+            },
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["source_filename"] == "layers.mid"
+    assert payload["total_stream_count"] == 3
+    assert payload["guitar_part_count"] == 1
+    assert payload["selected_stream_count"] == 2
+    assert payload["filtered_count"] == 1
+    assert payload["possible_count"] + payload["unlikely_count"] == 1
+    assert len(payload["candidates"]) == 1
+    candidate = payload["candidates"][0]
+    assert candidate["source_track_name"] == "Guitar Layers"
+    assert candidate["fragment_count"] == 2
+    assert candidate["guitar_probability"] >= 0.75
+    assert candidate["confidence"] >= 0.5
+    assert "按一个吉他声部展示" in candidate["reasons"][-1]
+    assert list((tmp_path / "detections").glob("*/source.mid")) == []
+
+
 def test_job_runs_real_engine_and_exposes_selected_downloads(tmp_path: Path) -> None:
     with TestClient(create_app(job_root=tmp_path)) as client:
         response = client.post(
@@ -146,6 +207,12 @@ def test_job_runs_real_engine_and_exposes_selected_downloads(tmp_path: Path) -> 
         assert job["midi_fidelity"] == 0.35
         assert job["knowledge_snapshot_version"] == "2026.08.2"
         assert len(job["streams"]) == 1
+        assert job["detection"]["guitar_part_count"] == 1
+        assert job["detection"]["filtered_count"] == 0
+        assert job["streams"][0]["source_track_name"] == "Electric Guitar"
+        assert job["streams"][0]["guitar_probability"] >= 0.75
+        assert job["streams"][0]["confidence"] >= 0.5
+        assert job["streams"][0]["recommendation"] == "optional"
 
         artifacts = job["streams"][0]["artifacts"]
         assert {artifact["kind"] for artifact in artifacts} == {"gp5", "ample_sc_midi"}

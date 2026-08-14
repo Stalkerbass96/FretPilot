@@ -11,6 +11,8 @@ from threading import Lock
 from typing import Any
 from uuid import uuid4
 
+from fretpilot.detection import classify_timeline
+from fretpilot.detection.review import build_guitar_review_summary
 from fretpilot.midi import load_midi
 from fretpilot.knowledge import BUILTIN_KNOWLEDGE_SNAPSHOT_VERSION
 from fretpilot.prototype import PrototypeOutputStatus, generate_prototype_package
@@ -55,6 +57,16 @@ class ArtifactRecord:
 @dataclass(slots=True)
 class StreamRecord:
     stream_id: str
+    group_id: str = ""
+    source_track_name: str = ""
+    display_channel: int = 0
+    program_name: str | None = None
+    note_count: int = 0
+    guitar_probability: float = 0.0
+    confidence: float = 0.0
+    recommendation: str = "review"
+    recommendation_text: str = ""
+    reasons: list[str] = field(default_factory=list)
     outputs: list[dict[str, Any]] = field(default_factory=list)
     artifacts: list[ArtifactRecord] = field(default_factory=list)
     review_required: bool = False
@@ -75,6 +87,7 @@ class JobRecord:
     created_at: str = field(default_factory=_now)
     completed_at: str | None = None
     streams: list[StreamRecord] = field(default_factory=list)
+    detection_summary: dict[str, Any] | None = None
 
 
 class JobManager:
@@ -121,6 +134,14 @@ class JobManager:
 
         try:
             timeline = load_midi(record.source_path)
+            detection_summary = build_guitar_review_summary(
+                classify_timeline(timeline)
+            )
+            metadata_by_stream = {
+                stream_id: candidate
+                for candidate in detection_summary["candidates"]
+                for stream_id in candidate["stream_ids"]
+            }
             manifest = generate_prototype_package(
                 timeline,
                 record.output_directory,
@@ -130,10 +151,18 @@ class JobManager:
                 include_gp5=record.requested_outputs.gp5,
                 include_ample_sc_midi=record.requested_outputs.ample_sc_midi,
             )
-            streams = [self._collect_stream(job_id, item) for item in manifest.stream_results]
+            streams = [
+                self._collect_stream(
+                    job_id,
+                    item,
+                    metadata_by_stream.get(item.stream_id, {}),
+                )
+                for item in manifest.stream_results
+            ]
             with self._lock:
                 record.knowledge_snapshot_version = manifest.knowledge_snapshot_version
                 record.streams = streams
+                record.detection_summary = detection_summary
                 record.status = "completed"
                 record.progress = 100
                 record.completed_at = _now()
@@ -144,7 +173,12 @@ class JobManager:
                 record.error = str(exc) or type(exc).__name__
                 record.completed_at = _now()
 
-    def _collect_stream(self, job_id: str, result: Any) -> StreamRecord:
+    def _collect_stream(
+        self,
+        job_id: str,
+        result: Any,
+        candidate_summary: dict[str, Any],
+    ) -> StreamRecord:
         artifacts: list[ArtifactRecord] = []
         outputs: list[dict[str, Any]] = []
         requested = (
@@ -167,12 +201,30 @@ class JobManager:
             )
 
         review_required = False
+        stream_summary: dict[str, Any] = {}
         if result.report.path:
             report_path = Path(result.report.path)
             report = json.loads(report_path.read_text(encoding="utf-8"))
             review_required = bool(report.get("review_required"))
+            stream_summary = dict(report.get("stream", {}))
         return StreamRecord(
             stream_id=result.stream_id,
+            group_id=str(candidate_summary.get("group_id", result.stream_id)),
+            source_track_name=str(
+                stream_summary.get("source_track_name", result.stream_id)
+            ),
+            display_channel=int(stream_summary.get("display_channel", 0)),
+            program_name=stream_summary.get("program_name"),
+            note_count=int(stream_summary.get("note_count", 0)),
+            guitar_probability=float(
+                candidate_summary.get("guitar_probability", 0.0)
+            ),
+            confidence=float(candidate_summary.get("confidence", 0.0)),
+            recommendation=str(candidate_summary.get("recommendation", "review")),
+            recommendation_text=str(
+                candidate_summary.get("recommendation_text", "")
+            ),
+            reasons=list(candidate_summary.get("reasons", [])),
             outputs=outputs,
             artifacts=artifacts,
             review_required=review_required,
@@ -214,9 +266,24 @@ class JobManager:
                 "error": record.error,
                 "created_at": record.created_at,
                 "completed_at": record.completed_at,
+                "detection": (
+                    dict(record.detection_summary)
+                    if record.detection_summary is not None
+                    else None
+                ),
                 "streams": [
                     {
                         "stream_id": stream.stream_id,
+                        "group_id": stream.group_id,
+                        "source_track_name": stream.source_track_name,
+                        "display_channel": stream.display_channel,
+                        "program_name": stream.program_name,
+                        "note_count": stream.note_count,
+                        "guitar_probability": stream.guitar_probability,
+                        "confidence": stream.confidence,
+                        "recommendation": stream.recommendation,
+                        "recommendation_text": stream.recommendation_text,
+                        "reasons": list(stream.reasons),
                         "review_required": stream.review_required,
                         "outputs": [dict(output) for output in stream.outputs],
                         "artifacts": [

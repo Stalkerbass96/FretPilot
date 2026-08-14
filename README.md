@@ -214,6 +214,12 @@ FretPilot resolves logical `InstrumentStream` objects before guitar analysis and
 
 Track identification is useful but not yet a calibrated finished classifier. Multiple likely guitar streams are not silently collapsed into one.
 
+The local frontend now runs a guitar-only preflight when a MIDI is selected. It
+shows probability, decision confidence, reasons, and a recommendation for each
+high-confidence guitar part; possible and unlikely streams are excluded from
+generation cards and summarized as a filtered count. Program fragments on the
+same physical track and channel are displayed as one guitar part.
+
 ## Tests
 
 ```bash
