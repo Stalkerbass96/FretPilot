@@ -51,6 +51,14 @@ def _fretting_digit_map(project: GuitarProjectIR) -> dict[int, int]:
             if not event.score.tie_in:
                 events_by_source.setdefault(event.source_note_index, event)
 
+    persisted = {
+        source_index: event.fingering.fretting_digit
+        for source_index, event in events_by_source.items()
+        if event.fingering.fretting_digit is not None
+    }
+    if len(persisted) == len(events_by_source):
+        return persisted
+
     source_indices = sorted(events_by_source)
     entries = []
     for source_index in source_indices:
@@ -64,11 +72,13 @@ def _fretting_digit_map(project: GuitarProjectIR) -> dict[int, int]:
             )
         )
     digits = assign_digit_locations(entries)
-    return {
+    result = {
         source_index: digit
         for source_index, digit in zip(source_indices, digits, strict=True)
         if digit is not None
     }
+    result.update(persisted)
+    return result
 
 
 def _apply_fretting_digits(
