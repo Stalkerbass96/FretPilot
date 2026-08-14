@@ -57,6 +57,11 @@ def analyze_guitar_stream_section_aware(timeline, stream, **kwargs):
                     "semitones": semitones,
                     "peak_wheel": float(gesture["peak_wheel"]),
                     "range_semitones": float(gesture["range_semitones"]),
+                    "peak_position": float(gesture["peak_position"]),
+                    "return_position": float(gesture["return_position"]),
+                    "returned_to_center": (
+                        1.0 if gesture["returned_to_center"] else 0.0
+                    ),
                 },
             )
         )
