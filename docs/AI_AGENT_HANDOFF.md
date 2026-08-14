@@ -23,6 +23,10 @@ MIDI → streams → guitar confidence → rewrite → section-aware analysis
 → Guitar IR → PDF / GP5 / PerformancePlan / VI report / Ample MIDI
 ```
 
+An optional OpenAI-compatible AI shadow path can inspect bounded structured
+note context and return validated rewrite advice. It never applies edits or
+changes the canonical conversion path.
+
 `generate_prototype_package()` is the single product conversion pipeline.
 Section-aware musical execution lives only in
 `analysis/section_execution.py`. Compatibility modules must remain thin.
@@ -41,6 +45,8 @@ the snapshot and relevant entry IDs.
 - canonical Guitar IR with separate score and performance timing;
 - GP5, PDF/TAB, PerformancePlan, VI report, and Ample MIDI outputs;
 - FastAPI conversion jobs and React review UI;
+- provider-neutral AI shadow contracts, OpenAI-compatible adapter, CLI/API,
+  consent gate, and frontend review panel;
 - approved Ample SC generic profile with legacy-scheduler parity checks.
 
 ## Known limits
@@ -52,6 +58,8 @@ the snapshot and relevant entry IDs.
 - generic VI control planning remains shadow-only;
 - Ample timing/picking realization and plugin verification remain incomplete;
 - API jobs are not persistent.
+- AI advice has not yet passed real-song comparative evaluation and remains
+  read-only.
 
 ## Current priority
 

@@ -120,6 +120,105 @@ describe("FretPilot studio", () => {
     expect(screen.getByText("Quiet Studio · 0.1")).toBeInTheDocument();
   });
 
+  it("shows safe AI shadow configuration in advanced settings", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((input: string) => {
+      if (input.endsWith("/api/ai/status")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ configured: false, mode: "shadow" }),
+        });
+      }
+      return Promise.reject(new Error(`Unexpected request: ${input}`));
+    }));
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "高级设置" }));
+
+    expect(screen.getByText("AI 智能增强")).toBeInTheDocument();
+    expect(await screen.findByText("未配置")).toBeInTheDocument();
+    expect(screen.getByText(/FRETPILOT_LLM_API_KEY/)).toBeInTheDocument();
+    expect(screen.getByText(/不会进入 GP5/)).toBeInTheDocument();
+  });
+
+  it("requests consent and renders validated shadow advice", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((input: string) => {
+      if (input.endsWith("/api/ai/status")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            configured: true,
+            mode: "shadow",
+            provider: {
+              provider_id: "fixture-provider",
+              model: "fixture-model",
+              endpoint_origin: "https://llm.example",
+            },
+          }),
+        });
+      }
+      if (input.endsWith("/api/detect")) {
+        return Promise.resolve({ ok: true, json: async () => detectionSummary });
+      }
+      if (input.endsWith("/api/ai/shadow")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            format_version: "0.1",
+            mode: "shadow",
+            applied: false,
+            request_id: "shadow-fixture",
+            provider: {
+              provider_id: "fixture-provider",
+              model: "fixture-model",
+              endpoint_origin: "https://llm.example",
+            },
+            source_label: "riff.mid",
+            stream_id: "t0:ch0:p25",
+            context: {
+              note_count: 128,
+              truncated: false,
+              knowledge_snapshot_version: "2026.08.2",
+            },
+            policy: {
+              midi_fidelity: 0.35,
+              allowed_operations: ["delete", "transpose"],
+              max_delete_count: 8,
+              max_transpose_count: 9,
+              max_pitch_shift: 12,
+              max_context_notes: 256,
+            },
+            summary: "建议删除一个孤立的经过音。",
+            accepted_decisions: [{
+              source_note_index: 4,
+              operation: "delete",
+              confidence: 0.84,
+              reason: "孤立音与重复乐句不一致。",
+              target_pitch: null,
+            }],
+            rejected_decisions: [],
+          }),
+        });
+      }
+      return Promise.reject(new Error(`Unexpected request: ${input}`));
+    }));
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "高级设置" }));
+    await user.upload(
+      screen.getByLabelText("选择 MIDI 文件"),
+      new File(["midi"], "riff.mid", { type: "audio/midi" }),
+    );
+    await screen.findByRole("heading", { name: "建议保留 2 个吉他声部" });
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: /生成 AI 建议/ }));
+
+    expect(await screen.findByText("建议已验证，但未应用")).toBeInTheDocument();
+    expect(screen.getByText("建议删除一个孤立的经过音。")).toBeInTheDocument();
+    expect(screen.getByText(/接受 1 条 · 拒绝 0 条/)).toBeInTheDocument();
+  });
+
   it("loads both knowledge bases for human review", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", vi.fn().mockImplementation((input: string) => {

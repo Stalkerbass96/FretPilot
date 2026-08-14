@@ -46,9 +46,13 @@ src/fretpilot/articulation/
 src/fretpilot/picking/
 src/fretpilot/harmony/
 src/fretpilot/analysis/
+src/fretpilot/ai/
 ```
 
 The canonical section-aware execution logic lives in `src/fretpilot/analysis/section_execution.py`. `section_aware.py` is compatibility-only; do not create a second execution truth there.
+
+Optional LLM providers operate in validated shadow/ranking layers. They must
+not mutate source notes, bypass hard constraints, or serialize score files.
 
 ### Score / IR / performance
 

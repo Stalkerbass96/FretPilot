@@ -12,6 +12,7 @@ MIDI
 → logical InstrumentStream resolution
 → guitar detection and selection
 → adjustable note rationalization
+├─→ optional bounded AI shadow advice (never applied)
 → section/context analysis
 → fingering, articulation, picking, harmony
 → GuitarTrackAnalysis
@@ -47,6 +48,7 @@ does not own musical policy.
 | `GuitarProjectIR` | Shared score/performance musical intent |
 | `GuitarPerformancePlan` | Target-neutral performance realization |
 | `VirtualGuitarInstrumentProfile` | Product/version capability and control knowledge |
+| `ShadowRewriteReport` | Validated, read-only third-party LLM advice |
 
 Score timing and source/performance timing are separate. Product-specific
 keyswitches, CCs, latch state, and approximations never enter Guitar IR.
@@ -58,6 +60,7 @@ keyswitches, CCs, latch state, and approximations never enter Guitar IR.
 | `midi` | parsing, metadata, source timing | musical repair |
 | `detection` | logical streams, guitar identity confidence | playing-style decisions |
 | `rewrite` | explicit add/delete/transpose repairs and provenance | hidden source mutation |
+| `ai` | provider abstraction, bounded context, proposal validation | direct mutation or file serialization |
 | `analysis` | sections, context, pipeline orchestration | output formatting |
 | `rhythm` | notation grids and score timing | performance timing replacement |
 | `guitar` | fretboard feasibility and fingering | plugin controls |
@@ -81,6 +84,8 @@ keyswitches, CCs, latch state, and approximations never enter Guitar IR.
   they do not add conversion behavior.
 - Behavior profile contracts belong to `knowledge`; detection may consume them,
   but knowledge does not import detection.
+- AI shadow advice uses `ai/providers/` and `ai/shadow.py`; it is optional,
+  provider-neutral at the engine boundary, and cannot modify Guitar IR.
 
 ## Runtime knowledge
 

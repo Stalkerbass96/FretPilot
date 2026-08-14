@@ -46,6 +46,7 @@ import {
 } from "./api";
 import { cn } from "./lib/utils";
 import { KnowledgeView } from "./KnowledgeView";
+import { AIShadowPanel } from "./AIShadowPanel";
 
 type View = "studio" | "projects" | "knowledge" | "system";
 type OutputKey = keyof OutputSelection;
@@ -537,6 +538,7 @@ function StudioView() {
   const [detecting, setDetecting] = useState(false);
   const [detectionError, setDetectionError] = useState("");
   const [requestError, setRequestError] = useState("");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const requestVersion = useRef(0);
   const detectionVersion = useRef(0);
 
@@ -614,14 +616,20 @@ function StudioView() {
             <div><h2>选择音乐</h2><p>支持 Standard MIDI File</p></div>
           </div>
           <UploadArea file={file} onFile={(nextFile) => { setFile(nextFile); resetResult(); }} />
-          <div className="privacy-note"><ShieldCheck size={14} /> 文件仅在本地处理，不会上传到云端</div>
+          <div className="privacy-note"><ShieldCheck size={14} /> MIDI 文件保留在本地；外部 AI 仅在明确同意后接收结构化音符上下文</div>
         </article>
 
         <article className="panel panel--settings">
           <div className="panel-heading">
             <div className="step-number">02</div>
             <div><h2>设置输出</h2><p>默认值已偏向合理演奏</p></div>
-            <Button variant="ghost" size="icon" aria-label="高级设置"><Settings2 size={17} /></Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="高级设置"
+              aria-expanded={advancedOpen}
+              onClick={() => setAdvancedOpen((current) => !current)}
+            ><Settings2 size={17} /></Button>
           </div>
           <FidelityControl value={fidelity} onChange={setFidelity} />
           <div className="panel-divider" />
@@ -629,6 +637,13 @@ function StudioView() {
             outputs={outputs}
             onToggle={(key, enabled) => setOutputs((current) => ({ ...current, [key]: enabled }))}
           />
+          {advancedOpen && (
+            <AIShadowPanel
+              file={file}
+              fidelity={fidelity}
+              streamId={detection?.recommended_stream_ids[0]}
+            />
+          )}
           <Button
             className="generate-button"
             disabled={!file || selectedOutputCount === 0 || isProcessing || noGuitarParts}

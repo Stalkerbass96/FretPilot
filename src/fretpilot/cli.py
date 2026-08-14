@@ -4,10 +4,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 from typing import Any, Sequence
 
 from fretpilot import __version__
+from fretpilot.ai import generate_shadow_rewrite_report
+from fretpilot.ai.providers import (
+    AIProviderError,
+    OpenAICompatibleRewriteAdvisor,
+)
 from fretpilot.analysis import (
     analyze_guitar_track,
     analyze_section_contexts,
@@ -210,6 +216,52 @@ def _build_parser() -> argparse.ArgumentParser:
         ample_parser,
         help_text="Destination Ample Guitar performance .mid file",
     )
+
+    ai_shadow_parser = subparsers.add_parser(
+        "ai-shadow",
+        help="Ask an OpenAI-compatible LLM for validated, read-only MIDI rewrite advice",
+    )
+    ai_shadow_parser.add_argument(
+        "midi_file",
+        type=Path,
+        help="Path to a .mid/.midi file",
+    )
+    ai_shadow_parser.add_argument(
+        "--stream-id",
+        help="Logical InstrumentStream ID; auto-selects only one likely guitar",
+    )
+    _add_max_fret_argument(ai_shadow_parser)
+    _add_midi_fidelity_argument(ai_shadow_parser)
+    ai_shadow_parser.add_argument(
+        "--base-url",
+        help="OpenAI-compatible base URL; defaults to FRETPILOT_LLM_BASE_URL",
+    )
+    ai_shadow_parser.add_argument(
+        "--model",
+        help="Provider model ID; defaults to FRETPILOT_LLM_MODEL",
+    )
+    ai_shadow_parser.add_argument(
+        "--provider-id",
+        default="openai-compatible",
+        help="Non-secret provider label recorded in the report",
+    )
+    ai_shadow_parser.add_argument(
+        "--api-key-env",
+        default="FRETPILOT_LLM_API_KEY",
+        help="Environment variable containing the API key",
+    )
+    ai_shadow_parser.add_argument(
+        "--max-context-notes",
+        type=int,
+        default=256,
+        help="Maximum source notes sent as structured context (default: 256)",
+    )
+    ai_shadow_parser.add_argument(
+        "--disable-json-mode",
+        action="store_true",
+        help="Do not send the optional OpenAI response_format parameter",
+    )
+    _add_json_output_arguments(ai_shadow_parser)
 
     prototype_parser = subparsers.add_parser(
         "prototype",
@@ -482,6 +534,57 @@ def _run_export_ample_sc(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_ai_shadow(args: argparse.Namespace) -> int:
+    _validate_max_fret(args.max_fret)
+    midi_fidelity = (
+        DEFAULT_MIDI_FIDELITY
+        if args.midi_fidelity is None
+        else args.midi_fidelity
+    )
+    _validate_midi_fidelity(midi_fidelity)
+    if args.max_context_notes < 1:
+        raise SystemExit("--max-context-notes must be at least 1.")
+
+    base_url = args.base_url or os.environ.get("FRETPILOT_LLM_BASE_URL")
+    model = args.model or os.environ.get("FRETPILOT_LLM_MODEL")
+    api_key = os.environ.get(args.api_key_env)
+    if not base_url:
+        raise SystemExit(
+            "Configure --base-url or the FRETPILOT_LLM_BASE_URL environment variable."
+        )
+    if not model:
+        raise SystemExit(
+            "Configure --model or the FRETPILOT_LLM_MODEL environment variable."
+        )
+    if not api_key:
+        raise SystemExit(
+            f"Environment variable {args.api_key_env!r} does not contain an API key."
+        )
+
+    timeline = load_midi(args.midi_file)
+    stream = _select_instrument_stream(timeline, stream_id=args.stream_id)
+    try:
+        provider = OpenAICompatibleRewriteAdvisor(
+            base_url=base_url,
+            api_key=api_key,
+            model=model,
+            provider_id=args.provider_id,
+            json_mode=not args.disable_json_mode,
+        )
+        report = generate_shadow_rewrite_report(
+            timeline,
+            stream,
+            provider,
+            midi_fidelity=midi_fidelity,
+            max_fret=args.max_fret,
+            max_context_notes=args.max_context_notes,
+        )
+    except (AIProviderError, ValueError) as exc:
+        raise SystemExit(f"AI shadow analysis failed: {exc}") from exc
+    _emit_json(report.to_dict(), args.output, args.compact)
+    return 0
+
+
 def _run_prototype(args: argparse.Namespace) -> int:
     timeline = load_midi(args.midi_file)
     try:
@@ -526,6 +629,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_export_gp5(args)
     if args.command == "export-ample-sc":
         return _run_export_ample_sc(args)
+    if args.command == "ai-shadow":
+        return _run_ai_shadow(args)
     if args.command == "prototype":
         return _run_prototype(args)
 

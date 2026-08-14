@@ -18,6 +18,8 @@ file contains only product priority and release gates.
   SC MIDI generation from one prototype pipeline;
 - pinned guitar-playing knowledge snapshot and artifact provenance;
 - FastAPI/React conversion and knowledge-review shell;
+- optional OpenAI-compatible AI shadow advice with bounded context,
+  deterministic validation, explicit consent, and no automatic application;
 - approved generic Ample SC profile, negotiation policy, and shadow control-plan
   parity coverage.
 
@@ -62,6 +64,12 @@ barre/stretch/thumb/shift semantics using real-song evidence.
 
 Extend knowledge provenance into full engine/config/model identity and
 selectable approved snapshots under `SE-*`.
+
+### 6. AI shadow evaluation
+
+Compare accepted/rejected LLM proposals against deterministic baselines and
+human review on real songs. Do not allow automatic rewrite application until
+the provider/model/version is recorded and measurable improvement is shown.
 
 ## One-command validation
 

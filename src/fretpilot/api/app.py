@@ -13,7 +13,11 @@ from uuid import uuid4
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from starlette.concurrency import run_in_threadpool
 
+from fretpilot.ai import generate_shadow_rewrite_report
+from fretpilot.ai.config import advisor_from_environment
+from fretpilot.ai.providers import AIProviderError, RewriteAdvisor
 from fretpilot.api.jobs import JobManager, OutputRequest
 from fretpilot.detection import classify_timeline
 from fretpilot.detection.review import build_guitar_review_summary
@@ -37,9 +41,14 @@ def create_app(
     *,
     job_root: str | Path | None = None,
     max_upload_bytes: int = DEFAULT_MAX_UPLOAD_BYTES,
+    ai_advisor: RewriteAdvisor | None = None,
+    configure_ai_from_environment: bool = True,
 ) -> FastAPI:
     root = Path(job_root) if job_root is not None else _default_job_root()
     manager = JobManager(root)
+    ai_configuration_error: str | None = None
+    if ai_advisor is None and configure_ai_from_environment:
+        ai_advisor, ai_configuration_error = advisor_from_environment()
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -107,6 +116,26 @@ def create_app(
         registry = get_builtin_knowledge_registry()
         return registry.snapshot.to_dict()
 
+    @app.get("/api/ai/status")
+    def get_ai_status() -> dict[str, object]:
+        if ai_advisor is None:
+            return {
+                "configured": False,
+                "mode": "shadow",
+                "configuration_error": ai_configuration_error,
+            }
+        return {
+            "configured": True,
+            "mode": "shadow",
+            "provider": {
+                "provider_id": ai_advisor.identity.provider_id,
+                "model": ai_advisor.identity.model,
+                "endpoint_origin": ai_advisor.identity.endpoint_origin,
+            },
+            "transmitted_data": "bounded_structured_note_context",
+            "binary_midi_transmitted": False,
+        }
+
     @app.get("/api/virtual-instruments")
     def list_virtual_instruments() -> dict[str, object]:
         registry = get_builtin_virtual_instrument_registry()
@@ -158,6 +187,86 @@ def create_app(
             return {"source_filename": filename, **summary}
         finally:
             shutil.rmtree(detection_directory, ignore_errors=True)
+
+    @app.post("/api/ai/shadow")
+    async def create_ai_shadow_report(
+        midi_file: Annotated[UploadFile, File()],
+        consent_external_ai: Annotated[bool, Form()] = False,
+        stream_id: Annotated[str | None, Form()] = None,
+        midi_fidelity: Annotated[float, Form(ge=0.0, le=1.0)] = (
+            DEFAULT_MIDI_FIDELITY
+        ),
+        max_context_notes: Annotated[int, Form(ge=1, le=512)] = 256,
+    ) -> dict[str, object]:
+        if not consent_external_ai:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=(
+                    "Explicit consent is required before structured MIDI note "
+                    "context is sent to an external AI provider."
+                ),
+            )
+        if ai_advisor is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=ai_configuration_error or "AI provider is not configured.",
+            )
+
+        request_directory = root / "ai-shadow" / uuid4().hex
+        try:
+            filename, source_path = await save_midi_upload(
+                midi_file,
+                request_directory,
+            )
+            timeline = load_midi(source_path)
+            timeline.source = filename
+            detection = classify_timeline(timeline)
+            if stream_id is not None:
+                candidate = next(
+                    (
+                        item
+                        for item in detection.candidates
+                        if item.stream.stream_id == stream_id
+                    ),
+                    None,
+                )
+                if candidate is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                        detail="Requested stream_id was not found in the MIDI file.",
+                    )
+            else:
+                likely = [
+                    item
+                    for item in detection.candidates
+                    if item.decision == "likely_guitar"
+                ]
+                if len(likely) != 1:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                        detail=(
+                            "AI shadow analysis requires one explicit stream_id "
+                            "when guitar selection is ambiguous."
+                        ),
+                    )
+                candidate = likely[0]
+            try:
+                report = await run_in_threadpool(
+                    generate_shadow_rewrite_report,
+                    timeline,
+                    candidate.stream,
+                    ai_advisor,
+                    midi_fidelity=midi_fidelity,
+                    max_context_notes=max_context_notes,
+                )
+            except (AIProviderError, ValueError) as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=f"AI shadow analysis failed: {exc}",
+                ) from exc
+            return report.to_dict()
+        finally:
+            shutil.rmtree(request_directory, ignore_errors=True)
 
     @app.post("/api/jobs", status_code=status.HTTP_202_ACCEPTED)
     async def create_job(

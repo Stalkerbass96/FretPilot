@@ -7,6 +7,7 @@ import time
 import mido
 from fastapi.testclient import TestClient
 
+from fretpilot.ai.models import AIProviderIdentity
 from fretpilot.api import create_app
 
 
@@ -71,6 +72,69 @@ def test_health_reports_ready_engine(tmp_path: Path) -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ready", "engine": "fretpilot"}
+
+
+def test_api_reports_when_ai_is_not_configured(tmp_path: Path) -> None:
+    app = create_app(
+        job_root=tmp_path,
+        configure_ai_from_environment=False,
+    )
+    with TestClient(app) as client:
+        response = client.get("/api/ai/status")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "configured": False,
+        "mode": "shadow",
+        "configuration_error": None,
+    }
+
+
+def test_api_ai_shadow_requires_consent_and_never_applies_advice(
+    tmp_path: Path,
+) -> None:
+    class FakeAdvisor:
+        identity = AIProviderIdentity(
+            "fixture-provider",
+            "fixture-model",
+            "https://llm.example",
+        )
+
+        def __init__(self):
+            self.calls = 0
+
+        def propose_rewrite(self, request):
+            self.calls += 1
+            return {"summary": "No confident change.", "decisions": []}
+
+    advisor = FakeAdvisor()
+    app = create_app(job_root=tmp_path, ai_advisor=advisor)
+    with TestClient(app) as client:
+        status_response = client.get("/api/ai/status")
+        without_consent = client.post(
+            "/api/ai/shadow",
+            files={"midi_file": ("riff.mid", _guitar_midi(), "audio/midi")},
+        )
+        shadow_response = client.post(
+            "/api/ai/shadow",
+            files={"midi_file": ("riff.mid", _guitar_midi(), "audio/midi")},
+            data={"consent_external_ai": "true", "midi_fidelity": "0.35"},
+        )
+
+    assert status_response.status_code == 200
+    assert status_response.json()["provider"] == {
+        "provider_id": "fixture-provider",
+        "model": "fixture-model",
+        "endpoint_origin": "https://llm.example",
+    }
+    assert without_consent.status_code == 422
+    assert shadow_response.status_code == 200
+    payload = shadow_response.json()
+    assert payload["mode"] == "shadow"
+    assert payload["applied"] is False
+    assert payload["source_label"] == "riff.mid"
+    assert advisor.calls == 1
+    assert list((tmp_path / "ai-shadow").glob("*/source.mid")) == []
 
 
 def test_api_lists_virtual_instrument_knowledge_profiles(tmp_path: Path) -> None:

@@ -114,6 +114,34 @@ High-confidence repairs include guitar-range octave correction, exact duplicate
 removal, isolated spike repair, repeated-pulse completion, and minimum deletion
 for near-simultaneous chords that cannot fit six distinct strings.
 
+## Optional AI shadow advice
+
+FretPilot can call an OpenAI-compatible third-party API for read-only MIDI
+rewrite suggestions. The model receives a bounded structured note context, not
+the binary MIDI or the source's full local path. Every suggestion is checked
+against fidelity budgets, stable note IDs, pitch-shift limits, and the physical
+fretboard. Shadow suggestions are never applied to GP5 or other outputs.
+
+Configure the local API/CLI process through environment variables:
+
+```bash
+export FRETPILOT_LLM_BASE_URL="https://provider.example/v1"
+export FRETPILOT_LLM_MODEL="provider-model-id"
+export FRETPILOT_LLM_API_KEY="..."
+```
+
+Generate a report directly:
+
+```bash
+fretpilot ai-shadow song.mid \
+  --stream-id t0:ch2:p27 \
+  --midi-fidelity 0.35 \
+  -o shadow-advice.json
+```
+
+The frontend exposes the same capability under **高级设置 → AI 智能增强**.
+It requires explicit consent before sending structured context externally.
+
 ## Useful focused commands
 
 Inspect streams:

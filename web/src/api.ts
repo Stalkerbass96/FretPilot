@@ -67,6 +67,58 @@ export type GuitarDetectionSummary = {
   candidates: GuitarCandidateGroup[];
 };
 
+export type AIStatus = {
+  configured: boolean;
+  mode: "shadow";
+  configuration_error?: string | null;
+  provider?: {
+    provider_id: string;
+    model: string;
+    endpoint_origin: string;
+  };
+  transmitted_data?: string;
+  binary_midi_transmitted?: boolean;
+};
+
+export type AIShadowReport = {
+  format_version: string;
+  mode: "shadow";
+  applied: false;
+  request_id: string;
+  provider: {
+    provider_id: string;
+    model: string;
+    endpoint_origin: string;
+  };
+  source_label: string;
+  stream_id: string;
+  context: {
+    note_count: number;
+    truncated: boolean;
+    knowledge_snapshot_version: string;
+  };
+  policy: {
+    midi_fidelity: number;
+    allowed_operations: string[];
+    max_delete_count: number;
+    max_transpose_count: number;
+    max_pitch_shift: number;
+    max_context_notes: number;
+  };
+  summary: string;
+  accepted_decisions: Array<{
+    source_note_index: number;
+    operation: string;
+    confidence: number;
+    reason: string;
+    target_pitch: number | null;
+  }>;
+  rejected_decisions: Array<{
+    raw: Record<string, unknown>;
+    errors: string[];
+  }>;
+};
+
 export type ConversionJob = {
   id: string;
   status: "queued" | "processing" | "completed" | "failed";
@@ -252,6 +304,26 @@ export async function detectGuitarCandidates(file: File): Promise<GuitarDetectio
   const form = new FormData();
   form.append("midi_file", file);
   return readJson<GuitarDetectionSummary>(await fetch(`${API_BASE}/api/detect`, {
+    method: "POST",
+    body: form,
+  }));
+}
+
+export async function getAIStatus(): Promise<AIStatus> {
+  return readJson<AIStatus>(await fetch(`${API_BASE}/api/ai/status`));
+}
+
+export async function createAIShadowReport(
+  file: File,
+  fidelityPercent: number,
+  streamId: string | undefined,
+): Promise<AIShadowReport> {
+  const form = new FormData();
+  form.append("midi_file", file);
+  form.append("consent_external_ai", "true");
+  form.append("midi_fidelity", String(fidelityPercent / 100));
+  if (streamId) form.append("stream_id", streamId);
+  return readJson<AIShadowReport>(await fetch(`${API_BASE}/api/ai/shadow`, {
     method: "POST",
     body: form,
   }));
