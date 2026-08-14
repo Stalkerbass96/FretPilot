@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from fretpilot.articulation import ArticulationPlan, plan_articulations
 from fretpilot.guitar import FingeringResult, optimize_fingering
 from fretpilot.guitar.fretting_digits import assign_fretting_digits
+from fretpilot.harmony import HarmonyPlan, plan_harmony
 from fretpilot.midi.models import NormalizedTrack
 from fretpilot.picking import PickingPlan, plan_picking
 from fretpilot.rhythm import RhythmAnalysis, analyze_track_rhythm
@@ -26,6 +27,7 @@ class GuitarTrackAnalysis:
     fingering: FingeringResult
     articulations: ArticulationPlan
     picking: PickingPlan | None = None
+    harmony: HarmonyPlan | None = None
     playing_context: PlayingContext | None = None
     section_contexts: list[SectionContextAnalysis] = field(default_factory=list)
     hand_positions: list[HandPositionState] = field(default_factory=list)
@@ -57,6 +59,7 @@ def analyze_guitar_track(
         ),
     )
     picking = plan_picking(track, fingering, context=playing_context)
+    harmony = plan_harmony(track, fingering)
 
     return GuitarTrackAnalysis(
         track_index=track.index,
@@ -65,5 +68,6 @@ def analyze_guitar_track(
         fingering=fingering,
         articulations=articulations,
         picking=picking,
+        harmony=harmony,
         playing_context=playing_context,
     )
