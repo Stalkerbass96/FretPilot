@@ -17,7 +17,9 @@ def test_project_dict_round_trip_keeps_guitar_metadata():
         ScoreTiming(0.0, 0.5, 1, 0.0),
         PerformanceTiming(0.0, 0.5, 90),
         IRFingering(2, 5, 3),
-        right_hand=IRRightHandIntent("pick", "down", 0.9, "fixture"),
+        right_hand=IRRightHandIntent(
+            "pick", "down", 0.9, "fixture", "sweep"
+        ),
     )
     project = GuitarProjectIR(
         "song", "song.mid", [], [],
@@ -30,4 +32,6 @@ def test_project_dict_round_trip_keeps_guitar_metadata():
     )
     restored = project_from_dict(project.to_dict())
     assert restored.to_dict() == project.to_dict()
-    assert restored.tracks[0].measures[0].events[0].fingering.fretting_digit == 3
+    restored_event = restored.tracks[0].measures[0].events[0]
+    assert restored_event.fingering.fretting_digit == 3
+    assert restored_event.right_hand.technique == "sweep"
