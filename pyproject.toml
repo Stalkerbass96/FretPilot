@@ -34,7 +34,7 @@ fretpilot-prototype-performance = "fretpilot.prototype_performance_cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-fretpilot = ["knowledge/assets/*.json"]
+fretpilot = ["knowledge/assets/*.json", "virtual_instruments/assets/*.json"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

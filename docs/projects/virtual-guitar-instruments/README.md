@@ -146,6 +146,20 @@ src/fretpilot/exporters/ample_guitar/
 
 It already contains a versioned Ample Guitar SC profile and renderer. This is the prototype reference implementation, not the final generic architecture.
 
+The provider-neutral knowledge registry is under:
+
+```text
+src/fretpilot/virtual_instruments/
+├── models.py
+├── registry.py
+└── assets/virtual-instruments-2026.08.0.json
+```
+
+The first registry entry is `ample-metal-eclipse-v4.1`. It records official
+AME controls and evidence while remaining explicitly `plugin_unverified`.
+Profile discovery is also exposed by `GET /api/virtual-instruments`. The legacy
+SC renderer has not yet been migrated to consume the registry.
+
 The long-term direction is:
 
 ```text
