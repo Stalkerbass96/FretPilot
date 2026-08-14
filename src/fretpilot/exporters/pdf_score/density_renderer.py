@@ -12,7 +12,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from fretpilot.exporters.pdf_score.layout import (
+    DEFAULT_MIN_ONSET_GAP,
     chunk_measures_for_equal_width_systems,
+    measure_required_width,
 )
 from fretpilot.exporters.pdf_score.renderer import (
     PDFScoreExportResult,
@@ -41,6 +43,25 @@ def _track_system_chunks(
     )
 
 
+def _density_warnings(
+    track: GuitarTrackIR,
+    *,
+    available_width: float,
+) -> list[str]:
+    warnings: list[str] = []
+    for measure in track.measures:
+        required = measure_required_width(measure)
+        if required <= available_width + 1e-7:
+            continue
+        warnings.append(
+            f"Measure {measure.number} in {track.name or track.id} requires about "
+            f"{required:.1f} pt to preserve the {DEFAULT_MIN_ONSET_GAP:.1f} pt "
+            f"minimum onset gap, but one PDF system provides {available_width:.1f} pt. "
+            "The measure remains time-proportional but will be horizontally compressed."
+        )
+    return warnings
+
+
 class _DensityAwarePDFScoreRenderer(_PDFScoreRenderer):
     """Reuse core engraving while changing only density-sensitive line breaks."""
 
@@ -49,6 +70,10 @@ class _DensityAwarePDFScoreRenderer(_PDFScoreRenderer):
         available_width = _system_available_width(self)
 
         for track in self.project.tracks:
+            for warning in _density_warnings(track, available_width=available_width):
+                if warning not in self.warnings:
+                    self.warnings.append(warning)
+
             section = track.name or track.id
             harmony_labels = _harmony_label_map(track)
             self._new_page(section)
@@ -77,9 +102,6 @@ class _DensityAwarePDFScoreRenderer(_PDFScoreRenderer):
                     self._new_page(section)
                     systems = 0
 
-                # The stable core renderer uses equal-width measures. Temporarily
-                # set the system count to this chunk length so a dense one- or
-                # two-measure line expands across the full available width.
                 self.measures_per_system = len(chunk)
                 try:
                     self.current_y = self._draw_system(
