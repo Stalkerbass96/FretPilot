@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from fretpilot.exporters.pdf_score import export_score_pdf
-from fretpilot.exporters.pdf_score.renderer import _harmony_label_map
+from fretpilot.exporters.pdf_score.renderer import _duration_label, _harmony_label_map
 from fretpilot.ir.models import (
     GuitarMeasure,
     GuitarNoteEvent,
@@ -14,6 +14,13 @@ from fretpilot.ir.models import (
     PerformanceTiming,
     ScoreTiming,
 )
+
+
+def test_duration_labels_never_round_unknown_values_to_standard_notes() -> None:
+    assert _duration_label(0.5) == "1/8"
+    assert _duration_label(1 / 3) == "8T"
+    assert _duration_label(0.4) == "0.4b"
+    assert _duration_label(2.5) == "2.5b"
 
 
 def test_export_score_pdf_writes_reviewable_pdf(tmp_path: Path) -> None:
