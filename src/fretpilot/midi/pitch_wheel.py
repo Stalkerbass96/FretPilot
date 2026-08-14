@@ -72,3 +72,60 @@ def load_midi(path: str | Path):
         key=lambda item: (item.tick, item.track_index, item.channel),
     )
     return timeline
+
+
+def extract_monophonic_pitch_raises(timeline, stream):
+    """Return explicit positive wheel gestures only when source evidence is unambiguous."""
+
+    wheels = [
+        event for event in timeline.pitch_wheel_events
+        if event.track_index == stream.source_track_index
+        and event.channel == stream.channel
+    ]
+    ranges = [
+        event for event in timeline.pitch_wheel_range_events
+        if event.track_index == stream.source_track_index
+        and event.channel == stream.channel
+    ]
+    if not wheels or not ranges:
+        return []
+
+    results = []
+    for note_index, note in enumerate(stream.notes):
+        events = [
+            event for event in wheels
+            if note.start_tick <= event.tick <= note.end_tick
+        ]
+        positive = [event for event in events if event.value > 0]
+        if not positive:
+            continue
+        peak = max(positive, key=lambda event: event.value)
+        active_count = sum(
+            other.start_tick <= peak.tick < other.end_tick
+            for other in stream.notes
+        )
+        if active_count != 1:
+            continue
+        active_ranges = [event for event in ranges if event.tick <= peak.tick]
+        if not active_ranges:
+            continue
+        wheel_range = active_ranges[-1]
+        total_range = wheel_range.semitones + wheel_range.cents / 100.0
+        if total_range <= 0:
+            continue
+        semitones = peak.value / 8192.0 * total_range
+        if semitones < 0.25:
+            continue
+        results.append(
+            {
+                "note_index": note_index,
+                "semitones": round(semitones, 6),
+                "peak_wheel": float(peak.value),
+                "range_semitones": round(total_range, 6),
+                "returned_to_center": any(
+                    event.tick >= peak.tick and abs(event.value) <= 64
+                    for event in events
+                ),
+            }
+        )
+    return results
