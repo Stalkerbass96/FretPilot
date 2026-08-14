@@ -41,6 +41,36 @@ def _tight_low_repeat(track: NormalizedTrack, groups: list[list[int]], pos: int)
     return False
 
 
+def _tremolo_positions(track: NormalizedTrack, groups: list[list[int]]) -> set[int]:
+    """Find very rapid, consecutive monophonic repeats with strong MIDI evidence."""
+
+    positions: set[int] = set()
+    run: list[int] = []
+    previous_position: int | None = None
+
+    for position, indices in enumerate(groups):
+        extends = False
+        if len(indices) == 1 and previous_position is not None:
+            previous_indices = groups[previous_position]
+            if len(previous_indices) == 1:
+                previous = track.notes[previous_indices[0]]
+                current = track.notes[indices[0]]
+                gap = current.start_beat - previous.start_beat
+                extends = current.pitch == previous.pitch and 0 < gap <= 0.125 + 1e-9
+
+        if extends:
+            run.append(position)
+        else:
+            if len(run) >= 4:
+                positions.update(run)
+            run = [position] if len(indices) == 1 else []
+        previous_position = position if len(indices) == 1 else None
+
+    if len(run) >= 4:
+        positions.update(run)
+    return positions
+
+
 def plan_picking(
     track: NormalizedTrack,
     fingering: FingeringResult,
@@ -61,8 +91,11 @@ def plan_picking(
     arpeggio = _score(context, "technique_scores", "rock_arpeggio")
 
     groups = _onset_groups(track)
+    tremolo_positions = _tremolo_positions(track, groups)
     decisions: list[PickingDecision] = []
     pick_phase = 0
+    tremolo_phase = 0
+    previous_tremolo_position: int | None = None
     strum_phase = 0
 
     for position, note_indices in enumerate(groups):
@@ -88,6 +121,30 @@ def plan_picking(
         if len(note_indices) != 1:
             continue
 
+        if position in tremolo_positions:
+            if previous_tremolo_position is None or position != previous_tremolo_position + 1:
+                tremolo_phase = 0
+            direction = "down" if tremolo_phase % 2 == 0 else "up"
+            tremolo_phase += 1
+            previous_tremolo_position = position
+            context_support = max(riff, solo, metal, arpeggio)
+            decisions.append(
+                PickingDecision(
+                    note_indices=tuple(note_indices),
+                    start_beat=start,
+                    motion="pick",
+                    direction=direction,
+                    confidence=round(min(0.96, 0.86 + 0.08 * context_support), 6),
+                    reason=(
+                        "Four-or-more consecutive same-pitch attacks occur at very rapid "
+                        "intervals; context only confidence-weights the tremolo evidence."
+                    ),
+                    technique="tremolo",
+                )
+            )
+            continue
+
+        previous_tremolo_position = None
         if riff >= 0.50 and metal >= 0.45 and _tight_low_repeat(track, groups, position):
             decisions.append(
                 PickingDecision(
