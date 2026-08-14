@@ -84,9 +84,9 @@ def test_api_exposes_full_knowledge_entries_for_human_review(tmp_path: Path) -> 
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["snapshot_version"] == "2026.08.0"
+    assert payload["snapshot_version"] == "2026.08.1"
     assert payload["status"] == "approved"
-    assert len(payload["entries"]) == 10
+    assert len(payload["entries"]) == 81
     metal = next(
         entry for entry in payload["entries"]
         if entry["knowledge_id"] == "gk.profile.metal"
@@ -144,7 +144,7 @@ def test_job_runs_real_engine_and_exposes_selected_downloads(tmp_path: Path) -> 
         assert job["status"] == "completed", job.get("error")
         assert job["source_filename"] == "riff.mid"
         assert job["midi_fidelity"] == 0.35
-        assert job["knowledge_snapshot_version"] == "2026.08.0"
+        assert job["knowledge_snapshot_version"] == "2026.08.1"
         assert len(job["streams"]) == 1
 
         artifacts = job["streams"][0]["artifacts"]

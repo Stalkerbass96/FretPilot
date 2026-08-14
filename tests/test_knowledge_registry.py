@@ -47,6 +47,55 @@ def test_shape_library_contains_relative_reusable_prototypes() -> None:
     assert power_chord.status == "candidate"
 
 
+def test_total_rock_guitar_candidate_covers_every_lesson() -> None:
+    registry = get_builtin_knowledge_registry()
+    entries = [
+        entry
+        for entry in registry.query(domain="guitar_playing")
+        if entry.provenance.source_type == "user_provided_reference"
+    ]
+
+    assert len(entries) == 71
+    assert {entry.kind for entry in entries} == {
+        "execution_rule",
+        "harmonic_context",
+        "phrase_pattern",
+        "rhythm_rule",
+        "shape_family",
+    }
+    assert all(entry.status == "candidate" for entry in entries)
+    assert all(entry.evaluation.status == "untested" for entry in entries)
+    assert all(entry.provenance.license for entry in entries)
+
+    covered_lessons = {
+        lesson
+        for entry in entries
+        for section in entry.payload["source_sections"]
+        for lesson in range(1, 23)
+        if section.startswith(f"Lesson {lesson} ")
+    }
+    assert covered_lessons == set(range(1, 23))
+
+
+def test_reference_candidates_do_not_change_approved_runtime_profiles() -> None:
+    registry = get_builtin_knowledge_registry()
+
+    approved_profiles = registry.query(
+        domain="guitar_playing",
+        kind="playing_profile",
+        statuses={"approved"},
+    )
+
+    assert {entry.payload["profile_id"] for entry in approved_profiles} == {
+        "solo",
+        "riff",
+        "strumming",
+        "metal",
+        "jazz",
+        "rock_arpeggio",
+    }
+
+
 def test_registry_filters_entries_by_scope() -> None:
     registry = get_builtin_knowledge_registry()
 
