@@ -183,14 +183,29 @@ def measure_notated_rests(measure: GuitarMeasure) -> list[RestSpan]:
     return result
 
 
-def _beam_level(duration_beats: float) -> int:
-    if duration_beats <= 0.125 + _EPSILON:
+def _binary_beam_level(base_duration: float) -> int:
+    if base_duration <= 0.125 + _EPSILON:
         return 3
-    if duration_beats <= 0.25 + _EPSILON:
+    if base_duration <= 0.25 + _EPSILON:
         return 2
-    if duration_beats <= 0.5 + _EPSILON:
+    if base_duration <= 0.5 + _EPSILON:
         return 1
     return 0
+
+
+def _nominal_binary_base(duration_beats: float) -> float:
+    for base in _BINARY_BASES:
+        if abs(duration_beats - base) <= 1e-7:
+            return base
+        if abs(duration_beats - base * 1.5) <= 1e-7:
+            return base
+        if abs(duration_beats - base * (2.0 / 3.0)) <= 1e-7:
+            return base
+    return duration_beats
+
+
+def _beam_level(duration_beats: float) -> int:
+    return _binary_beam_level(_nominal_binary_base(duration_beats))
 
 
 def _metric_group_size(measure: GuitarMeasure) -> float:
