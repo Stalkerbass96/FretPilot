@@ -6,6 +6,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 from fretpilot.guitar.models import FingeringResult
+from fretpilot.knowledge.picking_research import PICKING_RESEARCH
 from fretpilot.midi.models import NormalizedTrack
 from fretpilot.picking.models import PickingDecision, PickingPlan
 
@@ -15,6 +16,12 @@ if TYPE_CHECKING:
 
 def _score(context: PlayingContext, group: str, key: str) -> float:
     return float(getattr(context, group).get(key, 0.0))
+
+
+def _prior(family: str, key: str) -> float:
+    branch = PICKING_RESEARCH.get(family, {})
+    value = branch.get(key, 1.0) if isinstance(branch, dict) else 1.0
+    return float(value) if isinstance(value, (int, float)) else 1.0
 
 
 def _onset_groups(track: NormalizedTrack) -> list[list[int]]:
@@ -42,8 +49,6 @@ def _tight_low_repeat(track: NormalizedTrack, groups: list[list[int]], pos: int)
 
 
 def _tremolo_positions(track: NormalizedTrack, groups: list[list[int]]) -> set[int]:
-    """Find very rapid, consecutive monophonic repeats with strong MIDI evidence."""
-
     positions: set[int] = set()
     run: list[int] = []
     previous_position: int | None = None
@@ -57,7 +62,6 @@ def _tremolo_positions(track: NormalizedTrack, groups: list[list[int]]) -> set[i
                 current = track.notes[indices[0]]
                 gap = current.start_beat - previous.start_beat
                 extends = current.pitch == previous.pitch and 0 < gap <= 0.125 + 1e-9
-
         if extends:
             run.append(position)
         else:
@@ -71,13 +75,65 @@ def _tremolo_positions(track: NormalizedTrack, groups: list[list[int]]) -> set[i
     return positions
 
 
+def _sweep_directions(
+    track: NormalizedTrack,
+    fingering: FingeringResult,
+    groups: list[list[int]],
+) -> dict[int, str]:
+    """Find fast monotonic adjacent-string runs; return direction by onset position."""
+
+    result: dict[int, str] = {}
+    run: list[int] = []
+    run_direction: str | None = None
+
+    def flush() -> None:
+        if len(run) >= 3 and run_direction is not None:
+            for position in run:
+                result[position] = run_direction
+
+    for position in range(1, len(groups)):
+        previous_indices = groups[position - 1]
+        current_indices = groups[position]
+        step_direction: str | None = None
+        if len(previous_indices) == 1 and len(current_indices) == 1:
+            previous_index = previous_indices[0]
+            current_index = current_indices[0]
+            previous_string = fingering.notes[previous_index].string
+            current_string = fingering.notes[current_index].string
+            gap = (
+                track.notes[current_index].start_beat
+                - track.notes[previous_index].start_beat
+            )
+            if previous_string is not None and current_string is not None and 0 < gap <= 0.25 + 1e-9:
+                string_delta = current_string - previous_string
+                if string_delta == -1:
+                    step_direction = "down"
+                elif string_delta == 1:
+                    step_direction = "up"
+
+        if step_direction is not None:
+            if run_direction == step_direction and run and run[-1] == position - 1:
+                run.append(position)
+            else:
+                flush()
+                run = [position - 1, position]
+                run_direction = step_direction
+        else:
+            flush()
+            run = []
+            run_direction = None
+
+    flush()
+    return result
+
+
 def plan_picking(
     track: NormalizedTrack,
     fingering: FingeringResult,
     *,
     context: PlayingContext | None,
 ) -> PickingPlan:
-    """Infer conservative right-hand direction from context plus MIDI evidence."""
+    """Infer conservative right-hand direction from context plus physical/MIDI evidence."""
 
     if len(track.notes) != len(fingering.notes):
         raise ValueError("Track and fingering result contain different note counts.")
@@ -92,6 +148,7 @@ def plan_picking(
 
     groups = _onset_groups(track)
     tremolo_positions = _tremolo_positions(track, groups)
+    sweep_directions = _sweep_directions(track, fingering, groups)
     decisions: list[PickingDecision] = []
     pick_phase = 0
     tremolo_phase = 0
@@ -108,12 +165,9 @@ def plan_picking(
             strum_phase += 1
             decisions.append(
                 PickingDecision(
-                    note_indices=tuple(note_indices),
-                    start_beat=start,
-                    motion="strum",
-                    direction=direction,
-                    confidence=round(min(0.95, 0.72 + 0.18 * strumming), 6),
-                    reason="Chordal onset in an active strumming context.",
+                    tuple(note_indices), start, "strum", direction,
+                    round(min(0.95, 0.72 + 0.18 * strumming), 6),
+                    "Chordal onset in an active strumming context.",
                 )
             )
             continue
@@ -128,32 +182,41 @@ def plan_picking(
             tremolo_phase += 1
             previous_tremolo_position = position
             context_support = max(riff, solo, metal, arpeggio)
+            research = _prior("tremolo", "rapid_repeated_pitch_bias")
+            confidence = 0.84 + 0.06 * context_support + 0.04 * (research - 1.0)
             decisions.append(
                 PickingDecision(
-                    note_indices=tuple(note_indices),
-                    start_beat=start,
-                    motion="pick",
-                    direction=direction,
-                    confidence=round(min(0.96, 0.86 + 0.08 * context_support), 6),
-                    reason=(
-                        "Four-or-more consecutive same-pitch attacks occur at very rapid "
-                        "intervals; context only confidence-weights the tremolo evidence."
-                    ),
+                    tuple(note_indices), start, "pick", direction,
+                    round(min(0.96, confidence), 6),
+                    "Very rapid repeated-pitch run satisfies tremolo evidence; context and research only confidence-weight it.",
                     technique="tremolo",
                 )
             )
             continue
 
         previous_tremolo_position = None
-        if riff >= 0.50 and metal >= 0.45 and _tight_low_repeat(track, groups, position):
+        sweep_direction = sweep_directions.get(position)
+        if arpeggio >= 0.65 and sweep_direction is not None:
+            research = _prior("sweep", "adjacent_string_arpeggio")
+            confidence = 0.78 + 0.10 * arpeggio + 0.04 * (research - 1.0)
             decisions.append(
                 PickingDecision(
-                    note_indices=tuple(note_indices),
-                    start_beat=start,
-                    motion="pick",
-                    direction="down",
-                    confidence=round(min(0.96, 0.72 + 0.12 * riff + 0.10 * metal), 6),
-                    reason="Tight low-register repeated riff favors controlled downstrokes.",
+                    tuple(note_indices), start, "pick", sweep_direction,
+                    round(min(0.95, confidence), 6),
+                    "Fast arpeggio follows a monotonic adjacent-string path in the final fingering.",
+                    technique="sweep",
+                )
+            )
+            continue
+
+        if riff >= 0.50 and metal >= 0.45 and _tight_low_repeat(track, groups, position):
+            research = _prior("downstroke", "tight_repeated_rhythm_bias")
+            confidence = 0.70 + 0.12 * riff + 0.08 * metal + 0.04 * (research - 1.0)
+            decisions.append(
+                PickingDecision(
+                    tuple(note_indices), start, "pick", "down",
+                    round(min(0.96, confidence), 6),
+                    "Tight low-register repeated riff favors controlled downstrokes.",
                 )
             )
             continue
@@ -169,14 +232,13 @@ def plan_picking(
             direction = "down" if pick_phase % 2 == 0 else "up"
             pick_phase += 1
             evidence = max(arpeggio, solo)
+            research = _prior("alternate", "fast_single_note_bias")
+            confidence = 0.66 + 0.18 * evidence + 0.04 * (research - 1.0)
             decisions.append(
                 PickingDecision(
-                    note_indices=tuple(note_indices),
-                    start_beat=start,
-                    motion="pick",
-                    direction=direction,
-                    confidence=round(min(0.92, 0.68 + 0.18 * evidence), 6),
-                    reason="Sequential single-note passage favors alternate picking.",
+                    tuple(note_indices), start, "pick", direction,
+                    round(min(0.92, confidence), 6),
+                    "Sequential single-note passage favors alternate picking.",
                 )
             )
 
