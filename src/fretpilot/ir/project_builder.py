@@ -71,6 +71,7 @@ def _attach_right_hand(project: GuitarProjectIR, analysis: GuitarTrackAnalysis) 
             direction=decision.direction,
             confidence=decision.confidence,
             reason=decision.reason,
+            technique=decision.technique,
         )
         for source_index in decision.note_indices:
             by_source[source_index] = intent
