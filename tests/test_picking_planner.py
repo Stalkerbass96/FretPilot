@@ -51,7 +51,21 @@ def test_rapid_repeated_notes_become_tremolo_alternate_picking() -> None:
     assert all(item.technique == "tremolo" for item in plan.decisions)
 
 
-def test_arpeggio_context_uses_alternate_pick_direction() -> None:
+def test_fast_adjacent_string_arpeggio_can_become_sweep() -> None:
+    track = _track([
+        _note(49, 0.0, 0.2),
+        _note(56, 0.25, 0.2),
+        _note(63, 0.5, 0.2),
+    ])
+    context = compose_playing_context({"rock_arpeggio": 1.0})
+    fingering = optimize_fingering(track, preferences=context.fingering)
+    assert [item.string for item in fingering.notes] == [5, 4, 3]
+    plan = plan_picking(track, fingering, context=context)
+    assert [item.direction for item in plan.decisions] == ["down", "down", "down"]
+    assert all(item.technique == "sweep" for item in plan.decisions)
+
+
+def test_slower_arpeggio_context_uses_alternate_pick_direction() -> None:
     track = _track([
         _note(49, 0.0, 0.45), _note(56, 0.5, 0.45),
         _note(63, 1.0, 0.45), _note(56, 1.5, 0.45),
@@ -61,6 +75,7 @@ def test_arpeggio_context_uses_alternate_pick_direction() -> None:
     plan = plan_picking(track, fingering, context=context)
     assert [item.direction for item in plan.decisions] == ["down", "up", "down", "up"]
     assert all(item.motion == "pick" for item in plan.decisions)
+    assert all(item.technique is None for item in plan.decisions)
 
 
 def test_strumming_context_emits_chord_level_strum_intent() -> None:
