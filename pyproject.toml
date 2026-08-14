@@ -23,6 +23,7 @@ dev = [
 fretpilot = "fretpilot.cli:main"
 fretpilot-pdf = "fretpilot.pdf_cli:main"
 fretpilot-performance-plan = "fretpilot.performance_cli:main"
+fretpilot-prototype-performance = "fretpilot.prototype_performance_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
