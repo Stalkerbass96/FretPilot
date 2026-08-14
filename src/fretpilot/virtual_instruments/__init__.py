@@ -7,6 +7,7 @@ from fretpilot.virtual_instruments.models import (
     ControlAction,
     VirtualGuitarInstrumentProfile,
 )
+from fretpilot.virtual_instruments.registry import get_profile, list_profiles
 
 __all__ = [
     "AMPLE_GUITAR_SC_V4_PROFILE",
@@ -14,4 +15,6 @@ __all__ = [
     "ArticulationCapability",
     "ControlAction",
     "VirtualGuitarInstrumentProfile",
+    "get_profile",
+    "list_profiles",
 ]
