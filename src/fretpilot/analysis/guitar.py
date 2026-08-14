@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from fretpilot.articulation import ArticulationPlan, plan_articulations
 from fretpilot.guitar import FingeringResult, optimize_fingering
+from fretpilot.guitar.fretting_digits import assign_fretting_digits
 from fretpilot.midi.models import NormalizedTrack
 from fretpilot.picking import PickingPlan, plan_picking
 from fretpilot.rhythm import RhythmAnalysis, analyze_track_rhythm
@@ -47,6 +48,7 @@ def analyze_guitar_track(
         max_fret=max_fret,
         preferences=playing_context.fingering if playing_context is not None else None,
     )
+    fingering = assign_fretting_digits(track, fingering)
     articulations = plan_articulations(
         track,
         fingering,
