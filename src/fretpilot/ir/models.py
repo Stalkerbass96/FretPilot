@@ -49,6 +49,15 @@ class IRRightHandIntent:
     reason: str
     technique: str | None = None
 @dataclass(slots=True)
+class IRHarmonyRegion:
+    start_beat: float
+    symbol: str
+    root_pitch_class: int
+    quality: str
+    confidence: float
+    source_note_indices: list[int] = field(default_factory=list)
+    reason: str = ""
+@dataclass(slots=True)
 class NoteConfidence:
     rhythm: float
     fingering: float
@@ -84,6 +93,7 @@ class GuitarTrackIR:
     playing_context: dict[str, Any] | None = None
     section_contexts: list[dict[str, Any]] = field(default_factory=list)
     hand_positions: list[dict[str, Any]] = field(default_factory=list)
+    harmony_regions: list[IRHarmonyRegion] = field(default_factory=list)
 @dataclass(slots=True)
 class Transformation:
     id: str
