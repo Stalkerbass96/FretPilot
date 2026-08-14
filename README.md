@@ -1,74 +1,53 @@
 # FretPilot
 
-**AI-assisted MIDI-to-guitar notation and performance engine.**
+**MIDI-to-guitar notation and virtual-guitar performance engine.**
 
-FretPilot turns raw or imperfect MIDI into guitar-aware musical data that is both **readable by humans** and **playable by virtual guitar instruments**.
+FretPilot turns raw, imperfect, or AI-generated MIDI into guitar-aware musical data that is both **reviewable by a guitarist** and **usable by virtual-guitar adapters**.
 
-The first product target is:
+Current Prototype 0.1 scope:
 
-- Input: MIDI extracted/generated from Suno, other AI music tools, DAWs, or transcription tools
-- Instrument: 6-string standard-tuned guitar
-- Score output: Guitar Pro 5 (`.gp5`)
-- Performance output: Ample Guitar SC 4.x MIDI
-- Core capabilities: stream detection, rhythm repair, guitar fingering, articulation planning, score rendering, and performance rendering
+- input: MIDI Type 0 / Type 1;
+- instrument: standard-tuned six-string guitar, 0–24 frets;
+- score outputs: Guitar Pro 5 (`.gp5`) and PDF/TAB review output;
+- performance target: Ample Guitar SC 4.x MIDI;
+- canonical layer: versioned Guitar IR shared by score/performance paths.
 
-## Product pipeline
-
-```text
-Raw MIDI
-   ↓
-MIDI normalization
-   ↓
-Physical track + channel + program stream resolution
-   ↓
-Layered guitar detection
-   ↓
-Rhythm analysis / repair
-   ↓
-Guitar fingering optimization
-   ↓
-Articulation planning
-   ↓
-Canonical Guitar IR
-   ├──→ Guitar Pro 5 exporter
-   └──→ Ample Guitar SC performance-MIDI renderer
-```
-
-FretPilot deliberately separates **score timing** from **source/performance timing**. A score can use clean note lengths and rests while Ample playback retains ringing notes, overlaps, velocity, and legato timing.
-
-## Design principles
-
-1. **Deterministic engine first.** Timing, validation, fingering constraints, file I/O, and instrument mappings do not depend on an LLM.
-2. **AI is an advisor, not the source of truth.** A model may later rank ambiguous musical choices, but deterministic validation remains mandatory.
-3. **Metadata is evidence, not truth.** Track names and MIDI programs contribute to guitar detection but are checked against note behavior.
-4. **Instrument-aware by design.** Notes become strings, frets, techniques, phrases, score events, and performance events.
-5. **One canonical IR.** Guitar Pro and Ample adapters both consume Guitar IR instead of depending on each other.
-6. **Start narrow.** V0.1 focuses on standard six-string lead, riff, arpeggio, and simple chord material.
-
-## Current runnable vertical slice
+## Current pipeline
 
 ```text
-MIDI file
-→ NormalizedTimeline
-→ InstrumentStream resolution
-→ three-layer guitar candidate ranking
-→ selected stream
-→ rhythm-grid analysis
-→ guitar fingering
-→ articulation planning
-→ measure-aware Guitar IR
-├──→ GP5 export + parse-back test
-└──→ Ample Guitar SC MIDI + event-order test
+MIDI
+→ normalized source timeline
+→ logical Track/Channel/Program InstrumentStreams
+→ layered guitar candidate ranking
+→ selected guitar stream
+→ rhythm / notation analysis
+→ section segmentation
+→ per-section behavior/style PlayingContext
+→ fingering + hand-position / voicing continuity
+→ 1–4 fretting digits
+→ articulation + source-backed pitch movement
+→ right-hand pick / strum / sweep / tremolo intent
+→ conservative harmony regions
+→ canonical Guitar IR
+├──→ GP5
+├──→ PDF/TAB
+├──→ Generic PerformancePlan
+├──→ VI capability diagnostics
+└──→ Ample Guitar SC MIDI
 ```
 
-Current score cleanup recognizes two common guitar-MIDI patterns:
+FretPilot keeps **score timing** separate from **source/performance timing**. Notation may be cleaned without destroying the original performance timing used by playback/performance planning.
 
-- arpeggio notes that continue ringing after the next pick attack;
-- notes struck together as a chord but released at different times.
+## Design rules
 
-FretPilot shortens only the **written** duration where needed, records `let_ring` intent and a change log, and preserves original sustained durations for Ample playback.
+- **Deterministic engine first.** Physical playability, source identity, timing, file validity, and adapter state remain deterministic.
+- **Knowledge is a soft prior.** Style/role/technique knowledge ranks valid guitar choices but never bypasses fretboard constraints.
+- **Metadata is evidence, not truth.** Track names and General MIDI programs help identify guitars but are not absolute labels.
+- **One canonical Guitar IR.** Score and performance adapters consume the same musical intent.
+- **Guitar knowledge and plugin knowledge are separate.** Vendor keyswitches/CC/state never enter Guitar Playing Knowledge or Guitar IR.
+- **Unsupported target behavior is explicit.** Adapters warn, approximate deliberately, or block; they do not silently discard material intent.
 
-## Quick start
+## Install
 
 Requires Python 3.11+.
 
@@ -78,9 +57,9 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 ```
 
-### One-command prototype package
+## One-command prototype package
 
-For every likely guitar stream:
+Generate all likely guitar streams:
 
 ```bash
 fretpilot prototype song.mid \
@@ -88,7 +67,7 @@ fretpilot prototype song.mid \
   -o output/
 ```
 
-For one explicit stream:
+Or select one logical stream explicitly:
 
 ```bash
 fretpilot prototype song.mid \
@@ -96,185 +75,176 @@ fretpilot prototype song.mid \
   -o output/
 ```
 
-The package contains one directory per stream:
+A successful package contains per-stream analysis, Guitar IR, GP5 when supported, Ample MIDI, and a processing report. The normal prototype post-hook also writes Generic PerformancePlan and VI capability sidecars.
+
+Representative layout:
 
 ```text
 output/
 ├── manifest.json
+├── performance-plans.json
+├── vi-capabilities.json
 ├── t0_ch2_p27/
 │   ├── t0_ch2_p27.analysis.json
 │   ├── t0_ch2_p27.guitar-ir.json
 │   ├── t0_ch2_p27.gp5
 │   ├── t0_ch2_p27.ample-sc.mid
-│   └── t0_ch2_p27.report.json
+│   ├── t0_ch2_p27.report.json
+│   ├── t0_ch2_p27.performance-plan.json
+│   └── t0_ch2_p27.vi-capabilities.json
 └── ...
 ```
 
-If GP5 cannot represent a stream yet, the package still keeps the analysis, Guitar IR, Ample MIDI, and report. The manifest records the unsupported output instead of failing the whole batch.
+Unsupported outputs are recorded explicitly rather than causing unrelated outputs for the same stream to disappear.
 
-### Individual commands
+## Useful focused commands
 
-Inspect and rank streams:
+Inspect streams:
 
 ```bash
 fretpilot inspect song.mid
 fretpilot tracks song.mid -o tracks.json
 ```
 
-Analyze and build Guitar IR:
+Analyze/build canonical data:
 
 ```bash
 fretpilot analyze song.mid --stream-id t0:ch2:p27 -o analysis.json
 fretpilot build-ir song.mid --stream-id t0:ch2:p27 -o guitar-ir.json
+fretpilot sections song.mid --stream-id t0:ch2:p27
 ```
 
-Export individual files:
+Export score/performance artifacts:
 
 ```bash
-fretpilot export-gp5 song.mid \
-  --stream-id t0:ch2:p27 \
-  -o song.gp5
-
-fretpilot export-ample-sc song.mid \
-  --stream-id t0:ch2:p27 \
-  -o song-ample-sc.mid
+fretpilot export-gp5 song.mid --stream-id t0:ch2:p27 -o song.gp5
+fretpilot-pdf song.mid --stream-id t0:ch2:p27 -o song.pdf
+fretpilot export-ample-sc song.mid --stream-id t0:ch2:p27 -o song-ample-sc.mid
+fretpilot-performance-plan song.mid --stream-id t0:ch2:p27 -o performance-plan.json
 ```
 
-## Processing report
+## Guitar execution baseline
 
-Each prototype stream report contains:
+Current deterministic/context-aware guitar decisions include:
 
-- stream and detection evidence;
-- guitar probability and confidence;
-- selected rhythm grid;
-- low-confidence rhythm notes;
-- unplayable fingering notes;
-- articulation counts;
-- Guitar IR transformation counts;
-- let-ring conversions;
-- GP5 and Ample output status;
-- warnings and whether manual review is required.
+- six-string string/fret candidates and distinct-string chord solving;
+- movable riff/arpeggio repair and chord-voicing continuity;
+- section-aware hand-position carry/reset;
+- 1–4 fretting digits;
+- hammer-on / pull-off / slide / vibrato;
+- contextual palm mute / staccato;
+- explicit-range monophonic MIDI pitch raises;
+- down/up picking, strum, observed rolled strum, tremolo, and sweep baselines;
+- conservative simultaneous/sequential harmony labels.
+
+Role/style/technique evidence is section-aware and remains a soft ranking prior. The current profiles are useful baselines, not calibrated ground truth.
 
 ## Guitar IR V0.1
 
-Current IR includes:
+Canonical Guitar IR includes, among other fields:
 
-- schema version
-- tempo and time-signature maps
-- measures and beat-in-measure coordinates
-- repaired score onset and duration
-- original source onset, duration, and velocity
-- string/fret assignments
-- generic articulations
-- cross-measure ties
-- `let_ring` intent
-- transformation/change log
+- tempo/time-signature maps;
+- measure/beat coordinates;
+- cleaned score onset/duration;
+- original source onset/duration/velocity;
+- stable source-note identity;
+- string/fret and fretting digit;
+- generic articulations and pitch-movement parameters;
+- right-hand intent;
+- typed harmony regions;
+- section/context and hand-position provenance;
+- ties and transformation/change records.
 
-## GP5 prototype
+Product-specific keyswitch/CC/state data is intentionally excluded.
 
-Currently supported:
+## GP5 baseline
 
-- one guitar track and one notation voice
-- monophonic phrases
-- same-onset chords with normalized equal written duration
-- generated rests for silent gaps
-- straight, dotted, and triplet duration decomposition
-- string/fret assignments
-- ties
-- single-note let ring
-- vibrato
-- hammer-on / pull-off
-- shift slide
+Current GP5 support includes:
 
-The exporter raises an explicit error when a stream requires unsupported independent voices. A partial let-ring marking inside one chord remains in Guitar IR and performance timing, but is omitted from GP5 with a warning because PyGuitarPro 0.11 cannot safely round-trip that combination.
+- rests and duration decomposition;
+- string/fret and fretting-digit mapping;
+- ties;
+- supported articulations;
+- pick direction;
+- observed rolled-strum `BeatStroke`;
+- source-backed integer-semitone pitch curves with conservative fallback for unsupported fractional representation;
+- harmony labels;
+- write + parse-back validation.
 
-## Ample Guitar SC prototype
+Still pending: real Guitar Pro visual acceptance across full songs, true independent two-voice notation, and safer partial let-ring representation inside chords.
 
-Profile:
+## PDF/TAB baseline
+
+The review renderer currently includes:
+
+- landscape six-line TAB;
+- harmony symbols;
+- exact rests;
+- stems, isolated flags, and meter-aware beams;
+- dotted marks and triplet brackets;
+- cross-measure ties;
+- density-aware system breaking and over-density warnings.
+
+It is not publication-grade engraving yet. Mixed-density variable measure widths, collision-aware annotation placement, multi-voice TAB, and paired standard staff + TAB remain future score-quality work.
+
+## Ample Guitar SC 4.x baseline
+
+Approved profile id:
 
 ```text
 ample-guitar-sc-v4
 ```
 
-Currently rendered:
+Current renderer preserves source timing/velocity and supports the regression-covered Sustain, Hammer/Pull, Legato Slide, Natural Harmonic, Palm Mute, and Slide In/Out control paths.
 
-- Sustain state
-- original note timing and velocity
-- original ringing overlaps
-- Hammer-On / Pull-Off keyswitch and required note overlap
-- Legato Slide keyswitch and required note overlap
-- Natural Harmonic, Palm Mute, and Slide In/Out when those intents appear in Guitar IR
-- tempo and time-signature maps
+The provider-neutral VI layer now owns the approved static profile/capability knowledge. Public Ample export runs capability preflight and normalizes the generic profile through a thin compatibility view before delegating event scheduling to the proven legacy scheduler.
 
-Vibrato and bends remain in Guitar IR but are not yet rendered by the SC V0 adapter; the export report emits warnings instead.
+Canonical pick/strum intent, Generic PerformancePlan target adjustments, vibrato, and pitch-raise curves are currently reported as unsupported by the legacy Ample handoff rather than silently approximated.
 
-See [`docs/AMPLE_GUITAR_SC.md`](docs/AMPLE_GUITAR_SC.md) for raw MIDI mapping and timing rules.
+See [`docs/AMPLE_GUITAR_SC.md`](docs/AMPLE_GUITAR_SC.md) for low-level current MIDI mapping details.
 
-## Track detection
+## Track identification
 
-Detection currently uses:
+FretPilot resolves logical `InstrumentStream` objects before guitar analysis and combines:
 
-1. Track-name keywords
-2. Channel, program, and instrument metadata
-3. MIDI note behavior and guitar plausibility
-4. A separate experimental behavior library for solo, riff, strumming, breakdown, and jazz comping
+1. track-name evidence;
+2. channel/program/instrument metadata;
+3. note behavior / guitar plausibility;
+4. a separate section/behavior layer for how selected guitar material is being played.
 
-Track recognition will improve incrementally and is not blocking the output prototype. The dedicated backlog is in [`docs/projects/track-identification/`](docs/projects/track-identification/).
-
-When exactly one high-confidence guitar stream exists, downstream commands may select it automatically. When several likely guitars exist, FretPilot requires an explicit `--stream-id` or `--all-likely-guitars`.
+Track identification is useful but not yet a calibrated finished classifier. Multiple likely guitar streams are not silently collapsed into one.
 
 ## Tests
 
 ```bash
-pytest
+pytest -q
 ```
 
-GitHub Actions verifies, among other cases:
+GitHub Actions covers the main deterministic contracts, including MIDI stream resolution, rhythm/fingering behavior, section-aware execution, hand-position/fretting regressions, Guitar IR round trips, GP5 parse-back, PDF layout helpers, Ample event ordering/profile parity, VI capability negotiation/preflight, and generic shadow-control parity.
 
-- Type-0 channel/program stream separation
-- layered guitar detection
-- rhythm and fingering behavior
-- cross-measure ties
-- articulation links across tied fragments
-- ringing-overlap and unequal-chord normalization
-- GP5 write-and-parse round trip
-- safe GP5 downgrade for partial chord let ring
-- Ample HP keyswitch timing and source/destination overlap
-- complete multi-guitar prototype package generation
+## Documentation source of truth
 
-## Repository layout
+For contributors/agents:
 
 ```text
-FretPilot/
-├── AGENTS.md
-├── README.md
-├── pyproject.toml
-├── docs/
-│   ├── README.md
-│   ├── PRODUCT.md
-│   ├── ARCHITECTURE.md
-│   ├── GUITAR_DETECTION.md
-│   ├── MUSIC_IR.md
-│   ├── AMPLE_GUITAR_SC.md
-│   ├── ROADMAP.md
-│   └── projects/track-identification/
-├── src/fretpilot/
-│   ├── midi/
-│   ├── detection/
-│   ├── knowledge/
-│   ├── analysis/
-│   ├── rhythm/
-│   ├── guitar/
-│   ├── articulation/
-│   ├── ir/
-│   ├── prototype.py
-│   └── exporters/
-│       ├── guitar_pro/
-│       └── ample_guitar/
-├── tests/
-└── .github/workflows/ci.yml
+AGENTS.md                                  entry point / workflow rules
+docs/AI_AGENT_HANDOFF.md                   short current-state handoff
+docs/ROADMAP.md                            product milestone / release gates
+docs/projects/*/BACKLOG.md                 task-level status by TI/GK/VI/SE family
 ```
 
-## Status
+Do not use old chat history as the authoritative project state when these repository documents exist.
 
-FretPilot is an early V0.1 prototype with both target output paths and a one-command multi-guitar package workflow implemented. The next milestone is hands-on validation: open generated GP5 files in Guitar Pro, play generated MIDI through Ample Guitar SC, record measure-level issues, then prioritize true two-voice notation, bend/vibrato rendering, and a simple upload/download interface.
+## Prototype 0.1 status
+
+The architecture and main deterministic vertical slice are in place. Prototype 0.1 is now primarily a **validation and quality-convergence** milestone.
+
+Before external hands-on testing, FretPilot still needs:
+
+- full real-song GP5/TAB musician review and acceptance;
+- at least one real Ample Guitar SC DAW/plugin verification record;
+- continued output-neutral VI handoff coverage;
+- explicit handling of unsupported cases;
+- documentation/reproducibility closeout.
+
+Large-scale online learning, learned rankers, and multiple virtual-guitar products are deliberately not Prototype 0.1 blockers.
