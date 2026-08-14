@@ -119,9 +119,6 @@ def _project():
 
 
 def _planned_keyswitch_signature(plan):
-    note_off_velocity = int(
-        AMPLE_GUITAR_SC_V4_PROFILE.timing_parameters["note_off_velocity"]
-    )
     result = []
     for item in plan.controls:
         action = item.action
@@ -129,9 +126,10 @@ def _planned_keyswitch_signature(plan):
             continue
         assert isinstance(action.target, int)
         velocity = int(action.value) if action.value is not None else 100
+        release_velocity = int(action.release_value) if action.release_value is not None else 0
         duration = int(action.duration_ticks or 0)
         result.append((item.tick, "note_on", action.target, velocity))
-        result.append((item.tick + duration, "note_off", action.target, note_off_velocity))
+        result.append((item.tick + duration, "note_off", action.target, release_velocity))
     return sorted(result)
 
 
@@ -171,6 +169,15 @@ def test_generic_control_plan_matches_legacy_keyswitch_ticks_and_values(tmp_path
     assert plan.timeline_offset_ticks == 30
     assert plan.warnings == []
     assert _planned_keyswitch_signature(plan) == _rendered_keyswitch_signature(output)
+
+    sustain_reset_ticks = [
+        item.tick
+        for item in plan.controls
+        if item.source_event_id in {"n3", "n4", "n5", "n6"}
+        and item.action.kind == "keyswitch_note"
+        and item.action.target == 24
+    ]
+    assert sustain_reset_ticks == [991, 1231, 1471, 1711]
 
 
 def test_generic_control_plan_matches_legacy_legato_note_extensions(tmp_path: Path):
