@@ -14,11 +14,13 @@ from fretpilot.analysis.sections import (
     SectionSegmentation,
     segment_instrument_stream,
 )
+from fretpilot.guitar.fretting_digits import assign_fretting_digits
 from fretpilot.picking.sections import plan_picking_by_sections
 
 
 def analyze_guitar_track_by_sections(track, section_contexts, **kwargs):
     result = _base_sections(track, section_contexts, **kwargs)
+    result.fingering = assign_fretting_digits(track, result.fingering)
     result.picking = plan_picking_by_sections(
         track,
         result.fingering,
@@ -29,9 +31,11 @@ def analyze_guitar_track_by_sections(track, section_contexts, **kwargs):
 
 
 def analyze_guitar_stream_section_aware(timeline, stream, **kwargs):
+    track = stream.as_track()
     result = _base_stream(timeline, stream, **kwargs)
+    result.fingering = assign_fretting_digits(track, result.fingering)
     result.picking = plan_picking_by_sections(
-        stream.as_track(),
+        track,
         result.fingering,
         result.section_contexts,
         kwargs.get("context_overrides"),
