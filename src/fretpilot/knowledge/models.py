@@ -12,6 +12,33 @@ VALID_KNOWLEDGE_STATUSES = frozenset(
 
 
 @dataclass(frozen=True, slots=True)
+class KnowledgeSource:
+    """One reusable source record referenced by any number of entries."""
+
+    source_id: str
+    source_type: str
+    title: str
+    creator: str | None = None
+    reference: str | None = None
+    license: str | None = None
+    allowed_uses: tuple[str, ...] = ()
+    notes: str = ""
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> KnowledgeSource:
+        return cls(
+            source_id=str(data["source_id"]),
+            source_type=str(data["source_type"]),
+            title=str(data["title"]),
+            creator=(str(data["creator"]) if data.get("creator") else None),
+            reference=(str(data["reference"]) if data.get("reference") else None),
+            license=(str(data["license"]) if data.get("license") else None),
+            allowed_uses=tuple(str(item) for item in data.get("allowed_uses", ())),
+            notes=str(data.get("notes", "")),
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class KnowledgeProvenance:
     """Where one knowledge item came from and how it may be used."""
 
@@ -19,6 +46,17 @@ class KnowledgeProvenance:
     reference: str | None = None
     license: str | None = None
     notes: str = ""
+    source_ids: tuple[str, ...] = ()
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> KnowledgeProvenance:
+        return cls(
+            source_type=str(data.get("source_type", "hand_authored")),
+            reference=(str(data["reference"]) if data.get("reference") else None),
+            license=(str(data["license"]) if data.get("license") else None),
+            notes=str(data.get("notes", "")),
+            source_ids=tuple(str(item) for item in data.get("source_ids", ())),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,7 +109,9 @@ class KnowledgeEntry:
             status=str(data["status"]),
             payload=dict(data.get("payload", {})),
             scope=scope,
-            provenance=KnowledgeProvenance(**dict(data.get("provenance", {}))),
+            provenance=KnowledgeProvenance.from_dict(
+                dict(data.get("provenance", {}))
+            ),
             evaluation=KnowledgeEvaluation(**dict(data.get("evaluation", {}))),
         )
 
@@ -87,6 +127,7 @@ class KnowledgeSnapshot:
     schema_version: str
     status: str
     entries: tuple[KnowledgeEntry, ...]
+    sources: tuple[KnowledgeSource, ...] = ()
 
     def __post_init__(self) -> None:
         if self.status not in VALID_KNOWLEDGE_STATUSES:
@@ -97,6 +138,22 @@ class KnowledgeSnapshot:
         identifiers = [entry.knowledge_id for entry in self.entries]
         if len(identifiers) != len(set(identifiers)):
             raise ValueError("knowledge IDs must be unique within one snapshot.")
+        source_ids = [source.source_id for source in self.sources]
+        if len(source_ids) != len(set(source_ids)):
+            raise ValueError("knowledge source IDs must be unique within one snapshot.")
+        unknown_source_ids = sorted(
+            {
+                source_id
+                for entry in self.entries
+                for source_id in entry.provenance.source_ids
+                if source_id not in source_ids
+            }
+        )
+        if unknown_source_ids:
+            raise ValueError(
+                "knowledge entries reference unknown sources: "
+                + ", ".join(unknown_source_ids)
+            )
         mismatched = [
             entry.knowledge_id
             for entry in self.entries
@@ -117,6 +174,10 @@ class KnowledgeSnapshot:
             entries=tuple(
                 KnowledgeEntry.from_dict(item)
                 for item in data.get("entries", [])
+            ),
+            sources=tuple(
+                KnowledgeSource.from_dict(item)
+                for item in data.get("sources", [])
             ),
         )
 

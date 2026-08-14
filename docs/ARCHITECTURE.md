@@ -185,7 +185,7 @@ Current components include:
 
 - behavior profiles (`solo`, `riff`, `strumming`, `breakdown`, `jazz_comping`);
 - shared `KnowledgeEntry`, provenance, evaluation, snapshot, and registry contracts;
-- pinned built-in snapshot `2026.08.1` loaded from a packaged JSON asset;
+- pinned built-in snapshot `2026.08.2` loaded from a packaged JSON asset;
 - composable `PlayingContext` dimensions;
 - role/style/technique profiles;
 - fingering, articulation, and performance preferences.

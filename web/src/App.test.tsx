@@ -49,15 +49,25 @@ describe("FretPilot studio", () => {
         return Promise.resolve({
           ok: true,
           json: async () => ({
-            snapshot_version: "2026.08.1",
+            snapshot_version: "2026.08.2",
             schema_version: "1",
             status: "approved",
+            sources: [{
+              source_id: "source.book.total_rock_guitar",
+              source_type: "user_provided_reference",
+              title: "Total Rock Guitar",
+              creator: "Troy Stetina",
+              reference: "User-provided PDF review copy",
+              license: "Copyrighted reference",
+              allowed_uses: ["analysis", "derived_abstractions"],
+              notes: "Registered once at snapshot level.",
+            }],
             entries: [{
               knowledge_id: "gk.profile.metal",
               domain: "guitar_playing",
               kind: "playing_profile",
               schema_version: "1",
-              knowledge_version: "2026.08.1",
+              knowledge_version: "2026.08.2",
               status: "approved",
               payload: {
                 profile_id: "metal",
@@ -82,7 +92,7 @@ describe("FretPilot studio", () => {
               domain: "guitar_playing",
               kind: "execution_rule",
               schema_version: "1",
-              knowledge_version: "2026.08.1",
+              knowledge_version: "2026.08.2",
               status: "candidate",
               payload: {
                 label: "休止处双手联合止音",
@@ -93,14 +103,14 @@ describe("FretPilot studio", () => {
                 soft_preferences: [],
                 exceptions: [],
                 engine_targets: ["articulation", "performance_plan"],
-                source_sections: ["Lesson 1 — Rests"],
               },
               scope: { roles: ["riff"] },
               provenance: {
-                source_type: "user_provided_reference",
-                reference: "Total Rock Guitar — Lesson 1",
-                license: "Derived abstractions only.",
+                source_type: "curated_reference",
+                reference: null,
+                license: null,
                 notes: "No source notation embedded.",
+                source_ids: ["source.book.total_rock_guitar"],
               },
               evaluation: { benchmark_version: null, status: "untested", notes: "Needs review." },
             }],
@@ -181,7 +191,8 @@ describe("FretPilot studio", () => {
     await user.click(screen.getByRole("button", { name: "筛选：演奏动作" }));
     expect(screen.getByRole("heading", { name: "休止处双手联合止音" })).toBeInTheDocument();
     expect(screen.getByText("休止处不得让前一音自然延续。")).toBeInTheDocument();
-    expect(screen.getByText("Lesson 1 — Rests")).toBeInTheDocument();
+    expect(screen.getByText("Total Rock Guitar")).toBeInTheDocument();
+    expect(screen.queryByText(/Lesson 1/)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: /音源适配/ }));
     expect(await screen.findByRole("heading", { name: "Ample Metal Eclipse" })).toBeInTheDocument();

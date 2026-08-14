@@ -20,6 +20,7 @@ import {
   type InstrumentAction,
   type KnowledgeEntry,
   type KnowledgeSnapshot,
+  type KnowledgeSource,
   type VirtualInstrumentProfile,
   type VirtualInstrumentSummary,
 } from "./api";
@@ -44,7 +45,6 @@ const payloadFieldLabels: Record<string, string> = {
   soft_preferences: "软偏好",
   exceptions: "例外与边界",
   engine_targets: "可赋能模块",
-  source_sections: "教材位置",
   formula: "音程 / 公式",
   relations: "关系说明",
 };
@@ -125,17 +125,32 @@ function PreferenceGroup({
   );
 }
 
-function Provenance({ entry }: { entry: KnowledgeEntry }) {
+function Provenance({ entry, sources }: { entry: KnowledgeEntry; sources: KnowledgeSource[] }) {
+  const linkedSources = (entry.provenance.source_ids ?? [])
+    .map((sourceId) => sources.find((source) => source.source_id === sourceId))
+    .filter((source): source is KnowledgeSource => source !== undefined);
   return (
     <section className="knowledge-detail-section">
       <h3>来源与评估</h3>
       <div className="provenance-card">
         <div><span>来源类型</span><strong>{titleCase(entry.provenance.source_type)}</strong></div>
-        <div><span>参考</span><strong>{entry.provenance.reference ?? "未记录"}</strong></div>
+        <div><span>{linkedSources.length ? "关联来源" : "参考"}</span><strong>{linkedSources.length ? `${linkedSources.length} 个来源` : (entry.provenance.reference ?? "未记录")}</strong></div>
         <div><span>评估</span><strong>{statusLabel(entry.evaluation.status)}</strong></div>
         <div><span>基准版本</span><strong>{entry.evaluation.benchmark_version ?? "尚无"}</strong></div>
       </div>
       {entry.provenance.notes && <p className="knowledge-note">{entry.provenance.notes}</p>}
+      {linkedSources.length > 0 && (
+        <div className="knowledge-source-list">
+          {linkedSources.map((source) => (
+            <div key={source.source_id}>
+              <span><strong>{source.title}</strong><small>{source.creator ?? titleCase(source.source_type)}</small></span>
+              <code>{source.source_id}</code>
+              <p>{source.notes}</p>
+              <small>允许用途：{source.allowed_uses.map(titleCase).join(" / ")}</small>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -152,7 +167,7 @@ function TextKnowledgeSection({ title, values }: { title: string; values: string
   );
 }
 
-function PlayingKnowledgeDetail({ entry }: { entry: KnowledgeEntry }) {
+function PlayingKnowledgeDetail({ entry, sources }: { entry: KnowledgeEntry; sources: KnowledgeSource[] }) {
   const payload = entry.payload as {
     label?: string;
     description?: string;
@@ -168,7 +183,6 @@ function PlayingKnowledgeDetail({ entry }: { entry: KnowledgeEntry }) {
     soft_preferences?: string[];
     exceptions?: string[];
     engine_targets?: string[];
-    source_sections?: string[];
     formula?: string;
     relations?: string[];
     notes?: Array<{
@@ -217,7 +231,6 @@ function PlayingKnowledgeDetail({ entry }: { entry: KnowledgeEntry }) {
       )}
 
       <TextKnowledgeSection title={payloadFieldLabels.engine_targets} values={(payload.engine_targets ?? []).map(titleCase)} />
-      <TextKnowledgeSection title={payloadFieldLabels.source_sections} values={payload.source_sections ?? []} />
 
       {payload.notes && (
         <section className="knowledge-detail-section">
@@ -247,7 +260,7 @@ function PlayingKnowledgeDetail({ entry }: { entry: KnowledgeEntry }) {
           )))}
         </div>
       </section>
-      <Provenance entry={entry} />
+      <Provenance entry={entry} sources={sources} />
     </article>
   );
 }
@@ -528,7 +541,7 @@ export function KnowledgeView() {
             )}
           </aside>
           <div className="knowledge-detail-wrap">
-            {mode === "playing" && selectedEntry && <PlayingKnowledgeDetail entry={selectedEntry} />}
+            {mode === "playing" && selectedEntry && <PlayingKnowledgeDetail entry={selectedEntry} sources={snapshot?.sources ?? []} />}
             {mode === "instruments" && selectedProfile && <InstrumentDetail profile={selectedProfile} />}
             {((mode === "playing" && !selectedEntry) || (mode === "instruments" && !selectedProfile)) && (
               <div className="knowledge-empty"><CheckCircle2 size={22} /><strong>没有匹配条目</strong><span>试试其他搜索条件。</span></div>
