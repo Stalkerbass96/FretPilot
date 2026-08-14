@@ -40,6 +40,7 @@ def _ensure_section_picking(track: NormalizedTrack, analysis: GuitarTrackAnalysi
                     string=analysis.fingering.notes[global_index].string,
                     fret=analysis.fingering.notes[global_index].fret,
                     local_cost=analysis.fingering.notes[global_index].local_cost,
+                    fretting_digit=analysis.fingering.notes[global_index].fretting_digit,
                 )
                 for local_index, global_index in enumerate(indices)
             ],
@@ -77,6 +78,22 @@ def _attach_right_hand(project: GuitarProjectIR, analysis: GuitarTrackAnalysis) 
         for event in measure.events:
             if not event.score.tie_in:
                 event.right_hand = by_source.get(event.source_note_index)
+
+
+def _attach_fretting_digits(
+    project: GuitarProjectIR,
+    analysis: GuitarTrackAnalysis,
+) -> None:
+    if not project.tracks:
+        return
+    digits = {
+        item.note_index: item.fretting_digit
+        for item in analysis.fingering.notes
+        if item.fretting_digit is not None
+    }
+    for measure in project.tracks[0].measures:
+        for event in measure.events:
+            event.fingering.fretting_digit = digits.get(event.source_note_index)
 
 
 def _attach_articulation_parameters(
@@ -123,6 +140,7 @@ def build_guitar_ir(
         role=role,
     )
     _attach_right_hand(project, analysis)
+    _attach_fretting_digits(project, analysis)
     _attach_articulation_parameters(project, analysis)
     if not project.tracks:
         return project
