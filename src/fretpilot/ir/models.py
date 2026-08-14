@@ -47,6 +47,7 @@ class IRRightHandIntent:
     direction: str
     confidence: float
     reason: str
+    technique: str | None = None
 @dataclass(slots=True)
 class NoteConfidence:
     rhythm: float
