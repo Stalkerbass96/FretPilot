@@ -127,6 +127,93 @@ def _sweep_directions(
     return result
 
 
+def _rolled_strums(
+    track: NormalizedTrack,
+    fingering: FingeringResult,
+    *,
+    strumming_score: float,
+    arpeggio_score: float,
+) -> list[PickingDecision]:
+    """Detect short staggered chord attacks from source timing and final strings."""
+
+    if arpeggio_score >= 0.65:
+        return []
+
+    order = sorted(
+        range(len(track.notes)),
+        key=lambda index: (track.notes[index].start_beat, index),
+    )
+    decisions: list[PickingDecision] = []
+    cursor = 0
+    while cursor < len(order):
+        first = order[cursor]
+        first_start = track.notes[first].start_beat
+        candidate = [first]
+        position = cursor + 1
+        while position < len(order) and len(candidate) < 6:
+            index = order[position]
+            note = track.notes[index]
+            if note.start_beat - first_start > 0.12 + 1e-9:
+                break
+            previous = track.notes[candidate[-1]]
+            if note.start_beat <= previous.start_beat + 1e-9:
+                break
+            candidate.append(index)
+            position += 1
+
+        accepted: list[int] | None = None
+        direction: str | None = None
+        for length in range(len(candidate), 2, -1):
+            window = candidate[:length]
+            strings = [fingering.notes[index].string for index in window]
+            if any(string is None for string in strings):
+                continue
+            deltas = [
+                int(current) - int(previous)
+                for previous, current in zip(strings, strings[1:], strict=False)
+            ]
+            if not deltas or not all(delta == deltas[0] for delta in deltas):
+                continue
+            if deltas[0] not in (-1, 1):
+                continue
+            last_start = track.notes[window[-1]].start_beat
+            minimum_end = min(
+                track.notes[index].start_beat + track.notes[index].duration_beats
+                for index in window
+            )
+            if minimum_end - last_start < 0.10 - 1e-9:
+                continue
+            accepted = window
+            direction = "down" if deltas[0] == -1 else "up"
+            break
+
+        if accepted is None or direction is None:
+            cursor += 1
+            continue
+
+        confidence = min(0.97, 0.90 + 0.05 * strumming_score)
+        decisions.append(
+            PickingDecision(
+                note_indices=tuple(accepted),
+                start_beat=track.notes[accepted[0]].start_beat,
+                motion="strum",
+                direction=direction,
+                confidence=round(confidence, 6),
+                reason=(
+                    "Source notes enter as a short staggered, overlapping chord attack "
+                    "across monotonic adjacent strings."
+                ),
+                technique="rolled_strum",
+            )
+        )
+        consumed = set(accepted)
+        cursor += 1
+        while cursor < len(order) and order[cursor] in consumed:
+            cursor += 1
+
+    return decisions
+
+
 def plan_picking(
     track: NormalizedTrack,
     fingering: FingeringResult,
@@ -149,13 +236,25 @@ def plan_picking(
     groups = _onset_groups(track)
     tremolo_positions = _tremolo_positions(track, groups)
     sweep_directions = _sweep_directions(track, fingering, groups)
-    decisions: list[PickingDecision] = []
+    decisions: list[PickingDecision] = _rolled_strums(
+        track,
+        fingering,
+        strumming_score=strumming,
+        arpeggio_score=arpeggio,
+    )
+    consumed_notes = {
+        index
+        for decision in decisions
+        for index in decision.note_indices
+    }
     pick_phase = 0
     tremolo_phase = 0
     previous_tremolo_position: int | None = None
     strum_phase = 0
 
     for position, note_indices in enumerate(groups):
+        if consumed_notes.intersection(note_indices):
+            continue
         if not all(fingering.notes[index].playable for index in note_indices):
             continue
         start = track.notes[note_indices[0]].start_beat
@@ -242,4 +341,5 @@ def plan_picking(
                 )
             )
 
+    decisions.sort(key=lambda item: (item.start_beat, item.note_indices[0]))
     return PickingPlan(track.index, track.name, decisions)
