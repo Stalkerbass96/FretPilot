@@ -1,357 +1,111 @@
 # FretPilot Architecture
 
-## Architectural goal
+FretPilot turns imperfect MIDI into guitar-aware score and performance
+artifacts. Hard physical/file constraints are deterministic; versioned
+knowledge only ranks valid musical choices.
 
-FretPilot converts imperfect symbolic MIDI into guitar-aware notation and performance data while remaining independent of any single LLM, score format, or virtual instrument.
-
-The current architecture is:
-
-```text
-Input Foundation
-      ↓
-Instrument Intelligence
-      ↓
-Musical / Guitar Intelligence
-      ↓
-Canonical Guitar IR
-      ↓
-Output / Virtual-Instrument Adapters
-```
-
-Long-term evolution adds a separate offline Learning Plane. See [`LONG_TERM_ARCHITECTURE.md`](LONG_TERM_ARCHITECTURE.md).
-
----
-
-## Current executable pipeline
+## One runtime path
 
 ```text
-.mid
- ↓
-MIDI parser
- ↓
-NormalizedTimeline
- ↓
-InstrumentStream resolver
- ↓
-Layered guitar candidate detection
- ↓
-Selected InstrumentStream
- ↓
-Rhythm analysis / notation repair
- ↓
-Fingering optimizer
- ↓
-Articulation planner
- ↓
-GuitarTrackAnalysis
- ↓
-Guitar IR
- ├── PDF/TAB preview
- ├── GP5 exporter
- └── Performance intent
-       ↓
-   Ample Guitar SC profile/renderer
-       ↓
-   Ample-compatible MIDI
+MIDI
+→ NormalizedTimeline
+→ logical InstrumentStream resolution
+→ guitar detection and selection
+→ adjustable note rationalization
+→ section/context analysis
+→ fingering, articulation, picking, harmony
+→ GuitarTrackAnalysis
+→ canonical Guitar IR
+├─→ PDF/TAB
+├─→ GP5
+├─→ Generic PerformancePlan
+├─→ VI capability report
+└─→ Ample Guitar SC MIDI
 ```
 
-The prototype also supports batch packaging for likely guitar streams.
+`generate_prototype_package()` is the product-level conversion pipeline. The
+CLI and API call it directly. Performance and VI sidecars are generated inside
+that pipeline, so console, `python -m fretpilot`, and API execution share the
+same behavior.
 
-The local product shell wraps this pipeline without duplicating music policy:
+The web path adds delivery concerns only:
 
 ```text
-React client
-  ↓ multipart MIDI + fidelity + requested formats
-FastAPI `api` module
-  ↓ bounded local job queue
-prototype package generator (all likely guitar streams)
-  ↓ opaque artifact IDs
-per-stream status and downloads
+React UI → FastAPI → bounded JobManager → generate_prototype_package()
 ```
 
-The API owns upload limits, job lifecycle, local file isolation, and delivery.
-The existing engine remains the only owner of detection, rewriting, fingering,
-articulation, IR, and exporter decisions. V0.1 job metadata is in memory; moving
-to a persistent queue must preserve this boundary and the public job contract.
+The API owns uploads, job state, output selection, isolation, and downloads. It
+does not own musical policy.
 
-The Ample path is the first implementation of a broader virtual-guitar adapter architecture. The generic provider-neutral profile model now lives in `src/fretpilot/virtual_instruments/`; migration of the working Ample profile is intentionally deferred so the prototype remains stable.
+## Canonical contracts
 
----
+| Contract | Purpose |
+|---|---|
+| `NormalizedTimeline` | Loss-minimized MIDI source truth |
+| `InstrumentStream` | Logical track/channel/program stream |
+| `GuitarTrackAnalysis` | Guitar decisions before output formatting |
+| `GuitarProjectIR` | Shared score/performance musical intent |
+| `GuitarPerformancePlan` | Target-neutral performance realization |
+| `VirtualGuitarInstrumentProfile` | Product/version capability and control knowledge |
 
-## Module boundaries
+Score timing and source/performance timing are separate. Product-specific
+keyswitches, CCs, latch state, and approximations never enter Guitar IR.
 
-### `api`
+## Module ownership
 
-**Implemented local V0.1.** Owns product orchestration, not musical reasoning.
+| Module | Owns | Must not own |
+|---|---|---|
+| `midi` | parsing, metadata, source timing | musical repair |
+| `detection` | logical streams, guitar identity confidence | playing-style decisions |
+| `rewrite` | explicit add/delete/transpose repairs and provenance | hidden source mutation |
+| `analysis` | sections, context, pipeline orchestration | output formatting |
+| `rhythm` | notation grids and score timing | performance timing replacement |
+| `guitar` | fretboard feasibility and fingering | plugin controls |
+| `knowledge` | versioned guitarist behavior/preferences | vendor mappings |
+| `articulation`, `picking`, `harmony` | target-neutral musical intent | renderer policy |
+| `ir` | canonical project/event representation | target-specific state |
+| `performance` | target-neutral timing/velocity/overlap intent | keyswitch scheduling |
+| `virtual_instruments` | product-neutral VI contracts and negotiation | source analysis |
+| `exporters` | GP5, PDF, and Ample realization | re-inferring musical intent |
+| `api` | jobs, uploads, artifact delivery | duplicated engine logic |
+| `web` | presentation and user workflow | Python musical policy |
 
-Responsibilities include:
+## Implementation truths
 
-- validated, size-limited MIDI uploads;
-- bounded in-process conversion jobs;
-- queued/processing/completed/failed state;
-- all-likely-guitar batch execution;
-- selected-format generation;
-- per-stream output status;
-- artifact lookup through opaque IDs rather than client-supplied paths.
+- Section-aware execution lives in
+  `src/fretpilot/analysis/section_execution.py`.
+- `src/fretpilot/analysis/__init__.py` exports it without wrapping behavior.
+- `src/fretpilot/analysis/section_aware.py` is import compatibility only.
+- Prototype orchestration lives in `src/fretpilot/prototype.py`.
+- `entrypoint.py` and `prototype_performance_cli.py` are compatibility shims;
+  they do not add conversion behavior.
+- Behavior profile contracts belong to `knowledge`; detection may consume them,
+  but knowledge does not import detection.
 
-Future work includes persistent job/project storage, cancellation, granular
-progress events, and explicit stream selection before expensive export.
+## Runtime knowledge
 
-### `midi`
-
-**Implemented.** Owns source truth and MIDI normalization.
-
-Responsibilities include:
-
-- Standard MIDI parsing;
-- PPQ/tick preservation;
-- tempo/time-signature maps;
-- track/channel/program metadata;
-- note pairing and diagnostics;
-- source timing retained without musical quantization.
-
-Invariant:
-
-> MIDI import preserves what the source contained. Musical repair happens later.
-
-### `detection`
-
-**Implemented V0, long-term evolvable.**
-
-Responsibilities include:
-
-- resolving logical `InstrumentStream` objects from physical Track/Channel/Program information;
-- three-layer guitar identity evidence;
-- candidate ranking and explicit ambiguity handling;
-- behavior features for the experimental Layer-4 knowledge library.
-
-Detailed work lives under `projects/track-identification/` (`TI-*`).
-
-### `analysis`
-
-**Implemented orchestration, future musical-context owner.**
-
-Current responsibility:
-
-- combine rhythm, fingering, and articulation results.
-
-Long-term responsibilities include:
-
-- measure/phrase/section context;
-- motif/repetition;
-- harmony;
-- role/style/technique-family inference;
-- shared region context consumed by downstream modules.
-
-### `rhythm`
-
-**Implemented V0/V0.1 notation repair.**
-
-Responsibilities include:
-
-- onset grid analysis;
-- straight/triplet candidate families;
-- duration spelling;
-- measure-aware score timing;
-- rests/ties via Guitar IR construction;
-- preserving source/performance timing separately from score timing.
-
-Invariant:
-
-> Score timing and performance timing are different representations.
-
-The IR/GP5/PDF path preserves a conservative second voice for clearly unequal
-same-onset chord releases when string reuse is safe. Future work includes
-section-dependent grids, swing, richer tuplets, and general voice separation
-for arbitrary overlapping material.
-
-### `guitar`
-
-**Implemented V0/V0.2 fingering engine.**
-
-Responsibilities include:
-
-- tuning/fretboard model;
-- pitch → legal string/fret candidates;
-- hard physical feasibility;
-- phrase-level fingering optimization;
-- simultaneous-chord distinct-string solving;
-- movable riff/arpeggio shape repair.
-
-Hard playability is deterministic. Which valid path is most guitarist-like is a long-term evolvable ranking problem.
-
-### `knowledge`
-
-**Implemented initial unified knowledge snapshot and guitar-playing layer.**
-
-Current components include:
-
-- behavior profiles (`solo`, `riff`, `strumming`, `breakdown`, `jazz_comping`);
-- shared `KnowledgeEntry`, provenance, evaluation, snapshot, and registry contracts;
-- pinned built-in snapshot `2026.08.2` loaded from a packaged JSON asset;
-- composable `PlayingContext` dimensions;
-- role/style/technique profiles;
-- fingering, articulation, and performance preferences.
-- candidate reusable shapes plus lesson-sourced execution, rhythm, phrase, and
-  harmonic knowledge for offline review and evaluation.
-
-Guitar IR, processing reports, manifests, and API jobs record the pinned
-snapshot version; contexts and Guitar IR also record the exact profile entry
-IDs used. Candidate knowledge is catalogued but does not influence runtime
-ranking until separately evaluated, integrated, and approved.
-
-Important distinction:
+Runtime uses approved, pinned snapshots. Guitar IR, reports, manifests, and API
+jobs record the snapshot version; section contexts also record the exact entry
+IDs used. Candidate or lesson-derived knowledge does not affect production
+until it is evaluated and promoted.
 
 ```text
-role: solo/riff/strumming/comping
-style: metal/rock/jazz/blues/...
-technique family: legato/arpeggio/sweep/fingerstyle/...
+TI / Layers 1–3 = which stream is guitar?
+GK / Layer 4    = how is this section likely played?
+VI              = how can a product realize the intent?
+SE              = how are evidence and promotion governed?
 ```
 
-These dimensions compose instead of being flattened into one genre label.
+## Current infrastructure limits
 
-This module describes guitarist behavior and musical preferences. It must not contain vendor-specific virtual-instrument controls.
+- API job state is process-local and in memory.
+- PDF is a review renderer, not publication engraving.
+- Ample Guitar SC is the only runtime virtual-guitar target.
+- The generic VI control plan is still checked in shadow mode against the
+  proven Ample scheduler.
+- Behavior/style profiles are deterministic baselines, not calibrated truth.
 
-Detailed work lives under `projects/guitar-playing-knowledge/` (`GK-*`).
-The common contract and update workflow are documented in
-[`KNOWLEDGE_BASE.md`](KNOWLEDGE_BASE.md).
-
-### `articulation`
-
-**Implemented conservative V0.**
-
-Current generic techniques include:
-
-- hammer-on;
-- pull-off;
-- slide;
-- vibrato.
-
-The module stores musical intent, not plugin keyswitches.
-
-Future work includes bends, palm mute, picking/stroke direction, harmonics, tapping, and style/phrase-aware priors.
-
-### Canonical Guitar IR
-
-**Implemented schema/builder.**
-
-Guitar IR is the contract between musical reasoning and output adapters. It carries:
-
-- score timing;
-- preserved source/performance timing;
-- measure/event coordinates;
-- string/fret assignment;
-- generic articulation intent;
-- ties/let-ring transformations;
-- confidence/warnings/change records.
-
-Invariant:
-
-> Output-specific plugin mappings do not belong in Guitar IR.
-
-### `virtual_instruments`
-
-**Generic schema foundation implemented; product migration pending.**
-
-This module owns provider-neutral knowledge models that describe how a target virtual-guitar instrument can realize canonical performance intent.
-
-Current model types include:
-
-- `VirtualGuitarInstrumentProfile`;
-- `ArticulationCapability`;
-- `ControlAction`;
-- `AdapterEvidence`.
-
-Long-term responsibilities include:
-
-- product/version identity;
-- playable range and capabilities;
-- native / approximated / unsupported intent negotiation;
-- keyswitch/CC/velocity/program/pitch-bend binding descriptions;
-- string/position forcing capability;
-- timing/legato overlap requirements;
-- state/latch/reset semantics;
-- evidence/provenance and verification maturity.
-
-Important distinction:
-
-```text
-Guitar Playing Knowledge
-= what a real guitarist is likely to do
-
-Virtual Guitar Instrument Knowledge
-= how a specific software instrument must be controlled
-```
-
-Detailed work lives under `projects/virtual-guitar-instruments/` (`VI-*`).
-
-### `exporters/guitar_pro`
-
-**Implemented GP5 prototype.**
-
-Current support includes rests, duration decomposition, string/fret mapping, ties, basic techniques, GP5 writing, and automated parse-back validation.
-
-Remaining quality work includes visual review, richer two-voice notation, and difficult chord/let-ring cases.
-
-### PDF/TAB renderer
-
-**Implemented prototype review renderer.**
-
-PDF exists so users can inspect output without Guitar Pro. Its notation quality remains under active development and should converge toward musician-readable TAB rather than debug visualization.
-
-### `exporters/ample_guitar`
-
-**Implemented Ample Guitar SC 4.x prototype adapter.**
-
-Owns current product-specific details such as:
-
-- keyswitches;
-- note overlaps;
-- articulation mappings;
-- plugin/version-specific conventions.
-
-The renderer consumes Guitar IR/source performance data; it must not redefine musical intent.
-
-Current Ample static profile data remains in this package until `VI-002` migrates it to the generic virtual-instrument profile contract. Existing behavior should remain green during that migration.
-
-Future virtual-guitar products should be added through `VI-*` rather than by copying Ample assumptions into shared code.
-
-### `ai`
-
-**Optional/future by design.**
-
-Possible responsibilities:
-
-- structured ambiguous-choice ranking;
-- phrase/style advisor;
-- provider abstraction;
-- retrieval/context assistance.
-
-The deterministic engine must remain functional with AI disabled.
-
----
-
-## Runtime vs Learning
-
-Runtime processing uses deterministic code plus approved/versioned knowledge states and target-instrument profiles.
-
-Future self-evolution happens offline:
-
-```text
-eligible sources / corrections / golden material / adapter evidence
-→ provenance + quality + deduplication/verification
-→ feature extraction / training / capability extraction
-→ candidate knowledge or adapter profile
-→ evaluation / conformance tests
-→ approved snapshot/profile
-→ Runtime
-```
-
-Runtime must never silently modify production knowledge or product mappings while processing a user request.
-
-See:
-
-- [`LONG_TERM_ARCHITECTURE.md`](LONG_TERM_ARCHITECTURE.md)
-- [`projects/system-evolution/README.md`](projects/system-evolution/README.md)
-- [`projects/guitar-playing-knowledge/LEARNING_PIPELINE.md`](projects/guitar-playing-knowledge/LEARNING_PIPELINE.md)
-- [`projects/virtual-guitar-instruments/README.md`](projects/virtual-guitar-instruments/README.md)
+Long-term learning architecture is documented in
+[`LONG_TERM_ARCHITECTURE.md`](LONG_TERM_ARCHITECTURE.md). Current priorities are
+in [`ROADMAP.md`](ROADMAP.md); task details remain in the `TI-*`, `GK-*`,
+`VI-*`, and `SE-*` project backlogs.

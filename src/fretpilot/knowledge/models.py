@@ -11,6 +11,18 @@ VALID_KNOWLEDGE_STATUSES = frozenset(
 )
 
 
+@dataclass(slots=True)
+class BehaviorProfileMatch:
+    """One explainable match against a guitar-behavior knowledge profile."""
+
+    profile_id: str
+    label: str
+    score: float
+    status: str
+    matched_features: list[str] = field(default_factory=list)
+    missing_features: list[str] = field(default_factory=list)
+
+
 @dataclass(frozen=True, slots=True)
 class KnowledgeSource:
     """One reusable source record referenced by any number of entries."""

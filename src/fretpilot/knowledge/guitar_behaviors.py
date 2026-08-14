@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Mapping
 
-from fretpilot.detection.models import BehaviorProfileMatch
+from fretpilot.knowledge.models import BehaviorProfileMatch
 
 LIBRARY_VERSION = "0.2"
 

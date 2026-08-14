@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from fretpilot.knowledge.models import BehaviorProfileMatch
 from fretpilot.midi.models import NormalizedNote, NormalizedTrack
 
 
@@ -88,16 +89,6 @@ class DetectionLayerResult:
     status: str
     reasons: list[str] = field(default_factory=list)
     metrics: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass(slots=True)
-class BehaviorProfileMatch:
-    profile_id: str
-    label: str
-    score: float
-    status: str
-    matched_features: list[str] = field(default_factory=list)
-    missing_features: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)

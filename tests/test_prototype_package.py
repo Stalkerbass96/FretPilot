@@ -87,6 +87,8 @@ def test_all_likely_guitars_receive_complete_output_packages(tmp_path: Path) -> 
 
     assert len(manifest.selected_stream_ids) == 2
     assert (output / "manifest.json").exists()
+    assert (output / "performance-plans.json").exists()
+    assert (output / "vi-capabilities.json").exists()
 
     for result in manifest.stream_results:
         assert result.analysis.status == "success"
@@ -95,6 +97,8 @@ def test_all_likely_guitars_receive_complete_output_packages(tmp_path: Path) -> 
         assert result.pdf.status == "success"
         assert result.gp5.status == "success"
         assert result.ample_sc_midi.status == "success"
+        assert result.performance_plan.status == "success"
+        assert result.vi_capabilities.status == "success"
         assert result.report.status == "success"
         assert result.analysis.path and Path(result.analysis.path).exists()
         assert result.rewrite.path and Path(result.rewrite.path).exists()
@@ -102,6 +106,10 @@ def test_all_likely_guitars_receive_complete_output_packages(tmp_path: Path) -> 
         assert result.pdf.path and Path(result.pdf.path).exists()
         assert result.gp5.path and Path(result.gp5.path).exists()
         assert result.ample_sc_midi.path and Path(result.ample_sc_midi.path).exists()
+        assert result.performance_plan.path
+        assert Path(result.performance_plan.path).exists()
+        assert result.vi_capabilities.path
+        assert Path(result.vi_capabilities.path).exists()
         assert result.report.path and Path(result.report.path).exists()
 
         analysis_payload = json.loads(Path(result.analysis.path).read_text(encoding="utf-8"))
@@ -119,6 +127,10 @@ def test_all_likely_guitars_receive_complete_output_packages(tmp_path: Path) -> 
         assert report_payload["note_rewrite"]["midi_fidelity"] == 0.35
         assert report_payload["guitar_ir"]["voice_counts"]["1"] > 0
         assert report_payload["outputs"]["pdf"]["status"] == "success"
+        assert (
+            report_payload["outputs"]["performance_plan"]["status"] == "success"
+        )
+        assert report_payload["outputs"]["vi_capabilities"]["status"] == "success"
         assert manifest.knowledge_snapshot_version
         assert report_payload["knowledge"]["snapshot_version"] == (
             manifest.knowledge_snapshot_version

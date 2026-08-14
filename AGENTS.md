@@ -58,8 +58,10 @@ src/fretpilot/exporters/guitar_pro/
 src/fretpilot/exporters/pdf_score/
 src/fretpilot/performance/
 src/fretpilot/prototype.py
-src/fretpilot/entrypoint.py
 ```
+
+`prototype.py` owns product conversion. `entrypoint.py` and
+`prototype_performance_cli.py` are compatibility-only and must not add behavior.
 
 ### Product API / frontend
 

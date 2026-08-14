@@ -10,8 +10,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any, Iterable, Mapping
 
-from fretpilot.detection.models import BehaviorProfileMatch
-from fretpilot.knowledge.models import KnowledgeEntry
+from fretpilot.knowledge.models import BehaviorProfileMatch, KnowledgeEntry
 from fretpilot.knowledge.registry import get_builtin_knowledge_registry
 
 

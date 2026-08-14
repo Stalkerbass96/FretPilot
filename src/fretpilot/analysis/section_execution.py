@@ -16,6 +16,7 @@ from fretpilot.articulation.planner import plan_articulations
 from fretpilot.detection.models import InstrumentStream
 from fretpilot.guitar import optimize_fingering
 from fretpilot.guitar.chord_voicing import apply_chord_voicing_strategy
+from fretpilot.guitar.fretting_digits import assign_fretting_digits
 from fretpilot.guitar.hand_position import (
     HandPositionState,
     carry_hand_position_into_section,
@@ -29,7 +30,10 @@ from fretpilot.guitar.models import (
 )
 from fretpilot.knowledge.context_strategy import apply_style_scores_to_context
 from fretpilot.knowledge.strategy_resolver import resolve_style_strategy
+from fretpilot.harmony import plan_harmony_by_sections
 from fretpilot.midi.models import NormalizedTimeline, NormalizedTrack
+from fretpilot.midi.pitch_wheel import extract_monophonic_pitch_raises
+from fretpilot.picking.sections import plan_picking_by_sections
 from fretpilot.rhythm import analyze_track_rhythm
 
 if TYPE_CHECKING:
@@ -255,6 +259,7 @@ def analyze_guitar_track_by_sections(
         diagnostics=sorted(diagnostics, key=lambda item: item.note_index),
         total_cost=total_cost,
     )
+    fingering = assign_fretting_digits(track, fingering)
     articulations = ArticulationPlan(
         track_index=track.index,
         track_name=track.name,
@@ -267,6 +272,13 @@ def analyze_guitar_track_by_sections(
             ),
         ),
     )
+    harmony = plan_harmony_by_sections(track, fingering, section_contexts)
+    picking = plan_picking_by_sections(
+        track,
+        fingering,
+        section_contexts,
+        context_overrides,
+    )
 
     return GuitarTrackAnalysis(
         track_index=track.index,
@@ -274,6 +286,8 @@ def analyze_guitar_track_by_sections(
         rhythm=rhythm,
         fingering=fingering,
         articulations=articulations,
+        picking=picking,
+        harmony=harmony,
         playing_context=None,
         section_contexts=section_contexts,
         hand_positions=hand_positions,
@@ -304,10 +318,41 @@ def analyze_guitar_stream_section_aware(
         stream,
         minimum_behavior_score=minimum_behavior_score,
     )
-    return analyze_guitar_track_by_sections(
+    result = analyze_guitar_track_by_sections(
         stream.as_track(),
         section_contexts,
         max_fret=max_fret,
         context_overrides=context_overrides,
         carry_boundary_strength_max=carry_boundary_strength_max,
     )
+    for gesture in extract_monophonic_pitch_raises(timeline, stream):
+        semitones = float(gesture["semitones"])
+        result.articulations.decisions.append(
+            ArticulationDecision(
+                note_index=int(gesture["note_index"]),
+                technique="pitch_raise",
+                confidence=0.94 if gesture["returned_to_center"] else 0.86,
+                reason=(
+                    f"Explicit wheel gesture raises pitch by about {semitones:.2f} "
+                    "semitones with a declared range on a monophonic stream."
+                ),
+                parameters={
+                    "semitones": semitones,
+                    "peak_wheel": float(gesture["peak_wheel"]),
+                    "range_semitones": float(gesture["range_semitones"]),
+                    "peak_position": float(gesture["peak_position"]),
+                    "return_position": float(gesture["return_position"]),
+                    "returned_to_center": (
+                        1.0 if gesture["returned_to_center"] else 0.0
+                    ),
+                },
+            )
+        )
+    result.articulations.decisions.sort(
+        key=lambda item: (
+            item.note_index,
+            item.source_note_index if item.source_note_index is not None else -1,
+            item.technique,
+        )
+    )
+    return result

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from collections import Counter
-from dataclasses import asdict, dataclass, field
 import json
 from pathlib import Path
 from typing import Any
@@ -17,48 +15,18 @@ from fretpilot.exporters.pdf_score import export_score_pdf
 from fretpilot.ir import build_guitar_ir
 from fretpilot.knowledge import BUILTIN_KNOWLEDGE_SNAPSHOT_VERSION
 from fretpilot.midi.models import NormalizedTimeline
+from fretpilot.prototype_models import (
+    PrototypeManifest,
+    PrototypeOutputStatus,
+    PrototypeStreamResult,
+)
+from fretpilot.prototype_reporting import build_processing_report
+from fretpilot.prototype_sidecars import export_prototype_sidecars
 from fretpilot.rewrite import (
     DEFAULT_MIDI_FIDELITY,
-    NoteRewriteResult,
     rewrite_instrument_stream,
 )
-
-
-@dataclass(slots=True)
-class PrototypeOutputStatus:
-    path: str | None
-    status: str
-    warnings: list[str] = field(default_factory=list)
-    error: str | None = None
-
-
-@dataclass(slots=True)
-class PrototypeStreamResult:
-    stream_id: str
-    directory: str
-    analysis: PrototypeOutputStatus
-    rewrite: PrototypeOutputStatus
-    guitar_ir: PrototypeOutputStatus
-    pdf: PrototypeOutputStatus
-    gp5: PrototypeOutputStatus
-    ample_sc_midi: PrototypeOutputStatus
-    report: PrototypeOutputStatus
-
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
-
-@dataclass(slots=True)
-class PrototypeManifest:
-    source: str
-    output_directory: str
-    stream_results: list[PrototypeStreamResult]
-    selected_stream_ids: list[str]
-    knowledge_snapshot_version: str = BUILTIN_KNOWLEDGE_SNAPSHOT_VERSION
-    format_version: str = "0.1"
-
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+from fretpilot.virtual_instruments.json_export import DEFAULT_PROFILE_ID
 
 
 def _write_json(path: Path, data: dict[str, Any], *, compact: bool) -> None:
@@ -77,152 +45,6 @@ def _write_json(path: Path, data: dict[str, Any], *, compact: bool) -> None:
 
 def _safe_stream_name(stream_id: str) -> str:
     return "".join(character if character.isalnum() else "_" for character in stream_id)
-
-
-def _count_transformations(changes: list[Any]) -> dict[str, int]:
-    return dict(Counter(change.stage for change in changes))
-
-
-def _count_articulations(analysis: Any) -> dict[str, int]:
-    return dict(
-        Counter(decision.technique for decision in analysis.articulations.decisions)
-    )
-
-
-def _build_processing_report(
-    candidate: GuitarStreamCandidate,
-    rewrite: NoteRewriteResult,
-    analysis: Any,
-    project: Any,
-    *,
-    pdf_status: PrototypeOutputStatus,
-    gp5_status: PrototypeOutputStatus,
-    ample_status: PrototypeOutputStatus,
-) -> dict[str, Any]:
-    low_confidence_rhythm = [
-        suggestion.note_index
-        for suggestion in analysis.rhythm.suggestions
-        if suggestion.confidence < 0.60
-    ]
-    unplayable = [
-        item.note_index
-        for item in analysis.fingering.notes
-        if not item.playable
-    ]
-    ir_events = [
-        event
-        for track in project.tracks
-        for measure in track.measures
-        for event in measure.events
-    ]
-    let_ring_sources = sorted(
-        {
-            event.source_note_index
-            for event in ir_events
-            if any(item.type == "let_ring" for item in event.articulations)
-        }
-    )
-
-    section_summary = [
-        {
-            "section_id": item.section_id,
-            "start_measure": item.start_measure,
-            "end_measure": item.end_measure,
-            "role_scores": item.playing_context.role_scores,
-            "style_scores": item.playing_context.style_scores,
-            "technique_scores": item.playing_context.technique_scores,
-            "source_profiles": item.playing_context.source_profiles,
-            "knowledge_version": item.playing_context.knowledge_version,
-            "knowledge_entry_ids": item.playing_context.knowledge_entry_ids,
-            "boundary_confidence": item.boundary_confidence,
-            "boundary_strength": item.boundary_strength,
-            "boundary_reason": item.boundary_reason,
-        }
-        for item in analysis.section_contexts
-    ]
-
-    return {
-        "format_version": "0.1",
-        "source": project.source,
-        "stream": candidate.stream.to_summary_dict(),
-        "detection": {
-            "guitar_probability": candidate.guitar_probability,
-            "confidence": candidate.confidence,
-            "decision": candidate.decision,
-            "layers": [asdict(layer) for layer in candidate.layers],
-            "behavior_profiles": [
-                asdict(profile) for profile in candidate.behavior_profiles
-            ],
-        },
-        "sections": {
-            "count": len(section_summary),
-            "items": section_summary,
-        },
-        "note_rewrite": {
-            "midi_fidelity": rewrite.midi_fidelity,
-            "rationality_weight": rewrite.rationality_weight,
-            "original_note_count": rewrite.original_note_count,
-            "rewritten_note_count": len(rewrite.stream.notes),
-            "change_counts": dict(
-                Counter(change.operation for change in rewrite.changes)
-            ),
-            "change_count": len(rewrite.changes),
-        },
-        "rhythm": {
-            "selected_grid": asdict(analysis.rhythm.selected_grid),
-            "note_count": len(analysis.rhythm.suggestions),
-            "low_confidence_note_indices": low_confidence_rhythm,
-            "low_confidence_count": len(low_confidence_rhythm),
-        },
-        "fingering": {
-            "tuning": analysis.fingering.tuning,
-            "max_fret": analysis.fingering.max_fret,
-            "unplayable_note_indices": unplayable,
-            "unplayable_count": len(unplayable),
-            "diagnostics": [asdict(item) for item in analysis.fingering.diagnostics],
-        },
-        "articulations": {
-            "counts": _count_articulations(analysis),
-            "decision_count": len(analysis.articulations.decisions),
-        },
-        "guitar_ir": {
-            "schema_version": project.schema_version,
-            "measure_count": sum(len(track.measures) for track in project.tracks),
-            "event_count": len(ir_events),
-            "voice_counts": dict(
-                Counter(str(event.score.voice) for event in ir_events)
-            ),
-            "transformation_counts": _count_transformations(project.changes),
-            "let_ring_source_note_indices": let_ring_sources,
-            "let_ring_count": len(let_ring_sources),
-            "warnings": project.warnings,
-        },
-        "outputs": {
-            "pdf": asdict(pdf_status),
-            "gp5": asdict(gp5_status),
-            "ample_sc_midi": asdict(ample_status),
-        },
-        "knowledge": (
-            asdict(project.knowledge)
-            if project.knowledge is not None
-            else {
-                "snapshot_version": BUILTIN_KNOWLEDGE_SNAPSHOT_VERSION,
-                "entry_ids": [],
-            }
-        ),
-        "review_required": bool(
-            rewrite.changes
-            or low_confidence_rhythm
-            or unplayable
-            or project.warnings
-            or pdf_status.status not in {"success", "skipped"}
-            or pdf_status.warnings
-            or gp5_status.status not in {"success", "skipped"}
-            or gp5_status.warnings
-            or ample_status.status not in {"success", "skipped"}
-            or ample_status.warnings
-        ),
-    }
 
 
 def _select_candidates(
@@ -303,6 +125,8 @@ def generate_prototype_package(
     )
 
     results: list[PrototypeStreamResult] = []
+    performance_sidecars: list[dict[str, Any]] = []
+    capability_sidecars: list[dict[str, Any]] = []
     for candidate in candidates:
         stream_name = _safe_stream_name(candidate.stream.stream_id)
         stream_dir = root / stream_name
@@ -338,6 +162,8 @@ def generate_prototype_package(
         pdf_path = prefix.with_suffix(".pdf")
         gp5_path = prefix.with_suffix(".gp5")
         ample_path = prefix.with_suffix(".ample-sc.mid")
+        performance_path = prefix.with_suffix(".performance-plan.json")
+        capability_path = prefix.with_suffix(".vi-capabilities.json")
         report_path = prefix.with_suffix(".report.json")
 
         _write_json(rewrite_path, rewrite.to_dict(), compact=compact_json)
@@ -402,7 +228,16 @@ def generate_prototype_package(
                     error=str(exc),
                 )
 
-        processing_report = _build_processing_report(
+        sidecars = export_prototype_sidecars(
+            candidate.stream.stream_id,
+            ir_path,
+            performance_path,
+            capability_path,
+        )
+        performance_sidecars.append(sidecars.performance_index_entry)
+        capability_sidecars.append(sidecars.capability_index_entry)
+
+        processing_report = build_processing_report(
             candidate,
             rewrite,
             analysis,
@@ -410,6 +245,8 @@ def generate_prototype_package(
             pdf_status=pdf_status,
             gp5_status=gp5_status,
             ample_status=ample_status,
+            performance_status=sidecars.performance_status,
+            capability_status=sidecars.capability_status,
         )
         _write_json(report_path, processing_report, compact=compact_json)
         report_status = PrototypeOutputStatus(
@@ -427,6 +264,8 @@ def generate_prototype_package(
                 pdf=pdf_status,
                 gp5=gp5_status,
                 ample_sc_midi=ample_status,
+                performance_plan=sidecars.performance_status,
+                vi_capabilities=sidecars.capability_status,
                 report=report_status,
             )
         )
@@ -437,6 +276,19 @@ def generate_prototype_package(
         selected_stream_ids=[candidate.stream.stream_id for candidate in candidates],
         stream_results=results,
         knowledge_snapshot_version=BUILTIN_KNOWLEDGE_SNAPSHOT_VERSION,
+    )
+    _write_json(
+        root / "performance-plans.json",
+        {"performance_plans": performance_sidecars},
+        compact=compact_json,
+    )
+    _write_json(
+        root / "vi-capabilities.json",
+        {
+            "profile_id": DEFAULT_PROFILE_ID,
+            "capability_reports": capability_sidecars,
+        },
+        compact=compact_json,
     )
     _write_json(root / "manifest.json", manifest.to_dict(), compact=compact_json)
     return manifest

@@ -1,6 +1,7 @@
 """Versioned musical knowledge used by FretPilot analysis and score planning."""
 
 from fretpilot.knowledge.models import (
+    BehaviorProfileMatch,
     KnowledgeEntry,
     KnowledgeEvaluation,
     KnowledgeProvenance,
@@ -57,6 +58,7 @@ __all__ = [
     "RESEARCH_SOURCE_VERSION",
     "BUILTIN_KNOWLEDGE_SNAPSHOT_VERSION",
     "SUPPORTED_KNOWLEDGE_SCHEMA_VERSION",
+    "BehaviorProfileMatch",
     "KnowledgeEntry",
     "KnowledgeEvaluation",
     "KnowledgeProvenance",

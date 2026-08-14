@@ -1,9 +1,7 @@
-"""Layered instrument-stream and guitar detection.
+"""Public exports for layered instrument-stream and guitar detection.
 
-The package keeps its data models cheap to import. Classifier/stream helpers are
-loaded lazily so modules that only depend on ``detection.models`` do not trigger
-the full classifier and knowledge graph, preventing circular imports as the
-playing-knowledge layer grows.
+Classifier helpers stay lazy so model-only users do not load the knowledge
+registry and classifier implementation.
 """
 
 from __future__ import annotations

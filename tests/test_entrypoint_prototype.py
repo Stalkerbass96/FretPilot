@@ -3,7 +3,12 @@ from pathlib import Path
 
 import mido
 
+from fretpilot.cli import main as cli_main
 from fretpilot.entrypoint import main
+
+
+def test_console_entrypoint_uses_the_cli_implementation():
+    assert main is cli_main
 
 
 def test_standard_prototype_command_writes_performance_and_vi_sidecars(tmp_path: Path):

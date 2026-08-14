@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 
 from fretpilot.midi import load_midi
-from fretpilot.performance.json_export import export_performance_plan_json
 from fretpilot.prototype import generate_prototype_package
 
 
@@ -14,45 +13,9 @@ def generate_prototype_with_performance(
     output_directory,
     **kwargs,
 ):
-    manifest = generate_prototype_package(timeline, output_directory, **kwargs)
-    sidecars = []
-
-    for result in manifest.stream_results:
-        if result.guitar_ir.status != "success" or result.guitar_ir.path is None:
-            sidecars.append({
-                "stream_id": result.stream_id,
-                "status": "unavailable",
-                "path": None,
-            })
-            continue
-
-        source = Path(result.guitar_ir.path)
-        output = source.with_name(
-            source.name.replace(".guitar-ir.json", ".performance-plan.json")
-        )
-        try:
-            plan = export_performance_plan_json(source, output)
-            sidecars.append({
-                "stream_id": result.stream_id,
-                "status": "success",
-                "path": str(output),
-                "note_count": len(plan.notes),
-                "section_count": len(plan.sections),
-                "warnings": list(plan.warnings),
-            })
-        except (OSError, ValueError, KeyError, TypeError) as exc:
-            sidecars.append({
-                "stream_id": result.stream_id,
-                "status": "error",
-                "path": None,
-                "error": str(exc),
-            })
-
     index = Path(output_directory) / "performance-plans.json"
-    index.write_text(
-        json.dumps({"performance_plans": sidecars}, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    manifest = generate_prototype_package(timeline, output_directory, **kwargs)
+    sidecars = json.loads(index.read_text(encoding="utf-8"))["performance_plans"]
     return manifest, sidecars, index
 
 

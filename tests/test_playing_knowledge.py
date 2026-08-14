@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fretpilot.detection.models import BehaviorProfileMatch
+from fretpilot.knowledge.models import BehaviorProfileMatch
 from fretpilot.knowledge import (
     BUILTIN_KNOWLEDGE_SNAPSHOT_VERSION,
     compose_playing_context,

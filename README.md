@@ -77,9 +77,9 @@ fretpilot prototype song.mid \
 ```
 
 A successful package contains per-stream analysis, rewrite provenance, Guitar
-IR, PDF, GP5 when supported, Ample MIDI, and a processing report. The normal
-prototype post-hook also writes Generic PerformancePlan and VI capability
-sidecars.
+IR, PDF, GP5 when supported, Ample MIDI, a processing report, Generic
+PerformancePlan, and VI capability sidecars. All entry points use this same
+prototype pipeline.
 
 Representative layout:
 

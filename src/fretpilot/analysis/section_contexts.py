@@ -12,8 +12,8 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 from fretpilot.analysis.sections import SectionSegmentation
-from fretpilot.detection.models import BehaviorProfileMatch
 from fretpilot.knowledge.guitar_behaviors import match_behavior_profiles
+from fretpilot.knowledge.models import BehaviorProfileMatch
 from fretpilot.knowledge.playing_contexts import (
     PlayingContext,
     context_from_behavior_matches,
