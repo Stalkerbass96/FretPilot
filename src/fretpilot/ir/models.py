@@ -30,6 +30,7 @@ class PerformanceTiming:
 class IRFingering:
     string: int | None
     fret: int | None
+    fretting_digit: int | None = None
     @property
     def playable(self) -> bool:
         return self.string is not None and self.fret is not None
