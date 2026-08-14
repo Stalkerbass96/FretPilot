@@ -8,7 +8,7 @@
 
 ```text
 MIDI
-→ NormalizedTimeline
+→ NormalizedTimeline + pitch-wheel/range evidence
 → InstrumentStream resolution
 → Layers 1–3 guitar identity
 → selected guitar stream
@@ -16,27 +16,30 @@ MIDI
 → section segmentation
 → per-section behavior profiles
 → per-section PlayingContext
-→ per-section fingering
-→ hand-position continuity baseline
-→ per-section articulation
+→ section-aware fingering + hand-position continuity
+→ fretting-digit assignment
+→ articulation / pitch-raise evidence
+→ right-hand pick / strum / sweep / tremolo planning
+→ conservative harmony regions
 → global source-note remap
 → GuitarTrackAnalysis
-→ canonical Guitar IR + section/hand-position provenance
+→ canonical Guitar IR + section/hand-position/right-hand/harmony provenance
 ├──→ PDF/TAB review output
 ├──→ GP5
 └──→ current Ample Guitar SC 4.x renderer
 ```
 
-A separate target-neutral performance-intent baseline now exists:
+A target-neutral performance-intent path is also part of the prototype workflow:
 
 ```text
 Guitar IR + PlayingContext.performance
 → Generic PerformancePlan
+→ .performance-plan.json sidecar / report summary
 → future VI capability negotiation
 → future adapter consumption
 ```
 
-The existing Ample renderer still uses the established source-performance path. Do not silently switch it to `PerformancePlan` until neutral behavior and adapter handoff have regression coverage.
+The existing Ample renderer still uses the established source-performance path. Do not silently switch it to `PerformancePlan` until capability negotiation and adapter handoff have regression coverage.
 
 Track identification remains an incremental `TI-*` project and is **not** the main prototype blocker.
 
@@ -59,11 +62,12 @@ SE-*  evaluation, feedback, reproducibility, knowledge evolution
 - [x] logical `InstrumentStream` resolution
 - [x] layered guitar candidate ranking
 - [x] explicit stream selection and multiple-guitar ambiguity handling
+- [x] package-level pitch-wheel + declared range preservation
 - [ ] measured/calibrated track-identification evaluation (`TI-*`)
 
 ### Musical understanding / guitar execution
 
-- [x] rhythm-grid analysis and basic notation cleanup
+- [x] rhythm-grid analysis and notation cleanup baseline
 - [x] source/performance timing separate from score timing
 - [x] measure coordinates and cross-measure ties
 - [x] standard six-string fretboard candidates
@@ -72,16 +76,21 @@ SE-*  evaluation, feedback, reproducibility, knowledge evolution
 - [x] `PlayingContext` model with separate role/style/technique dimensions
 - [x] context-aware fingering soft costs
 - [x] hammer-on / pull-off / slide / vibrato inference
+- [x] explicit monophonic pitch-raise evidence from declared MIDI wheel range
 - [x] context-aware articulation confidence weighting
 - [x] deterministic section segmentation baseline
 - [x] independent `PlayingContext` per section
 - [x] section-aware execution and global source-note remap
 - [x] explicit hand-position state baseline (`GK-013`)
 - [x] weak-boundary carry / strong-boundary reset baseline
-- [ ] focused GK-013 regression/golden evaluation and threshold tuning
+- [x] focused GK-013 weak/strong-boundary regressions
+- [x] 1–4 fretting-digit assignment baseline (`GK-014`)
+- [x] right-hand downstroke / alternate / tremolo / sweep / strum planning baseline
+- [x] observed micro-timed `rolled_strum` evidence baseline
+- [x] conservative simultaneous/sequential harmony labeling baseline
 - [ ] reusable shape-memory model (`GK-012`)
-- [ ] true left-hand finger/barre/stretch assignment (`GK-014`)
-- [ ] bend/palm-mute/pick-direction/strum-intent expansion
+- [ ] advanced left-hand contracts: barre / stretch / thumb / explicit shift fingering semantics
+- [ ] broader deterministic palm-mute/bend technique evidence beyond currently explicit source signals
 
 ### Guitar IR
 
@@ -89,11 +98,16 @@ SE-*  evaluation, feedback, reproducibility, knowledge evolution
 - [x] tempo/time-signature maps
 - [x] score and source-performance timing
 - [x] string/fret and generic articulations
+- [x] articulation parameters for source-backed pitch movement
+- [x] fretting digit
+- [x] generic right-hand intent + technique provenance
+- [x] typed harmony regions
 - [x] transformation/change log
 - [x] section-context provenance through public builder
 - [x] hand-position provenance through public builder
+- [x] JSON round-trip coverage for newer guitar fields
 - [ ] formal knowledge/config/runtime version manifest (`SE-*`)
-- [ ] richer voice/phrase/left-hand contracts as needed
+- [ ] richer voice/phrase/barre contracts as needed
 
 ### Generic Performance Plan (`GK-005`)
 
@@ -101,9 +115,9 @@ SE-*  evaluation, feedback, reproducibility, knowledge evolution
 - [x] target-neutral planner API
 - [x] section/context provenance
 - [x] timing, velocity, metric accent, and overlap intent baseline
+- [x] neutral-vs-context behavior regressions
 - [x] standalone `fretpilot-performance-plan` CLI
-- [ ] dedicated neutral-vs-context behavior regressions
-- [ ] include plan in one-command prototype/report package
+- [x] one-command prototype sidecars and report integration
 - [ ] stable capability-negotiation handoff into `VI-*`
 - [ ] let adapters consume the plan only after regression coverage
 
@@ -111,19 +125,31 @@ SE-*  evaluation, feedback, reproducibility, knowledge evolution
 
 - [x] direct landscape PDF/TAB renderer
 - [x] six-line TAB with string/fret decisions
-- [ ] musician-grade rhythmic stems/beams
-- [ ] proportional spacing by rhythmic density
-- [ ] better rests/ties/slides/let-ring notation
-- [ ] dotted/tuplet visual quality
+- [x] canonical harmony symbols above TAB
+- [x] explicit exact rest-span baseline
+- [x] deterministic rhythmic stems / isolated flags / meter-aware beams
+- [x] dotted rhythm marks
+- [x] exact triplet grouping + bracket/number baseline
+- [x] density-aware system breaking with minimum onset-gap planning
+- [x] explicit warning when one measure exceeds full-system density capacity
+- [x] cross-measure tie marks
+- [x] layout-level visual golden previews for harmony/rhythm/density
+- [ ] variable-width measure allocation inside a mixed-density system
+- [ ] collision-aware annotation placement beyond current fixed lanes
 - [ ] multi-voice TAB
 - [ ] standard staff + TAB pairing
-- [ ] visual golden regression samples
+- [ ] publication-quality traditional rest/notehead engraving
 
 ### GP5
 
 - [x] PyGuitarPro adapter
 - [x] rests and duration decomposition
 - [x] string/fret mapping
+- [x] fretting-digit mapping
+- [x] pick-stroke direction
+- [x] observed rolled-strum `BeatStroke` mapping
+- [x] source-backed integer-semitone pitch-raise curve mapping with conservative fractional fallback
+- [x] harmony text labels
 - [x] ties and supported articulations
 - [x] write + parse-back validation
 - [ ] real Guitar Pro visual review
@@ -142,7 +168,7 @@ SE-*  evaluation, feedback, reproducibility, knowledge evolution
 - [ ] manual DAW/plugin verification
 - [ ] vibrato rendering
 - [ ] bend curves
-- [ ] pick-direction/accent shaping
+- [ ] generic PerformancePlan / pick-direction / accent handoff after VI capability negotiation
 
 ### Virtual Guitar Instrument architecture (`VI-*`)
 
@@ -158,45 +184,29 @@ SE-*  evaluation, feedback, reproducibility, knowledge evolution
 
 ### PV-002 — musician-readable score/TAB
 
-Use real-song review by measure/stream. Prioritize rhythmic readability, spacing, rests/ties, phrase layout, hand-position plausibility, and visual golden samples.
+Use real-song review by measure/stream. The current PDF now has harmony labels, exact rests, rhythm stems/beams, dotted/triplet marks, and density-aware line breaking. The next score-quality work is visual collision refinement, mixed-density width allocation, phrase/system layout, and then paired standard staff + TAB.
 
 Acceptance:
 
 > At least one full real guitar stream reads like a usable first-draft TAB rather than a debugging visualization.
 
-### GK-013 — hand-position baseline validation
+### GK-013 / GK-014 — left-hand refinement
 
-The runtime baseline is integrated. Current remaining work is evidence and refinement, not rebuilding the module.
+The hand-position and 1–4 fretting-digit baselines are integrated and regression-covered. Remaining work is evidence-driven refinement rather than rebuilding them:
 
-Immediate acceptance work:
-
-- weak boundary can preserve a useful previous hand center;
-- strong boundary can deliberately reset/reposition;
+- reusable shape memory across phrase/context regions;
+- barre / stretch / thumb / explicit position-shift semantics;
 - no repair bypasses physical fretboard constraints;
 - simultaneous notes remain on distinct strings;
-- Message-in-a-Bottle movable-arpeggio regression remains green;
-- threshold/entry-window changes are justified by fixtures or real-song review.
+- Message-in-a-Bottle movable-arpeggio regression remains green.
 
-Compatibility cleanup:
+### GK-005 — performance intent → VI handoff
 
-> Package-level section-aware APIs use `src/fretpilot/analysis/section_execution.py`. The older `section_aware.py` still contains legacy reset-only code and should be replaced with a thin compatibility re-export.
+The plan now appears in normal prototype packages. Next:
 
-### GK-005 — performance intent validation/integration
-
-Use the standalone command to inspect generic intent without changing any plugin output:
-
-```bash
-fretpilot-performance-plan song.mid \
-  --stream-id t0:ch2:p27 \
-  -o performance-plan.json
-```
-
-Next:
-
-1. add dedicated neutral/context regression tests;
-2. include `.performance-plan.json` or equivalent summary in prototype output;
-3. define capability negotiation with `VI-*`;
-4. then adapt Ample while proving legacy-neutral output stability.
+1. define stable capability negotiation with `VI-*`;
+2. migrate Ample knowledge into the provider-neutral VI schema without output changes;
+3. let adapters consume generic plan intents only with legacy-neutral regression coverage.
 
 ### VI-002 — Ample knowledge migration
 
@@ -212,7 +222,7 @@ fretpilot prototype song.mid \
   -o output/
 ```
 
-Per selected stream it currently produces analysis JSON, Guitar IR JSON, GP5 when supported, Ample MIDI, and processing report. Generic PerformancePlan is available through its standalone CLI but is not yet part of this package.
+Per selected stream it produces analysis JSON, Guitar IR JSON, GP5 when supported, Ample MIDI, processing report, and Generic PerformancePlan sidecars/report enrichment.
 
 ## Prototype 0.1 release definition
 
