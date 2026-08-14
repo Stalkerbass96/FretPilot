@@ -1,7 +1,10 @@
 from pathlib import Path
 
 from fretpilot.exporters.pdf_score import export_score_pdf
-from fretpilot.exporters.pdf_score.density_renderer import _track_system_chunks
+from fretpilot.exporters.pdf_score.density_renderer import (
+    _density_warnings,
+    _track_system_chunks,
+)
 from fretpilot.ir.models import (
     GuitarMeasure,
     GuitarNoteEvent,
@@ -94,6 +97,14 @@ def test_mixed_extreme_measure_is_not_compressed_below_its_equal_share():
     assert [[item.number for item in chunk] for chunk in chunks] == [[1], [2], [3]]
 
 
+def test_overfull_single_measure_produces_explicit_density_warning():
+    track = _project([_measure(1, 0.03125, 128)]).tracks[0]
+    warnings = _density_warnings(track, available_width=720.0)
+    assert len(warnings) == 1
+    assert "Measure 1" in warnings[0]
+    assert "horizontally compressed" in warnings[0]
+
+
 def test_public_pdf_export_uses_density_renderer_without_breaking_output(tmp_path: Path):
     project = _project([_measure(index + 1, 0.25, 16) for index in range(4)])
     output = tmp_path / "dense.pdf"
@@ -105,5 +116,6 @@ def test_public_pdf_export_uses_density_renderer_without_breaking_output(tmp_pat
     )
     assert result.track_count == 1
     assert result.measure_count == 4
+    assert result.warnings == []
     assert output.read_bytes().startswith(b"%PDF")
     assert output.stat().st_size > 1000
