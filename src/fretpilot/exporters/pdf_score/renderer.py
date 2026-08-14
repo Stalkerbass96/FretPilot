@@ -1,10 +1,10 @@
 """Render canonical Guitar IR as a review-friendly PDF TAB score.
 
 The PDF output is intentionally independent of Guitar Pro. V0.1 renders six-line
-TAB, measure positions, duration labels, ties, generic guitar techniques,
+TAB, measure positions, exact duration labels, ties, generic guitar techniques,
 canonical harmony labels, explicit rest spans, and a deterministic rhythmic
-stem/beam lane. It is designed for review and prototype validation rather than
-final publishing.
+stem/beam lane with dotted and tuplet marks. It is designed for review and
+prototype validation rather than final publishing.
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ from fretpilot.exporters.pdf_score.rhythm import (
     measure_beam_segments,
     measure_notated_rests,
     measure_rhythm_onsets,
+    measure_tuplet_groups,
 )
 from fretpilot.ir.models import (
     GuitarMeasure,
@@ -56,12 +57,15 @@ def _duration_label(beats: float) -> str:
         (3.0, "1/2."),
         (2.0, "1/2"),
         (1.5, "1/4."),
+        (4 / 3, "1/2T"),
         (1.0, "1/4"),
         (0.75, "1/8."),
         (2 / 3, "4T"),
         (0.5, "1/8"),
+        (0.375, "1/16."),
         (1 / 3, "8T"),
         (0.25, "1/16"),
+        (0.1875, "1/32."),
         (1 / 6, "16T"),
         (0.125, "1/32"),
     ]
@@ -247,7 +251,7 @@ class _PDFScoreRenderer:
         legend = [
             "Chord symbols above TAB come from canonical Guitar IR harmony regions.",
             "R + duration marks explicit silent score spans, for example R 1/4.",
-            "Stems, flags, and beams below TAB show the written rhythmic skeleton.",
+            "Stems, flags, beams, dots, and tuplet brackets below TAB show the written rhythmic skeleton.",
             "Duration labels use exact written values; unsupported values show their beat length instead of being rounded.",
             "Technique labels: H hammer-on, P pull-off, S slide, LS legato slide, vib., let ring, P.M.",
             "Fret numbers are positioned on standard six-line TAB. Ties are drawn at measure boundaries.",
@@ -340,6 +344,7 @@ class _PDFScoreRenderer:
 
             onsets = measure_rhythm_onsets(measure)
             beam_segments = measure_beam_segments(measure, onsets)
+            tuplet_groups = measure_tuplet_groups(measure, onsets)
             onset_x = [
                 _time_x(measure_x, measure_width, measure, onset.start_beat)
                 for onset in onsets
@@ -363,9 +368,19 @@ class _PDFScoreRenderer:
                     onset_x[onset_index],
                     stem_bottom_y,
                 )
+                if onset.dot_count:
+                    self.canvas.setFillColor(colors.HexColor("#374151"))
+                    self.canvas.circle(
+                        onset_x[onset_index] + 4.0,
+                        stem_top_y + 1.0,
+                        0.95,
+                        fill=1,
+                        stroke=0,
+                    )
 
             for segment in beam_segments:
                 beam_y = primary_beam_y - (segment.level - 1) * 3.0
+                self.canvas.setStrokeColor(colors.HexColor("#374151"))
                 self.canvas.setLineWidth(1.45)
                 self.canvas.line(
                     onset_x[segment.first_onset],
@@ -379,6 +394,7 @@ class _PDFScoreRenderer:
                     if (onset_index, level) in covered_beams:
                         continue
                     flag_y = primary_beam_y - (level - 1) * 3.0
+                    self.canvas.setStrokeColor(colors.HexColor("#374151"))
                     self.canvas.setLineWidth(1.15)
                     self.canvas.line(
                         onset_x[onset_index],
@@ -386,6 +402,25 @@ class _PDFScoreRenderer:
                         onset_x[onset_index] + 4.5,
                         flag_y - 1.5,
                     )
+
+            for group in tuplet_groups:
+                max_level = max(
+                    onsets[item].beam_level
+                    for item in range(group.first_onset, group.last_onset + 1)
+                )
+                bracket_y = primary_beam_y - max(9.0, (max_level - 1) * 3.0 + 9.0)
+                left = onset_x[group.first_onset]
+                right = onset_x[group.last_onset]
+                middle = (left + right) / 2.0
+                self.canvas.setStrokeColor(colors.HexColor("#4B5563"))
+                self.canvas.setLineWidth(0.55)
+                self.canvas.line(left, bracket_y, middle - 4.0, bracket_y)
+                self.canvas.line(middle + 4.0, bracket_y, right, bracket_y)
+                self.canvas.line(left, bracket_y, left, bracket_y + 2.5)
+                self.canvas.line(right, bracket_y, right, bracket_y + 2.5)
+                self.canvas.setFillColor(colors.HexColor("#374151"))
+                self.canvas.setFont("Helvetica-Bold", 5.5)
+                self.canvas.drawCentredString(middle, bracket_y - 1.8, str(group.number))
 
             grouped: dict[float, list[GuitarNoteEvent]] = defaultdict(list)
             for event in measure.events:
@@ -463,7 +498,7 @@ class _PDFScoreRenderer:
         self.canvas.setStrokeColor(colors.HexColor("#111827"))
         self.canvas.setLineWidth(0.9)
         self.canvas.line(x1, tab_top + 1, x1, tab_bottom - 1)
-        return tab_bottom - 36
+        return tab_bottom - 48
 
     def draw_tracks(self) -> None:
         for track in self.project.tracks:
@@ -485,7 +520,7 @@ class _PDFScoreRenderer:
             self.current_y -= 22
             systems = 0
             for offset in range(0, len(track.measures), self.measures_per_system):
-                if systems >= self.systems_per_page or self.current_y < 125:
+                if systems >= self.systems_per_page or self.current_y < 140:
                     self._new_page(section)
                     systems = 0
                 chunk = track.measures[offset : offset + self.measures_per_system]
