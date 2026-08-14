@@ -54,6 +54,7 @@ def _ensure_section_picking(track: NormalizedTrack, analysis: GuitarTrackAnalysi
                     direction=item.direction,
                     confidence=item.confidence,
                     reason=item.reason,
+                    technique=item.technique,
                 )
             )
     analysis.picking = PickingPlan(track.index, track.name, decisions)
@@ -78,6 +79,29 @@ def _attach_right_hand(project: GuitarProjectIR, analysis: GuitarTrackAnalysis) 
                 event.right_hand = by_source.get(event.source_note_index)
 
 
+def _attach_articulation_parameters(
+    project: GuitarProjectIR,
+    analysis: GuitarTrackAnalysis,
+) -> None:
+    if not project.tracks:
+        return
+    parameter_map = {
+        (decision.note_index, decision.technique): dict(decision.parameters)
+        for decision in analysis.articulations.decisions
+        if decision.parameters
+    }
+    if not parameter_map:
+        return
+    for measure in project.tracks[0].measures:
+        for event in measure.events:
+            for articulation in event.articulations:
+                parameters = parameter_map.get(
+                    (event.source_note_index, articulation.type)
+                )
+                if parameters is not None:
+                    articulation.parameters = dict(parameters)
+
+
 def build_guitar_ir(
     timeline: NormalizedTimeline,
     track: NormalizedTrack,
@@ -99,6 +123,7 @@ def build_guitar_ir(
         role=role,
     )
     _attach_right_hand(project, analysis)
+    _attach_articulation_parameters(project, analysis)
     if not project.tracks:
         return project
 
