@@ -77,7 +77,7 @@ def plan_picking(
                 PickingDecision(
                     note_indices=tuple(note_indices),
                     start_beat=start,
-                    attack="strum",
+                    motion="strum",
                     direction=direction,
                     confidence=round(min(0.95, 0.72 + 0.18 * strumming), 6),
                     reason="Chordal onset in an active strumming context.",
@@ -93,7 +93,7 @@ def plan_picking(
                 PickingDecision(
                     note_indices=tuple(note_indices),
                     start_beat=start,
-                    attack="pick",
+                    motion="pick",
                     direction="down",
                     confidence=round(min(0.96, 0.72 + 0.12 * riff + 0.10 * metal), 6),
                     reason="Tight low-register repeated riff favors controlled downstrokes.",
@@ -116,7 +116,7 @@ def plan_picking(
                 PickingDecision(
                     note_indices=tuple(note_indices),
                     start_beat=start,
-                    attack="pick",
+                    motion="pick",
                     direction=direction,
                     confidence=round(min(0.92, 0.68 + 0.18 * evidence), 6),
                     reason="Sequential single-note passage favors alternate picking.",
