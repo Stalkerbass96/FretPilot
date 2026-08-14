@@ -1,372 +1,213 @@
 # Guitar Playing Knowledge Backlog
 
-Stable task IDs use the `GK-` prefix.
+Stable task IDs use the `GK-` prefix. This file is the task-status source of truth for **how a real guitarist would likely play**. Product/plugin controls belong in `VI-*`.
 
-This backlog is the task-level source of truth for guitarist-like behavior. Keep plugin/product control facts in `VI-*`, not here.
+Status language:
 
-## P0 — knowledge interface and runtime flow
+```text
+implemented           contract is present and regression-covered
+implemented baseline  useful deterministic baseline; calibration/richer semantics remain
+partial                some priors/mechanisms exist; family/task is not complete
+not started            no first-class implementation yet
+```
 
-### GK-001 — PlayingContext model
+## P0 — knowledge interface / runtime flow
 
-Status: **implemented**
+| Task | Status | Current contract |
+|---|---|---|
+| GK-001 PlayingContext | implemented | separate composable role/style/technique-family dimensions |
+| GK-002 thread context through analysis | implemented baseline | section context reaches fingering, articulation, right hand, Guitar IR, PerformancePlan |
+| GK-003 preference-aware fingering | implemented baseline | soft ranking only; hard fretboard constraints stay authoritative |
+| GK-004 context-aware articulation | implemented baseline | hammer/pull, slide, vibrato, contextual palm mute/staccato, source-backed pitch movement |
+| GK-005 Generic PerformancePlan | implemented product baseline | target-neutral timing/duration/velocity/accent/overlap intent + normal prototype sidecars |
 
-Role, style, and technique-family dimensions remain separate and composable. Profiles merge into fingering, articulation, performance, and downstream score-strategy preferences. Existing Layer-4 behavior matches can be bridged into `PlayingContext`.
+### GK-002 — remaining
 
-### GK-002 — thread PlayingContext through analysis
-
-Status: **implemented baseline; VI handoff still pending**
-
-Current flow:
+The normal runtime is:
 
 ```text
 InstrumentStream
 → section segmentation
-→ section behavior/style evidence
-→ section PlayingContext
-→ final fingering + hand-position/voicing continuity
-→ fretting-digit assignment
-→ articulation + explicit pitch-wheel gesture interpretation
+→ behavior/style evidence
+→ PlayingContext
+→ fingering + hand-position / voicing continuity
+→ fretting digit
+→ articulation / pitch movement
 → right-hand PickingPlan
-→ stream-wide source_note_index remap
+→ global source_note_index remap
 → GuitarTrackAnalysis
-→ Guitar IR provenance/strategy/right-hand/fretting metadata
+→ Guitar IR provenance
 ```
 
-The normal prototype uses the public section-aware analysis path. A separate one-command product entry, `fretpilot-prototype-performance`, additionally writes target-neutral PerformancePlan JSON sidecars.
+Remaining is mostly cross-project provenance/versioning under `SE-*`; do not rebuild context threading.
+
+### GK-005 — remaining
+
+`fretpilot prototype` now emits per-stream `.performance-plan.json` sidecars plus `performance-plans.json`. VI capability negotiation exists and can inventory PerformancePlan requirements, but production Ample rendering still uses source performance timing/velocity/duration.
+
+Next contract:
+
+```text
+Guitar IR + PlayingContext.performance
+→ Generic PerformancePlan
+→ VI capability negotiation
+→ target adapter consumption only with output-neutral regression coverage
+```
+
+No vendor keyswitch/CC/state belongs in PerformancePlan.
+
+## P1 — phrase / fretboard / technique state
+
+| Task | Status | Current contract / remaining gap |
+|---|---|---|
+| GK-010 section/phrase segmentation | implemented baseline | deterministic measure/feature-change boundaries; calibration remains |
+| GK-011 behavior classification | implemented experimental baseline | solo/riff/strum/heavy/jazz-comping/arpeggio vocabulary; rules are not calibrated truth |
+| GK-012 reusable shape memory | **not started** | needs root-independent reusable shape prototypes |
+| GK-013 hand-position state | implemented baseline | weak-boundary carry / strong-boundary reset; real-song threshold/state calibration remains |
+| GK-014 fretting-digit assignment | implemented baseline | deterministic 1–4 digits; barre/stretch/thumb/chord-wide solving remain |
+| GK-015 section-aware execution/merge | implemented baseline | one canonical execution path with global source-note remap and context overrides |
+| GK-016 right-hand intent | implemented baseline | down/up pick, strum, observed rolled strum, tremolo, sweep; hybrid/calibration remain |
+| GK-017 pitch-wheel gesture preservation | implemented positive-raise baseline | explicit-range monophonic raises; downward/pre-bend/richer curves remain |
+| GK-018 harmony regions | implemented conservative baseline | simultaneous/sequential chord labels and inversions; richer harmonic semantics remain |
+
+### GK-012 — reusable shape memory
+
+This is the biggest structural GK gap.
+
+Existing local repair can reuse movable riff/arpeggio shapes and chord-voicing continuity, but there is no first-class shape prototype independent of absolute root fret.
+
+Initial shape families should include:
+
+```text
+sus2 arpeggio
+power chord
+octave shape
+triad inversion
+jazz shell voicing
+```
+
+The Message-in-a-Bottle movable sus2 pattern remains a primary golden reference.
+
+### GK-013 — hand-position refinement
+
+Implemented:
+
+- explicit per-section `HandPositionState`;
+- entry/exit fret center and min/max span;
+- previous-section exit / shift amount / transition reason;
+- weak-boundary carry and strong-boundary reset;
+- entry repair only among canonical playable candidates;
+- distinct-string chord constraints preserved;
+- Guitar IR provenance and focused weak/strong regressions.
 
 Remaining:
 
-- define the stable `PerformancePlan → VI-*` capability-negotiation handoff;
-- merge PerformancePlan sidecars into the ordinary prototype command/manifest after the sidecar format stabilizes;
-- keep knowledge/version provenance explicit as schemas evolve.
+- real-song/golden calibration of the current boundary threshold and entry window;
+- richer hand-center/span/shape-transition state;
+- explicit position-shift semantics coordinated with GK-012/GK-014.
 
-Acceptance:
+### GK-014 — advanced left-hand contracts
 
-- neutral/default context preserves deterministic baseline behavior;
-- explicit/derived context remains traceable through analysis and Guitar IR;
-- context overrides affect left-hand, articulation, and right-hand planning consistently;
-- no output adapter invents style rules;
-- source timing and stable source-note identity survive section-local processing.
+Current `fretting_digit` is deterministic 1–4 and persisted in Guitar IR/GP5. Open or ambiguous cases abstain rather than force impossible fingering.
 
-### GK-003 — preference-aware fingering costs
-
-Status: **implemented baseline**
-
-Current preferences affect valid-candidate ranking for adjacent-string arpeggios, same-string legato, hand-position stability, shape reuse, open strings, compact voicing, low-register bias, and wide-interval position shifts.
-
-Physical fretboard constraints remain hard constraints. Learned/statistical ranking remains `GK-040+`.
-
-### GK-004 — articulation planner consumes context
-
-Status: **implemented baseline**
-
-Current deterministic/context-aware articulation includes:
-
-- hammer-on / pull-off;
-- slide;
-- vibrato;
-- contextual staccato;
-- contextual palm mute;
-- explicit-range, monophonic MIDI pitch-wheel `pitch_raise` gestures with semitone and curve-timing parameters.
-
-Style/context can confidence-weight eligible techniques, but does not invent them. Pitch-wheel interpretation requires an explicit RPN range and an unambiguous monophonic source stream; missing range or overlapping notes abstain.
-
-The GP5 adapter maps `pitch_raise` parameters to a Guitar Pro pitch curve only after the target-neutral musical decision exists in Guitar IR.
-
-### GK-005 — generic Performance Plan consumes PerformancePreferences
-
-Status: **implemented product baseline; VI consumption pending**
-
-Current code:
+Remaining:
 
 ```text
-src/fretpilot/performance/models.py
-src/fretpilot/performance/planner.py
-src/fretpilot/performance/json_export.py
-src/fretpilot/prototype_performance_cli.py
+first-class barre
+stretch feasibility
+thumb-over/thumb-fretting
+richer chord-wide digit solving
+explicit shift fingering semantics
 ```
 
-Implemented target-neutral intent includes:
+### GK-016 — right-hand intent
 
-- source and target timing;
-- timing tightening/loosening intent;
-- source and target velocity;
-- deterministic velocity variation/evening;
-- metric accent strength;
-- note-overlap intent;
-- section/PlayingContext provenance;
-- reasons/deltas for explainability.
+Current deterministic baseline recognizes:
 
-Neutral preferences preserve source timing, duration, and velocity. Dedicated neutral/context regressions lock this contract and verify that canonical Guitar IR is not mutated by PerformancePlan construction.
+- tight low-register riff figures → repeated downstrokes;
+- slower single-note/arpeggio material → alternate picking;
+- rapid repeated same-pitch runs → tremolo + alternating direction;
+- fast monotonic adjacent-string runs → sweep intent;
+- chord onsets in strumming context → strum motion/direction;
+- real staggered overlapping chord onsets → `rolled_strum` evidence.
 
-Product entry:
+Research/style priors only adjust confidence after timing/fingering evidence passes. Do not invent rolled timing for simultaneous chords.
+
+Remaining: hybrid-picking inference and real-song threshold calibration.
+
+### GK-017 — pitch movement
+
+Package-level MIDI loading preserves raw pitch-wheel and RPN 0/0 range events. `pitch_raise` is emitted only when range and note ownership are unambiguous. Guitar IR stores semitone amount and curve timing; GP5 maps safe integer-semitone curves and conservatively falls back for fractional cases.
+
+Remaining: downward gestures, pre-bend/pre-raise semantics, richer multi-point curves. Target-specific pitch realization belongs in VI.
+
+### GK-018 — harmony regions
+
+Current conservative analysis labels simultaneous chords and strong sequential broken-chord cells, respects section boundaries, supports common qualities/inversions, and persists typed harmony regions into Guitar IR. GP5/PDF consume the canonical labels rather than re-inferring harmony.
+
+Remaining: richer extensions/alterations, phrase-level harmonic context, and stronger ambiguity handling.
+
+## P2 — style-family knowledge
+
+All style families below are **partial baselines**, not calibrated musical truth.
+
+| Task | Current useful priors | Major remaining work |
+|---|---|---|
+| GK-020 metal | low-register stability, PM/staccato evidence, downstroke/tremolo | calibrated rhythm/breakdown/lead/low-tuned subprofiles |
+| GK-021 rock/pop | movable arpeggio/shape reuse/open-string policy | open-chord, power-chord, melodic-lead subprofiles |
+| GK-022 jazz | compact voicing, open-string avoidance, voice-leading proxies | shell/drop-2/drop-3 and richer comping semantics |
+| GK-023 blues | box-position/expressive priors + explicit source pitch raises | pentatonic-box semantics, double stops, target-aware bends/vibrato |
+| GK-024 funk | short/percussive/staccato priors | muted 16ths, partial chords, ghost/percussive-note model |
+| GK-025 fingerstyle/acoustic | alternating-bass/open-string/let-ring/voice-separation priors | bass/melody separation, alternating thumb, chord-melody planner |
+
+Runtime style priors remain soft rankings. A song/section style label never bypasses physical fretboard constraints.
+
+## P3 — controlled learning infrastructure
+
+These are not Prototype 0.1 blockers.
+
+| Task | Status |
+|---|---|
+| GK-030 source provenance schema | not started as full learning-batch contract |
+| GK-031 symbolic tab normalizer | not started |
+| GK-032 knowledge feature extractor | not started |
+| GK-033 dedup/source-family weighting | not started |
+| GK-034 quality estimator | not started |
+| GK-035 versioned Knowledge Snapshot format | not started |
+| GK-036 candidate/evaluation/promotion workflow | not started |
+
+Target lifecycle:
 
 ```text
-fretpilot-prototype-performance INPUT.mid OUTPUT_DIR
+eligible/licensed evidence
+→ provenance + quality + dedup
+→ normalized derived features
+→ candidate knowledge snapshot
+→ offline evaluation / shadow comparison
+→ approval
+→ pinned production snapshot
 ```
 
-This generates the normal prototype package plus per-stream `.performance-plan.json` sidecars and a `performance-plans.json` index. The normal `fretpilot prototype` command is intentionally unchanged for backward compatibility while the sidecar format stabilizes.
+Runtime does not crawl arbitrary pages or mutate production knowledge while processing a song.
 
-Still pending:
+## P4 — learned ranking
 
-- define the stable handoff from `PerformancePlan` to `VI-*` capability negotiation;
-- merge the sidecar/status into the ordinary prototype manifest;
-- only after that, let Ample/future adapters consume the generic plan without changing canonical musical meaning.
+| Task | Status |
+|---|---|
+| GK-040 regression evaluation corpus | not started |
+| GK-041 interpretable statistical candidate ranker | not started |
+| GK-042 sequence-level fretboard path model | not started |
+| GK-043 approved shape/phrase retrieval | not started |
 
-Target flow:
+Expected metrics include string/fret agreement, shape-family agreement, fretting-digit agreement where known, average hand shift, fret-span cost, impossible-fingering rate, and phrase-level path score.
 
-```text
-Guitar IR + time-varying PlayingContext
-→ Generic PerformancePlan
-→ VI capability negotiation
-→ Ample / future virtual-guitar adapter
-```
-
-## P1 — phrase / fretboard-state knowledge
-
-### GK-010 — section/phrase segmentation
-
-Status: **implemented baseline**
-
-Current deterministic baseline:
-
-```text
-InstrumentStream + time-signature map
-→ measure windows
-→ behavior features
-→ normalized feature distance
-→ change boundaries
-→ merge adjacent similar windows
-→ GuitarSection
-```
-
-Sections retain both bounded `boundary_confidence` and unbounded normalized `boundary_strength`. Segmentation answers **where behavior changes**; semantic interpretation remains GK-011.
-
-### GK-011 — phrase-level behavior classification
-
-Status: **implemented experimental baseline**
-
-The current Layer-4 behavior library runs independently per `GuitarSection`. All matches remain available for diagnostics; only sufficiently strong matches contribute to the section `PlayingContext`.
-
-Current behavior vocabulary includes solo/lead, riff, strumming, breakdown/heavy-low behavior, jazz comping, and an arpeggio baseline used by the section-aware guitar path.
-
-Important limitation: current profiles are hand-authored experimental rules, not calibrated musical truth.
-
-### GK-012 — shape memory
-
-Status: **not started as a first-class reusable shape model**
-
-Existing fingering already contains local movable-arpeggio/riff-shape reuse and chord-voicing continuity, but there is not yet a versioned reusable shape-prototype representation independent of absolute root fret.
-
-Future shape memory should include sus2 arpeggios, power chords, octave shapes, triad inversions, and jazz shell voicings. The Message-in-a-Bottle movable sus2 regression remains an important golden reference.
-
-### GK-013 — hand-position state
-
-Status: **implemented baseline; real-song calibration pending**
-
-Current code:
-
-```text
-src/fretpilot/guitar/hand_position.py
-src/fretpilot/analysis/section_execution.py
-```
-
-Implemented:
-
-- explicit `HandPositionState` per executed section;
-- section entry/exit fret center;
-- min/max fret span summary;
-- previous-section exit position;
-- shift amount and transition cost/reason;
-- weak-boundary carry versus strong-boundary reset;
-- default carry threshold currently uses normalized `boundary_strength <= 1.35`;
-- short section-entry repair re-ranks only canonical playable candidates;
-- simultaneous notes still require distinct strings;
-- open strings do not force the fretting-hand center to fret zero;
-- Guitar IR persists hand-position provenance;
-- focused regressions prove that a weak boundary changes the real final fingering to a carried position, while a strong boundary allows a local reset.
-
-The old duplicate `analysis/section_aware.py` implementation has been removed in favor of a compatibility re-export; the canonical execution logic lives in `section_execution.py`.
-
-Still pending before calling GK-013 mature:
-
-- real-song and golden-tab evaluation of the `1.35` threshold and entry-window policy;
-- richer hand-center/span state beyond the current summary/entry repair;
-- context/shape-aware transition scoring.
-
-### GK-014 — fretting-digit assignment
-
-Status: **implemented baseline**
-
-Implemented:
-
-- deterministic 1–4 `fretting_digit` assignment after final string/fret selection;
-- open strings and unplayable/ambiguous cases remain unspecified;
-- clear movable-shape resets restart the local digit anchor;
-- simultaneous shapes with excessive span remain unspecified rather than forcing impossible digits;
-- Message-in-a-Bottle-style movable sus2 regression reuses the expected digit family;
-- `fretting_digit` is persisted in canonical `IRFingering`;
-- Guitar IR JSON round-trip preserves the digit;
-- GP5 maps 1/2/3/4 to index/middle/annular/little and has parse-back coverage;
-- GP5 prefers the persisted IR digit and only derives a fallback for older/manual IR.
-
-Still pending:
-
-- first-class barre representation;
-- explicit stretch-feasibility model beyond conservative abstention;
-- optional thumb-over/thumb-fretting techniques;
-- richer chord-wide digit solving for difficult voicings.
-
-### GK-015 — section-aware execution and merge
-
-Status: **implemented baseline**
-
-Current behavior:
-
-- solve fingering/articulation with each section's `PlayingContext`;
-- selectively carry hand-position state across weak section boundaries;
-- apply chord/voicing strategy after final position carry;
-- assign fretting digits after final string/fret choices;
-- remap section-local note indices back to original stream-wide indices;
-- preserve global source timing;
-- support stable `section_id`-keyed context overrides;
-- public section-aware analysis also builds right-hand PickingPlan using the same context override;
-- normal one-command prototype generation uses this public section-aware path.
-
-### GK-016 — right-hand picking/strum intent
-
-Status: **implemented baseline**
-
-Target-neutral `PickingPlan` currently recognizes only when deterministic evidence is strong enough:
-
-- tight low-register metal/riff figures → repeated downstrokes;
-- slower arpeggio/single-note passages → alternate down/up picking;
-- very rapid repeated same-pitch runs → `tremolo` technique plus alternate directions;
-- fast monotonic adjacent-string arpeggio runs → `sweep` technique plus one-direction motion;
-- chord onsets in strumming context → chord-level strum motion/direction.
-
-`PICKING_RESEARCH` is consumed only as a confidence prior after timing/fingering evidence passes. Neutral/no-context analysis does not invent picking direction.
-
-Guitar IR persists motion, direction, confidence, reason, and optional `tremolo`/`sweep` technique provenance. GP5 currently writes safe beat-level pick direction. It deliberately does not add a GP tremolo subdivision effect when source MIDI already contains explicit repeated notes, and it does not invent rolled-strum timing for simultaneous chord onsets.
-
-Pending:
-
-- infer rolled-strum timing only from real staggered-onset evidence;
-- add hybrid-picking inference only when bass/treble separation and string-skip evidence are strong;
-- real-song threshold calibration.
-
-### GK-017 — explicit pitch-wheel gesture preservation
-
-Status: **implemented positive-raise baseline**
-
-Package-level MIDI loading preserves raw pitch-wheel events and RPN 0/0 wheel-range events. The guitar analysis path emits `pitch_raise` only when:
-
-- the wheel range is explicitly declared;
-- the selected stream is monophonic at the gesture peak;
-- the gesture is a meaningful positive raise;
-- source timing can be attached to one note unambiguously.
-
-The analysis/IR keeps semitone amount, wheel range, peak timing, return timing, and whether the wheel returned to center. GP5 maps this to a parse-back-tested pitch curve.
-
-Pending:
-
-- negative/downward gestures;
-- pre-raise/pre-bend interpretation;
-- richer multi-point wheel-curve preservation;
-- product/profile-specific policies in VI adapters, not in Guitar IR.
-
-## P2 — expand style knowledge
-
-### GK-020 — metal family
-
-Status: **partial baseline; family expansion planned**
-
-Already available mechanisms include low-register riff priors, palm mute/staccato evidence, downstroke intent, rapid repeated-note tremolo picking, and position/shape stability. Still planned: more calibrated subprofiles for tight rhythm, breakdowns, metal lead/solo, and modern low-tuned riffing.
-
-### GK-021 — rock/pop family
-
-Status: **partial baseline; family expansion planned**
-
-Current style priors and arpeggio behavior already influence movable arpeggios, shape reuse, open-string policy, and right-hand alternate/sweep decisions. More calibrated open-chord, power-chord, and melodic-lead subprofiles remain planned.
-
-### GK-022 — jazz family
-
-Status: **partial baseline; family expansion planned**
-
-Existing priors influence compact voicing, open-string avoidance, hand-position/voice-leading proxy costs, and chord-voicing continuity. Shell/drop-2/drop-3 knowledge and richer comping semantics remain planned.
-
-### GK-023 — blues family
-
-Status: **partial baseline; family expansion planned**
-
-Existing priors cover box-position/expressive lead tendencies. Explicit MIDI pitch-wheel raises can now become target-neutral pitch-raise intent and GP5 curves. Pentatonic-box semantics, target-aware expressive patterns, double stops, and richer vibrato remain planned.
-
-### GK-024 — funk family
-
-Status: **partial baseline; family expansion planned**
-
-Current style inference and articulation preferences can support short/percussive material and staccato evidence. Dedicated muted-sixteenth, partial-chord, and percussive-ghost-note modeling remains planned.
-
-### GK-025 — fingerstyle/acoustic family
-
-Status: **partial priors; deeper planner work planned**
-
-Current knowledge includes alternating-bass, voice-separation, open-string, let-ring, and overlap priors. Dedicated bass/melody voice separation, alternating-thumb execution, and chord-melody planning remain pending.
-
-## P3 — learning infrastructure
-
-### GK-030 — source provenance schema
-
-Define source/license/permission/quality metadata for every learning batch.
-
-### GK-031 — symbolic tab normalizer
-
-Normalize eligible GP/MusicXML/other symbolic sources into an internal learning representation.
-
-### GK-032 — knowledge feature extractor
-
-Extract aggregate fretboard, phrase, articulation, right-hand, and style-conditioned statistics.
-
-### GK-033 — deduplication and source-family weighting
-
-Prevent copied/derived tabs from dominating learned priors.
-
-### GK-034 — quality estimator
-
-Score structural validity, fretboard validity, notation consistency, metadata quality, and source confidence.
-
-### GK-035 — knowledge snapshot format
-
-Version learned profiles separately from application code.
-
-### GK-036 — candidate/evaluation/promotion workflow
-
-Learned data creates a candidate snapshot first; production stays pinned to the last approved snapshot.
-
-## P4 — learned fingering ranker
-
-### GK-040 — regression evaluation corpus
-
-Metrics should include exact string/fret agreement, shape-family agreement, fretting-digit agreement where known, average hand shift, fret-span cost, impossible fingering rate, and phrase-level path score.
-
-### GK-041 — statistical candidate ranker
-
-Start with interpretable learned weights before sequence models.
-
-### GK-042 — sequence-level fretboard model
-
-Rank complete phrase fingering paths while deterministic constraints prune impossible candidates.
-
-### GK-043 — knowledge retrieval
-
-Retrieve similar approved shape/phrase prototypes to inform ranking without storing arbitrary internet content in runtime profiles.
+Learned systems rank deterministic valid candidates; they never create impossible fretboard positions.
 
 ## Guardrails
 
-- Do not silently change production knowledge from newly ingested data.
 - Do not treat one published tab as canonical truth.
-- Do not ingest or redistribute internet content without an appropriate legal basis.
+- Do not ingest/redistribute material without an appropriate legal basis.
 - Preserve source provenance and knowledge-version reproducibility.
 - Keep physical/playability validation deterministic.
-- Learned models rank candidates; they do not bypass hard guitar constraints.
 - Keep Guitar Playing Knowledge separate from target virtual-instrument control knowledge (`VI-*`).
+- Newly discovered evidence creates candidate knowledge; it does not silently replace production behavior.
