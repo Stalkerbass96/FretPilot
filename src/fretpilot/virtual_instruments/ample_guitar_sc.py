@@ -1,7 +1,7 @@
 """Provider-neutral Ample Guitar SC 4.x knowledge snapshot.
 
 This module migrates the control facts already used by the regression-covered
-legacy Ample exporter into ``VirtualGuitarInstrumentProfile``.  It does not
+legacy Ample exporter into ``VirtualGuitarInstrumentProfile``. It does not
 change the legacy renderer and it does not claim that repository-derived facts
 are official vendor documentation.
 """
@@ -59,6 +59,14 @@ def _overlap() -> ControlAction:
 
 def _reset_sustain() -> ControlAction:
     return _keyswitch(24, timing="after_event")
+
+
+def _legacy_handoff_unsupported(intent: str, notes: str) -> ArticulationCapability:
+    return ArticulationCapability(
+        intent=intent,
+        support="unsupported",
+        notes=notes,
+    )
 
 
 AMPLE_GUITAR_SC_V4_PROFILE = VirtualGuitarInstrumentProfile(
@@ -133,6 +141,46 @@ AMPLE_GUITAR_SC_V4_PROFILE = VirtualGuitarInstrumentProfile(
             support="unsupported",
             notes="The legacy SC MIDI adapter does not currently render pitch-raise curves.",
         ),
+        _legacy_handoff_unsupported(
+            "pick_down",
+            "The current legacy SC MIDI adapter does not consume canonical pick-direction intent.",
+        ),
+        _legacy_handoff_unsupported(
+            "pick_up",
+            "The current legacy SC MIDI adapter does not consume canonical pick-direction intent.",
+        ),
+        _legacy_handoff_unsupported(
+            "strum_down",
+            "The current legacy SC MIDI adapter does not consume canonical strum-direction intent.",
+        ),
+        _legacy_handoff_unsupported(
+            "strum_up",
+            "The current legacy SC MIDI adapter does not consume canonical strum-direction intent.",
+        ),
+        _legacy_handoff_unsupported(
+            "rolled_strum",
+            "The current migrated baseline does not realize canonical rolled-strum technique intent.",
+        ),
+        _legacy_handoff_unsupported(
+            "tremolo",
+            "The current migrated baseline does not realize canonical tremolo-picking technique intent.",
+        ),
+        _legacy_handoff_unsupported(
+            "sweep",
+            "The current migrated baseline does not realize canonical sweep-picking technique intent.",
+        ),
+        _legacy_handoff_unsupported(
+            "performance_timing_adjustment",
+            "The legacy SC renderer still uses source performance timing and does not consume Generic PerformancePlan target timing.",
+        ),
+        _legacy_handoff_unsupported(
+            "performance_duration_adjustment",
+            "The legacy SC renderer still uses source performance duration and does not consume Generic PerformancePlan target duration.",
+        ),
+        _legacy_handoff_unsupported(
+            "performance_velocity_adjustment",
+            "The legacy SC renderer still uses source velocity and does not consume Generic PerformancePlan target velocity.",
+        ),
     ),
     supports_string_forcing=False,
     supports_position_forcing=False,
@@ -150,7 +198,8 @@ AMPLE_GUITAR_SC_V4_PROFILE = VirtualGuitarInstrumentProfile(
         "Legacy adapter does not render vibrato.",
         "Legacy adapter does not render canonical pitch_raise curves.",
         "No string-forcing or position-forcing control is represented in the migrated baseline.",
-        "Generic PerformancePlan intents are not yet consumed by the legacy adapter.",
+        "Canonical pick/strum technique intent is not yet consumed by the legacy adapter.",
+        "Generic PerformancePlan timing, duration, and velocity intents are not yet consumed by the legacy adapter.",
     ),
     evidence=_EVIDENCE,
     maturity="legacy-compatible-baseline",
