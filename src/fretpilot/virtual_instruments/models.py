@@ -39,7 +39,10 @@ class ControlAction:
     Examples include a keyswitch note, CC value, velocity range, note-overlap
     requirement, pitch-bend setup, or a product-specific state transition.
     ``target`` and ``value`` remain generic because different control types use
-    different MIDI/control payloads.
+    different MIDI/control payloads. ``release_value`` carries a target-specific
+    release payload when one exists (for example a keyswitch note-off velocity),
+    while ``offset_ticks`` applies an exact signed tick offset after the timing
+    anchor has been resolved.
     """
 
     kind: str
@@ -48,6 +51,8 @@ class ControlAction:
     timing: str = "at_event"
     duration_ticks: int | None = None
     notes: str = ""
+    release_value: int | float | str | None = None
+    offset_ticks: int = 0
 
 
 @dataclass(frozen=True, slots=True)

@@ -22,6 +22,7 @@ class FingeredNote:
     string: int | None
     fret: int | None
     local_cost: float | None = None
+    fretting_digit: int | None = None
 
     @property
     def playable(self) -> bool:

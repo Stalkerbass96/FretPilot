@@ -4,8 +4,8 @@ This layer emits generic musical techniques. It does not know about Ample
 Guitar keyswitches; plugin-specific rendering belongs in an exporter/adapter.
 
 Optional articulation preferences may rank/confidence-weight techniques that
-are already physically eligible. They never create a technique that failed the
-hard deterministic eligibility rules.
+are already physically or contextually eligible. They never bypass fretboard
+or timing evidence.
 """
 
 from __future__ import annotations
@@ -47,14 +47,48 @@ def _connected(previous_end: float, current_start: float, tolerance: float = 0.1
 
 
 def _weighted_confidence(base: float, preference: float) -> float:
-    """Apply a bounded soft prior while preserving neutral confidence exactly."""
     if preference == 1.0:
         return base
-    # Keep knowledge priors influential but conservative. The deterministic
-    # eligibility rule remains the primary evidence, and confidence never
-    # reaches certainty merely because a style profile strongly prefers it.
     factor = min(1.25, max(0.50, preference))
     return round(min(0.99, max(0.01, base * factor)), 6)
+
+
+def _neighbor_at_different_onset(track: NormalizedTrack, index: int, step: int):
+    current_start = track.notes[index].start_beat
+    cursor = index + step
+    while 0 <= cursor < len(track.notes):
+        note = track.notes[cursor]
+        if abs(note.start_beat - current_start) > 1e-9:
+            return note
+        cursor += step
+    return None
+
+
+def _staccato_eligible(track: NormalizedTrack, index: int) -> bool:
+    current = track.notes[index]
+    next_note = _neighbor_at_different_onset(track, index, 1)
+    if next_note is None:
+        return False
+    inter_onset = next_note.start_beat - current.start_beat
+    if inter_onset <= 0:
+        return False
+    return current.duration_beats <= 0.5 and current.duration_beats / inter_onset <= 0.55
+
+
+def _palm_mute_eligible(track: NormalizedTrack, index: int) -> bool:
+    current = track.notes[index]
+    if current.pitch > 57 or current.duration_beats > 0.5:
+        return False
+    previous = _neighbor_at_different_onset(track, index, -1)
+    next_note = _neighbor_at_different_onset(track, index, 1)
+    neighbors = [item for item in (previous, next_note) if item is not None]
+    if not neighbors:
+        return False
+    return any(
+        abs(item.pitch - current.pitch) <= 2
+        and 0 < abs(item.start_beat - current.start_beat) <= 0.75
+        for item in neighbors
+    )
 
 
 def plan_articulations(
@@ -63,15 +97,7 @@ def plan_articulations(
     *,
     preferences: ArticulationPreferenceView | None = None,
 ) -> ArticulationPlan:
-    """Create conservative generic guitar-technique decisions for a phrase.
-
-    V0 recognizes hammer-ons, pull-offs, slides, and phrase-ending/long-note
-    vibrato. Palm muting and style-heavy techniques remain deferred until their
-    own deterministic eligibility/context features exist.
-
-    ``preferences`` only changes confidence for already-valid decisions. A
-    neutral/omitted preference object preserves historical output exactly.
-    """
+    """Create conservative generic guitar-technique decisions for a phrase."""
 
     if len(track.notes) != len(fingering.notes):
         raise ValueError("Track and fingering result contain different note counts.")
@@ -85,7 +111,6 @@ def plan_articulations(
         if note_index > 0:
             previous = track.notes[note_index - 1]
             previous_fingering = fingering.notes[note_index - 1]
-
             both_playable = previous_fingering.playable and current_fingering.playable
             same_string = (
                 both_playable
@@ -104,10 +129,7 @@ def plan_articulations(
                             note_index=note_index,
                             source_note_index=note_index - 1,
                             technique=technique,
-                            confidence=_weighted_confidence(
-                                0.82,
-                                active_preferences.hammer_pull,
-                            ),
+                            confidence=_weighted_confidence(0.82, active_preferences.hammer_pull),
                             reason=(
                                 "Connected notes are on the same string with a small "
                                 f"{interval}-semitone movement."
@@ -120,10 +142,7 @@ def plan_articulations(
                             note_index=note_index,
                             source_note_index=note_index - 1,
                             technique="slide",
-                            confidence=_weighted_confidence(
-                                0.76,
-                                active_preferences.slide,
-                            ),
+                            confidence=_weighted_confidence(0.76, active_preferences.slide),
                             reason=(
                                 "Connected notes remain on the same string and move "
                                 f"{interval} semitones."
@@ -142,14 +161,42 @@ def plan_articulations(
                 ArticulationDecision(
                     note_index=note_index,
                     technique="vibrato",
-                    confidence=_weighted_confidence(
-                        base_confidence,
-                        active_preferences.vibrato,
-                    ),
+                    confidence=_weighted_confidence(base_confidence, active_preferences.vibrato),
                     reason=(
                         "Long playable note at a phrase boundary."
                         if phrase_end
                         else "Sustained playable note is long enough for expressive vibrato."
+                    ),
+                )
+            )
+
+        if (
+            current_fingering.playable
+            and active_preferences.staccato > 1.05
+            and _staccato_eligible(track, note_index)
+        ):
+            decisions.append(
+                ArticulationDecision(
+                    note_index=note_index,
+                    technique="staccato",
+                    confidence=_weighted_confidence(0.70, active_preferences.staccato),
+                    reason="MIDI note-off is distinctly short relative to the next attack.",
+                )
+            )
+
+        if (
+            current_fingering.playable
+            and active_preferences.palm_mute > 1.10
+            and _palm_mute_eligible(track, note_index)
+        ):
+            decisions.append(
+                ArticulationDecision(
+                    note_index=note_index,
+                    technique="palm_mute",
+                    confidence=_weighted_confidence(0.68, active_preferences.palm_mute),
+                    reason=(
+                        "Low-register short note occurs in a tight repeated/pedal-tone "
+                        "figure and the active playing context favors palm muting."
                     ),
                 )
             )

@@ -101,7 +101,11 @@ def test_all_likely_guitars_receive_complete_output_packages(tmp_path: Path) -> 
         assert result.report.path and Path(result.report.path).exists()
 
         analysis_payload = json.loads(Path(result.analysis.path).read_text(encoding="utf-8"))
+        ir_payload = json.loads(Path(result.guitar_ir.path).read_text(encoding="utf-8"))
         report_payload = json.loads(Path(result.report.path).read_text(encoding="utf-8"))
         assert analysis_payload["section_contexts"]
+        assert analysis_payload["section_contexts"][0]["playing_context"]["style_scores"]
+        assert ir_payload["tracks"][0]["section_contexts"]
+        assert "score_strategy" in ir_payload["tracks"][0]["section_contexts"][0]
         assert report_payload["sections"]["count"] >= 1
         assert report_payload["sections"]["items"]

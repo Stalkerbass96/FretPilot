@@ -35,6 +35,7 @@ class GuitarSection:
     features: dict[str, Any]
     boundary_confidence: float
     boundary_reason: str
+    boundary_strength: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -139,14 +140,10 @@ def _feature_distance(previous: dict[str, Any], current: dict[str, Any]) -> floa
     for key in _FEATURE_DISTANCE_KEYS:
         values.append(abs(float(current[key]) - float(previous[key])))
 
-    # Polyphony contains useful change information but has a different numeric
-    # scale, so normalize it to a guitar-sized six-string range.
     previous_polyphony = min(6.0, float(previous["mean_onset_polyphony"])) / 6.0
     current_polyphony = min(6.0, float(current["mean_onset_polyphony"])) / 6.0
     values.append(abs(current_polyphony - previous_polyphony))
 
-    # Pitch range is normalized to four octaves so lead/riff register changes
-    # matter without dominating chord/monophony changes.
     previous_range = min(48.0, float(previous["pitch_range_semitones"])) / 48.0
     current_range = min(48.0, float(current["pitch_range_semitones"])) / 48.0
     values.append(abs(current_range - previous_range))
@@ -161,13 +158,7 @@ def segment_instrument_stream(
     window_measures: int = 2,
     change_threshold: float = 0.22,
 ) -> SectionSegmentation:
-    """Split one instrument stream at coarse behavior-feature change points.
-
-    The baseline uses non-overlapping measure windows. Adjacent windows merge
-    when their normalized behavior-feature distance stays below the threshold.
-    This is intentionally deterministic and conservative; future segmentation
-    models may improve the boundary ranking while preserving this data contract.
-    """
+    """Split one instrument stream at coarse behavior-feature change points."""
 
     if window_measures <= 0:
         raise ValueError("window_measures must be positive.")
@@ -236,6 +227,11 @@ def segment_instrument_stream(
                     "start_of_stream"
                     if index == 0
                     else f"behavior_feature_distance={distance:.6f}"
+                ),
+                boundary_strength=(
+                    0.0
+                    if index == 0
+                    else round(distance / max(change_threshold, 1e-9), 6)
                 ),
             )
         )

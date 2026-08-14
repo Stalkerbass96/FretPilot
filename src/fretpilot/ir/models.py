@@ -1,31 +1,17 @@
-"""Canonical FretPilot Guitar IR models.
-
-The IR separates readable score timing from source/performance timing and stays
-independent of Guitar Pro, Ample Guitar, or any other output adapter.
-"""
-
+"""Canonical FretPilot Guitar IR models."""
 from __future__ import annotations
-
 from dataclasses import asdict, dataclass, field
 from typing import Any
-
-
 SCHEMA_VERSION = "0.1"
-
-
 @dataclass(slots=True)
 class IRTempoEvent:
     beat: float
     bpm: float
-
-
 @dataclass(slots=True)
 class IRTimeSignatureEvent:
     beat: float
     numerator: int
     denominator: int
-
-
 @dataclass(slots=True)
 class ScoreTiming:
     start_beat: float
@@ -35,40 +21,47 @@ class ScoreTiming:
     voice: int = 1
     tie_in: bool = False
     tie_out: bool = False
-
-
 @dataclass(slots=True)
 class PerformanceTiming:
     source_start_beat: float
     source_duration_beats: float
     velocity: int
-
-
 @dataclass(slots=True)
 class IRFingering:
     string: int | None
     fret: int | None
-
+    fretting_digit: int | None = None
     @property
     def playable(self) -> bool:
         return self.string is not None and self.fret is not None
-
-
 @dataclass(slots=True)
 class IRArticulation:
     type: str
     confidence: float
     reason: str
     source_note_id: str | None = None
-
-
+    parameters: dict[str, float] = field(default_factory=dict)
+@dataclass(slots=True)
+class IRRightHandIntent:
+    motion: str
+    direction: str
+    confidence: float
+    reason: str
+    technique: str | None = None
+@dataclass(slots=True)
+class IRHarmonyRegion:
+    start_beat: float
+    symbol: str
+    root_pitch_class: int
+    quality: str
+    confidence: float
+    source_note_indices: list[int] = field(default_factory=list)
+    reason: str = ""
 @dataclass(slots=True)
 class NoteConfidence:
     rhythm: float
     fingering: float
     articulation: float | None = None
-
-
 @dataclass(slots=True)
 class GuitarNoteEvent:
     id: str
@@ -79,8 +72,7 @@ class GuitarNoteEvent:
     fingering: IRFingering
     articulations: list[IRArticulation] = field(default_factory=list)
     confidence: NoteConfidence | None = None
-
-
+    right_hand: IRRightHandIntent | None = None
 @dataclass(slots=True)
 class GuitarMeasure:
     number: int
@@ -89,8 +81,6 @@ class GuitarMeasure:
     numerator: int
     denominator: int
     events: list[GuitarNoteEvent] = field(default_factory=list)
-
-
 @dataclass(slots=True)
 class GuitarTrackIR:
     id: str
@@ -100,14 +90,10 @@ class GuitarTrackIR:
     tuning: list[int]
     fret_count: int
     measures: list[GuitarMeasure] = field(default_factory=list)
-    # Musical context/provenance is generic data. Product-specific keyswitches,
-    # CCs, or virtual-instrument capabilities must remain downstream of IR.
     playing_context: dict[str, Any] | None = None
-    # Time-varying contexts remain generic musical knowledge. Exporters may
-    # inspect them, but they must not rewrite their meaning for one plugin.
     section_contexts: list[dict[str, Any]] = field(default_factory=list)
-
-
+    hand_positions: list[dict[str, Any]] = field(default_factory=list)
+    harmony_regions: list[IRHarmonyRegion] = field(default_factory=list)
 @dataclass(slots=True)
 class Transformation:
     id: str
@@ -117,8 +103,6 @@ class Transformation:
     after: dict[str, Any]
     confidence: float
     reason: str
-
-
 @dataclass(slots=True)
 class GuitarProjectIR:
     title: str
@@ -129,6 +113,5 @@ class GuitarProjectIR:
     changes: list[Transformation] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     schema_version: str = SCHEMA_VERSION
-
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

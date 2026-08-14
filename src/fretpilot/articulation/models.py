@@ -13,6 +13,7 @@ class ArticulationDecision:
     confidence: float
     reason: str
     source_note_index: int | None = None
+    parameters: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass(slots=True)

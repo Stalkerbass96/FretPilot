@@ -1,17 +1,26 @@
 from pathlib import Path
 
 from fretpilot.exporters.pdf_score import export_score_pdf
+from fretpilot.exporters.pdf_score.renderer import _duration_label, _harmony_label_map
 from fretpilot.ir.models import (
     GuitarMeasure,
     GuitarNoteEvent,
     GuitarProjectIR,
     GuitarTrackIR,
     IRFingering,
+    IRHarmonyRegion,
     IRTempoEvent,
     IRTimeSignatureEvent,
     PerformanceTiming,
     ScoreTiming,
 )
+
+
+def test_duration_labels_never_round_unknown_values_to_standard_notes() -> None:
+    assert _duration_label(0.5) == "1/8"
+    assert _duration_label(1 / 3) == "8T"
+    assert _duration_label(0.4) == "0.4b"
+    assert _duration_label(2.5) == "2.5b"
 
 
 def test_export_score_pdf_writes_reviewable_pdf(tmp_path: Path) -> None:
@@ -32,6 +41,35 @@ def test_export_score_pdf_writes_reviewable_pdf(tmp_path: Path) -> None:
         ),
         fingering=IRFingering(string=1, fret=0),
     )
+    track = GuitarTrackIR(
+        id="guitar-1",
+        name="Lead Guitar",
+        source_stream_id="t0:ch0:p27",
+        role="lead",
+        tuning=[40, 45, 50, 55, 59, 64],
+        fret_count=24,
+        measures=[
+            GuitarMeasure(
+                number=1,
+                start_beat=0.0,
+                duration_beats=4.0,
+                numerator=4,
+                denominator=4,
+                events=[event],
+            )
+        ],
+        harmony_regions=[
+            IRHarmonyRegion(
+                start_beat=0.01,
+                symbol="C#sus2",
+                root_pitch_class=1,
+                quality="sus2",
+                confidence=0.9,
+                source_note_indices=[0],
+                reason="fixture",
+            )
+        ],
+    )
     project = GuitarProjectIR(
         title="PDF Test",
         source="test.mid",
@@ -39,27 +77,10 @@ def test_export_score_pdf_writes_reviewable_pdf(tmp_path: Path) -> None:
         time_signatures=[
             IRTimeSignatureEvent(beat=0.0, numerator=4, denominator=4)
         ],
-        tracks=[
-            GuitarTrackIR(
-                id="guitar-1",
-                name="Lead Guitar",
-                source_stream_id="t0:ch0:p27",
-                role="lead",
-                tuning=[40, 45, 50, 55, 59, 64],
-                fret_count=24,
-                measures=[
-                    GuitarMeasure(
-                        number=1,
-                        start_beat=0.0,
-                        duration_beats=4.0,
-                        numerator=4,
-                        denominator=4,
-                        events=[event],
-                    )
-                ],
-            )
-        ],
+        tracks=[track],
     )
+
+    assert _harmony_label_map(track) == {0.0: "C#sus2"}
 
     destination = tmp_path / "score.pdf"
     result = export_score_pdf(project, destination)

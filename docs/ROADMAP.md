@@ -1,215 +1,128 @@
 # FretPilot Roadmap
 
-> Current milestone: **Prototype 0.1 — musician-reviewable score + virtual-guitar performance output**
+> Current milestone: **Prototype 0.1 — musician-reviewable guitar score + virtual-guitar performance package**
 >
-> For an AI/Codex handoff, read `docs/AI_AGENT_HANDOFF.md` first. This roadmap tracks product priority; specialized `TI-*`, `GK-*`, `VI-*`, and `SE-*` details live in their project backlogs.
+> This file tracks product priority and release gates. Task-level detail belongs in the `TI-*`, `GK-*`, `VI-*`, and `SE-*` backlogs.
 
-## Current implemented vertical slice
+## Current vertical slice
 
 ```text
 MIDI
-→ NormalizedTimeline
+→ NormalizedTimeline + source timing + pitch-wheel/range evidence
 → InstrumentStream resolution
-→ layered guitar detection
+→ Layers 1–3 guitar identity
 → selected guitar stream
-→ rhythm / notation repair
+→ rhythm / notation analysis
 → section segmentation
-→ per-section behavior profiles
+→ per-section behavior/style evidence
 → per-section PlayingContext
-→ per-section fingering + articulation
-→ stream-wide GuitarTrackAnalysis
-→ Guitar IR
-├──→ PDF/TAB review output
+→ fingering + hand-position / voicing continuity
+→ fretting-digit assignment
+→ articulation / source-backed pitch movement
+→ right-hand pick / strum / sweep / tremolo intent
+→ conservative harmony regions
+→ GuitarTrackAnalysis
+→ canonical Guitar IR
 ├──→ GP5
-└──→ Ample Guitar SC 4.x performance MIDI
+├──→ PDF/TAB
+├──→ Generic PerformancePlan sidecar
+├──→ VI capability diagnostics
+└──→ Ample Guitar SC 4.x MIDI
 ```
 
-The one-command prototype package uses the section-aware analysis path.
+The score and performance paths share canonical musical intent, but adapter-specific keyswitch/CC/state data remains outside Guitar IR.
 
-Track identification remains an incremental `TI-*` project and is **not** the main prototype blocker.
+## What is already baseline-complete
 
-## Task families
+### Input / guitar execution
 
-```text
-PV-*  immediate prototype/output quality
-TI-*  InstrumentStream / guitar-track identification
-GK-*  guitarist-like playing knowledge, style, phrasing, fingering
-VI-*  virtual-guitar instrument knowledge and adapters
-SE-*  evaluation, feedback, reproducibility, knowledge evolution
-```
+- MIDI Type 0 / Type 1 import and logical `InstrumentStream` resolution;
+- layered guitar candidate ranking and explicit multi-guitar selection;
+- score timing separated from source/performance timing;
+- section-aware `PlayingContext`;
+- six-string fretboard candidates and hard playability constraints;
+- movable riff/arpeggio repair and chord-voicing continuity;
+- explicit hand-position state with weak-boundary carry / strong-boundary reset;
+- deterministic 1–4 fretting digits;
+- hammer/pull, slide, vibrato, contextual palm mute/staccato;
+- source-backed positive pitch-raise intent from declared MIDI wheel range;
+- down/up pick, strum, observed rolled strum, tremolo, and sweep baselines;
+- conservative harmony labeling;
+- canonical Guitar IR provenance for section, hand position, fretting, right hand, harmony, and articulation parameters.
 
-Long-term architecture:
+### Score outputs
 
-- `docs/LONG_TERM_ARCHITECTURE.md`
-- `docs/projects/guitar-playing-knowledge/`
-- `docs/projects/track-identification/`
-- `docs/projects/virtual-guitar-instruments/`
-- `docs/projects/system-evolution/`
+GP5 baseline includes string/fret mapping, rests/durations, ties, fretting digits, supported articulations, pick direction, observed rolled-strum `BeatStroke`, conservative pitch curves, harmony labels, and write/parse-back validation.
 
-## Prototype status
+PDF/TAB baseline includes six-line TAB, harmony labels, exact rests, stems/flags/beams, dotted marks, triplet brackets, ties, density-aware system breaking, and over-density warnings.
 
-### Input / stream selection
+### Performance / virtual instruments
 
-- [x] Standard MIDI import
-- [x] MIDI Type 0 and Type 1
-- [x] physical Track / Channel / active Program preservation
-- [x] logical `InstrumentStream` resolution
-- [x] layered guitar candidate ranking
-- [x] explicit `--stream-id`
-- [x] multiple-guitar ambiguity handling
-- [ ] labeled corpus + Precision/Recall/F1 calibration (`TI-*`)
+- target-neutral Generic PerformancePlan with timing/velocity/accent/overlap intent;
+- ordinary `fretpilot prototype` PerformancePlan sidecars;
+- provider-neutral `VirtualGuitarInstrumentProfile`;
+- approved static profile registry;
+- migrated `ample-guitar-sc-v4` generic profile;
+- capability negotiation and capability-report sidecars;
+- pre-render `report_only` / `warn` / `strict` policy;
+- public Ample export uses generic profile truth through a thin compatibility view while retaining the proven legacy scheduler;
+- shadow generic control planning has regression coverage against legacy Ample keyswitch/legato behavior.
 
-### Musical understanding / guitar execution
+Track identification remains an incremental `TI-*` project and is not the main Prototype 0.1 blocker.
 
-- [x] onset-grid analysis
-- [x] basic duration spelling
-- [x] score timing separate from source/performance timing
-- [x] measure coordinates and cross-measure ties
-- [x] standard six-string fingering
-- [x] movable riff/arpeggio shape repair baseline
-- [x] simultaneous chord distinct-string solving
-- [x] hammer-on / pull-off / slide / vibrato inference
-- [x] ringing-overlap normalization + `let_ring`
-- [x] composable `PlayingContext`
-- [x] context-aware fingering soft costs (`GK-003` baseline)
-- [x] context-aware articulation confidence (`GK-004` baseline)
-- [x] measure-aware section segmentation (`GK-010` baseline)
-- [x] section behavior → PlayingContext (`GK-011` experimental baseline)
-- [x] per-section fingering/articulation execution + global note-index remapping (`GK-015` baseline)
-- [ ] explicit hand-position state and cross-section continuity (`GK-013`)
-- [ ] reusable explicit shape-memory layer (`GK-012`)
-- [ ] left-hand finger/barre assignment (`GK-014`)
-- [ ] generic Performance Plan consumes `PerformancePreferences` (`GK-005` / remaining `GK-002`)
+## Active Prototype 0.1 work
 
-### Guitar IR
+### 1. Musician-facing score validation
 
-- [x] schema version `0.1`
-- [x] tempo / time-signature maps
-- [x] measures and score events
-- [x] source/performance timing
-- [x] string/fret assignment
-- [x] generic articulation vocabulary
-- [x] confidence / warnings / transformation log
-- [x] section-context field reserved in track IR
-- [ ] persist complete section/knowledge provenance as a stable IR contract
-- [ ] generic performance-intent representation
-- [ ] true multi-voice notation representation
+The engine can generate complete GP5/PDF/TAB review material. The next step is real-song acceptance rather than adding more debug notation.
 
-### PDF / TAB
+Priority fixes from real review should target:
 
-- [x] direct PDF renderer exists
-- [x] six-line TAB review output
-- [ ] musician-readable rhythmic stems/beams
-- [ ] proportional musical spacing
-- [ ] high-quality rests/ties/slides/let-ring presentation
-- [ ] section/phrase-aware system layout
-- [ ] multi-voice TAB
-- [ ] visual golden regression fixtures
-
-### Guitar Pro 5
-
-- [x] GP5 exporter
-- [x] generated rests
-- [x] duration decomposition
-- [x] string/fret mapping
-- [x] ties
-- [x] supported basic articulations
-- [x] write + parse-back automated validation
-- [ ] hands-on Guitar Pro visual review
-- [ ] real-song golden score review
-- [ ] true two-voice output
-
-### Ample Guitar SC 4.x
-
-- [x] working performance-MIDI renderer
-- [x] source timing / velocity preservation
-- [x] sustain state
-- [x] Hammer/Pull keyswitch behavior
-- [x] Legato Slide keyswitch behavior
-- [x] required legato overlap
-- [x] selected generic articulation mappings when present in IR
-- [x] parse-back event-order tests
-- [ ] manual DAW/plugin listening validation
-- [ ] bend curves
-- [ ] vibrato rendering
-- [ ] generic performance preferences before adapter translation
-
-### Virtual-guitar adapter architecture
-
-- [x] `VI-*` project boundary
-- [x] provider-neutral `VirtualGuitarInstrumentProfile` skeleton
-- [ ] migrate Ample static knowledge into generic profile (`VI-002`)
-- [ ] adapter registry (`VI-003`)
-- [ ] capability negotiation: native / approximated / unsupported (`VI-004`)
-- [ ] common conformance suite (`VI-021`)
-- [ ] second target after Ample is validated (`VI-030`)
-
-## Active priority
-
-### 1. `PV-002` — musician-readable score/TAB
-
-The current renderer is useful for debugging but not yet a normal playable TAB experience.
-
-Focus on:
-
-- rhythmic engraving;
-- spacing by musical time;
-- rests/ties/slides/let-ring;
-- readable systems/measures;
-- visual golden fixtures.
+- incorrect string/fret/shape decisions;
+- phrase or hand-position discontinuity;
+- wrong/missing articulation or harmony labels;
+- mixed-density horizontal allocation and annotation collisions;
+- multi-voice material;
+- paired standard staff + TAB when the TAB baseline is stable enough.
 
 Acceptance:
 
-> At least one complete real guitar stream is comfortable to review as a first-draft TAB without Guitar Pro.
+> At least one full real guitar stream reads like a usable first-draft guitar part, not a debugging visualization.
 
-### 2. `GK-013` — hand-position state
+### 2. VI-004 — generic control handoff
 
-Current section-aware execution treats each section as an independent phrase reset.
+The generic VI profile, negotiation layer, preflight policy, and shadow control plan exist. The production Ample MIDI scheduler is intentionally still the regression-proven legacy scheduler.
 
-Add explicit hand-position planning so:
-
-- weak boundaries can carry hand position;
-- strong musical/style boundaries can justify a deliberate shift;
-- shift cost/reason is explainable;
-- physical fretboard constraints remain deterministic.
-
-Acceptance:
-
-> Section-aware context changes musical decisions without creating arbitrary or excessive position jumps at boundaries.
-
-### 3. Finish `GK-002` via generic Performance Plan (`GK-005`)
-
-Target architecture:
+Next transition:
 
 ```text
-section PlayingContext + canonical guitar intent
-→ generic PerformancePlan
-→ VI capability negotiation
-→ target adapter
+canonical Guitar IR / PerformancePlan
+→ capability negotiation
+→ generic ControlAction plan
+→ shadow/parity comparison
+→ adapter consumption only when output-neutral coverage stays green
 ```
 
-`PerformancePreferences` must affect generic musical intent before Ample-specific translation.
+Do not switch schedulers merely for architectural neatness.
 
-### 4. Human review / correction data
+### 3. Real Ample plugin verification
 
-Implement the first small review/correction record path (`SE-020/021`) after the output is useful enough to review.
+Automated MIDI parse-back is not the same as plugin verification. At least one generated Ample MIDI must be played through the actual Ample Guitar SC 4.x plugin/DAW and recorded as structured verification evidence.
 
-Important examples:
+### 4. Guitar-knowledge refinement
 
-- wrong guitar stream;
-- wrong section boundary;
-- wrong role/style context;
-- bad string/fret choice;
-- bad articulation;
-- unreadable notation measure.
+The biggest structural GK gap is `GK-012` reusable root-independent shape memory. Hand-position and fretting-digit baselines should then be refined with barre/stretch/thumb/explicit shift semantics and real-song evidence rather than rebuilt.
 
-These records become future evaluation assets, not direct runtime self-learning.
+### 5. Reproducibility/documentation closeout
 
-### 5. `VI-002` — generalize Ample knowledge
+Before Prototype 0.1 external testing:
 
-Preserve current Ample output while moving static product facts into the generic VI profile schema. Do not put plugin facts in Guitar IR or GK.
+- README/current commands must match implementation;
+- authoritative handoff/backlogs must not contradict one another;
+- unsupported target capabilities must remain explicit;
+- formal runtime/knowledge/config version identity should begin under `SE-*` without blocking the release on the full learning platform.
 
-## Existing prototype package
+## One-command validation package
 
 ```bash
 fretpilot prototype song.mid \
@@ -217,36 +130,40 @@ fretpilot prototype song.mid \
   -o output/
 ```
 
-Per stream, the package contains analysis JSON, Guitar IR JSON, GP5 when supported, Ample MIDI, and a processing report. Analysis/report include section-context summaries.
+Per selected stream the package produces analysis JSON, Guitar IR JSON, GP5 when supported, Ample MIDI, and a processing report. The prototype post-hook also produces PerformancePlan and VI-capability sidecars/indexes.
 
-Section diagnostics:
-
-```bash
-fretpilot sections song.mid \
-  --stream-id t0:ch2:p27
-```
-
-## Prototype 0.1 release definition
+## Prototype 0.1 release gates
 
 Prototype 0.1 is ready for external hands-on testing when:
 
 1. full CI is green;
-2. a real multi-track MIDI can generate packages for likely guitar streams;
-3. at least one complete PDF/TAB or GP5 score has been visually reviewed;
-4. at least one Ample MIDI has been played through the actual plugin;
-5. unsupported cases generate warnings instead of silent corruption;
-6. README commands remain reproducible.
+2. one real multi-guitar MIDI generates complete review packages;
+3. at least one full guitar score/TAB has been visually reviewed and accepted as a usable first draft;
+4. at least one generated Ample MIDI has been played through the actual plugin/DAW;
+5. unsupported cases produce explicit warnings/errors rather than silent corruption;
+6. README, handoff, roadmap, and specialized backlog statuses match the implementation.
 
-Perfect Track identification, multi-product virtual-guitar support, and autonomous learning are explicitly **not** Prototype 0.1 blockers.
+Multi-product support, full TI calibration, large-scale learning infrastructure, and learned rankers are **not** Prototype 0.1 blockers.
 
-## Long-term evolution rule
+## After Prototype 0.1
+
+Near-term candidates:
+
+- `GK-012` reusable shape memory and advanced left-hand contracts;
+- calibrated style-family expansion;
+- TI labeled fixtures/evaluation/config versioning;
+- reusable VI adapter conformance suite and second virtual-guitar target;
+- SE reproducibility manifest and golden-review registry.
+
+Long-term:
 
 ```text
-eligible evidence / corrections / licensed data
-→ candidate knowledge/profile/model
-→ evaluation / conformance / shadow comparison
-→ approval
-→ versioned production state
+stable deterministic engine
++ approved/versioned Guitar Playing Knowledge
++ approved/versioned Virtual Instrument Knowledge
++ golden/user correction evidence
++ controlled candidate → evaluation → promotion loop
++ optional learned rankers that never bypass hard constraints
 ```
 
-Runtime never silently learns from arbitrary internet content while processing a song.
+Runtime must remain reproducible. New web/user/learned evidence never silently changes production behavior.
