@@ -16,6 +16,7 @@ from fretpilot.analysis.sections import (
 )
 from fretpilot.articulation.models import ArticulationDecision
 from fretpilot.guitar.fretting_digits import assign_fretting_digits
+from fretpilot.harmony import plan_harmony_by_sections
 from fretpilot.midi.pitch_wheel import extract_monophonic_pitch_raises
 from fretpilot.picking.sections import plan_picking_by_sections
 
@@ -23,6 +24,11 @@ from fretpilot.picking.sections import plan_picking_by_sections
 def analyze_guitar_track_by_sections(track, section_contexts, **kwargs):
     result = _base_sections(track, section_contexts, **kwargs)
     result.fingering = assign_fretting_digits(track, result.fingering)
+    result.harmony = plan_harmony_by_sections(
+        track,
+        result.fingering,
+        result.section_contexts,
+    )
     result.picking = plan_picking_by_sections(
         track,
         result.fingering,
@@ -36,6 +42,11 @@ def analyze_guitar_stream_section_aware(timeline, stream, **kwargs):
     track = stream.as_track()
     result = _base_stream(timeline, stream, **kwargs)
     result.fingering = assign_fretting_digits(track, result.fingering)
+    result.harmony = plan_harmony_by_sections(
+        track,
+        result.fingering,
+        result.section_contexts,
+    )
     result.picking = plan_picking_by_sections(
         track,
         result.fingering,
