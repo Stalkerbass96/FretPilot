@@ -58,6 +58,16 @@ def _timing_int(profile: VirtualGuitarInstrumentProfile, key: str) -> int:
     return integer
 
 
+def _action_offset(action: ControlAction) -> int:
+    if isinstance(action.offset_ticks, bool) or not isinstance(action.offset_ticks, int):
+        raise ValueError("ControlAction.offset_ticks must be an integer.")
+    return action.offset_ticks
+
+
+def _with_action_offset(tick: int, action: ControlAction) -> int:
+    return max(0, tick + _action_offset(action))
+
+
 def _flatten_events(project: GuitarProjectIR) -> list[GuitarNoteEvent]:
     if not project.tracks:
         return []
@@ -87,7 +97,7 @@ def _initial_controls(
                 continue
             controls.append(
                 ScheduledControlAction(
-                    tick=0,
+                    tick=_with_action_offset(0, action),
                     source_event_id=None,
                     requested_intent=capability.intent,
                     resolved_intent=capability.intent,
@@ -193,16 +203,17 @@ def build_control_plan(
             if action.timing == "initial_state":
                 continue
             if action.timing == "preroll":
-                tick = max(0, start_ticks[anchor.id] - preroll)
+                base_tick = max(0, start_ticks[anchor.id] - preroll)
             elif action.timing == "after_event":
-                tick = max(start_ticks[event.id], end_ticks[event.id])
+                base_tick = max(start_ticks[event.id], end_ticks[event.id])
             elif action.timing in {"immediate", "on_event"}:
-                tick = start_ticks[event.id]
+                base_tick = start_ticks[event.id]
             else:
                 plan.warnings.append(
                     f"Skipped unsupported ControlAction timing {action.timing!r} for {articulation.type!r} on {event.id}."
                 )
                 continue
+            tick = _with_action_offset(base_tick, action)
             plan.controls.append(
                 ScheduledControlAction(
                     tick=tick,
