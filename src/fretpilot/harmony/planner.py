@@ -76,9 +76,11 @@ def _simultaneous_decisions(track: NormalizedTrack) -> list[HarmonyDecision]:
     return decisions
 
 
-def _guitar_arpeggio_path(
+def _monotonic_string_path(
     fingering: FingeringResult,
     indices: list[int],
+    *,
+    max_string_step: int,
 ) -> bool:
     strings = [fingering.notes[index].string for index in indices]
     if any(string is None for string in strings):
@@ -87,7 +89,7 @@ def _guitar_arpeggio_path(
         int(current) - int(previous)
         for previous, current in zip(strings, strings[1:], strict=False)
     ]
-    if not deltas or any(abs(delta) > 1 for delta in deltas):
+    if not deltas or any(abs(delta) > max_string_step for delta in deltas):
         return False
     nonzero = [delta for delta in deltas if delta != 0]
     if not nonzero:
@@ -98,12 +100,38 @@ def _guitar_arpeggio_path(
     return deltas.count(0) <= 1
 
 
+def _guitar_arpeggio_path(
+    fingering: FingeringResult,
+    indices: list[int],
+) -> bool:
+    return _monotonic_string_path(fingering, indices, max_string_step=1)
+
+
 def _four_note_pitch_classes_are_safe(notes) -> bool:
     pitch_classes = [note.pitch % 12 for note in notes]
     unique_count = len(set(pitch_classes))
     if unique_count == 4:
         return True
     return unique_count == 3 and pitch_classes[-1] == pitch_classes[0]
+
+
+def _octave_closure_path(
+    fingering: FingeringResult,
+    indices: list[int],
+    pitches: list[int],
+) -> bool:
+    if len(indices) != 4 or len(pitches) != 4:
+        return False
+    if pitches[-1] - pitches[0] != 12:
+        return False
+    if pitches[-1] % 12 != pitches[0] % 12:
+        return False
+    # Ordinary three-note cells remain strictly adjacent-string.  Only the
+    # repeated-root closing note may require a single string skip, and the
+    # whole path must still move monotonically without reversing direction.
+    if not _guitar_arpeggio_path(fingering, indices[:3]):
+        return False
+    return _monotonic_string_path(fingering, indices, max_string_step=2)
 
 
 def _sequential_decisions(
@@ -136,9 +164,13 @@ def _sequential_decisions(
                 for previous, current in zip(notes, notes[1:], strict=False)
             ):
                 continue
-            if not _guitar_arpeggio_path(fingering, window):
+            pitches = [note.pitch for note in notes]
+            path_ok = _guitar_arpeggio_path(fingering, window)
+            if not path_ok and length == 4:
+                path_ok = _octave_closure_path(fingering, window, pitches)
+            if not path_ok:
                 continue
-            identified = _identify([note.pitch for note in notes])
+            identified = _identify(pitches)
             if identified is None:
                 continue
             matched = (window, identified)
@@ -160,7 +192,7 @@ def _sequential_decisions(
                 confidence=0.90,
                 reason=(
                     "Sequential notes match a known chord template and follow a "
-                    "monotonic adjacent-string guitar path in the final fingering."
+                    "monotonic guitar path in the final fingering."
                 ),
             )
         )
