@@ -12,6 +12,8 @@ This page is the navigation entry point for product, architecture, and active de
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — module boundaries and executable architecture.
 - [`LONG_TERM_ARCHITECTURE.md`](LONG_TERM_ARCHITECTURE.md) — Runtime/Learning planes and long-term evolution constraints.
 - [`MUSIC_IR.md`](MUSIC_IR.md) — canonical Guitar IR contract.
+- [`FRONTEND_DESIGN_SYSTEM.md`](FRONTEND_DESIGN_SYSTEM.md) — product frontend
+  principles, technical baseline, tokens, accessibility, and current scope.
 
 For a new AI agent: read `AGENTS.md` → `AI_AGENT_HANDOFF.md` → `ROADMAP.md`, then open only the specialized project docs for the task family being changed.
 
