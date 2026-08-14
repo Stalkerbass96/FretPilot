@@ -20,6 +20,8 @@ from fretpilot.exporters.pdf_score.renderer import (
     PDFScoreExportResult,
     _PDFScoreRenderer,
     _harmony_label_map,
+    _maximum_voice_count,
+    _system_uses_voice_two,
 )
 from fretpilot.ir.models import GuitarProjectIR, GuitarTrackIR
 
@@ -98,7 +100,11 @@ class _DensityAwarePDFScoreRenderer(_PDFScoreRenderer):
                 available_width=available_width,
             )
             for chunk in chunks:
-                if systems >= self.systems_per_page or self.current_y < 140:
+                minimum_start_y = 175 if _system_uses_voice_two(chunk) else 140
+                if (
+                    systems >= self.systems_per_page
+                    or self.current_y < minimum_start_y
+                ):
                     self._new_page(section)
                     systems = 0
 
@@ -152,5 +158,6 @@ def export_score_pdf(
             for track in project.tracks
             for measure in track.measures
         ),
+        maximum_voice_count=_maximum_voice_count(project),
         warnings=renderer.warnings,
     )
