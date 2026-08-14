@@ -40,6 +40,44 @@ def _track(
     return NormalizedTrack(index=0, name="Lead Guitar", notes=notes)
 
 
+def _stream(track: NormalizedTrack) -> InstrumentStream:
+    return InstrumentStream(
+        stream_id="t0:ch0:p29",
+        source_track_index=0,
+        source_track_name="Lead Guitar",
+        channel=0,
+        program=29,
+        program_name="Overdriven Guitar",
+        program_family="guitar",
+        instrument_name=None,
+        notes=track.notes,
+    )
+
+
+def _wheel_timeline(
+    track: NormalizedTrack,
+    *,
+    include_range: bool = True,
+) -> NormalizedTimeline:
+    return NormalizedTimeline(
+        source="wheel.mid",
+        midi_type=1,
+        ticks_per_beat=480,
+        tempo_events=[TempoEvent(0, 0.0, 120.0)],
+        time_signature_events=[TimeSignatureEvent(0, 0.0, 4, 4)],
+        tracks=[track],
+        pitch_wheel_events=[
+            PitchWheelEvent(0, 0, 120, 0.25, 4096),
+            PitchWheelEvent(0, 0, 240, 0.5, 0),
+        ],
+        pitch_wheel_range_events=(
+            [PitchWheelRangeEvent(0, 0, 0, 0.0, 2, 0)]
+            if include_range
+            else []
+        ),
+    )
+
+
 def test_analysis_combines_rhythm_fingering_and_articulation() -> None:
     track = _track(
         [64, 66, 71],
@@ -68,34 +106,10 @@ def test_analysis_threads_explicit_playing_context_into_result() -> None:
 
 def test_stream_analysis_attaches_explicit_pitch_raise_parameters() -> None:
     track = _track([64], onsets=[0.0], durations=[1.0])
-    stream = InstrumentStream(
-        stream_id="t0:ch0:p29",
-        source_track_index=0,
-        source_track_name="Lead Guitar",
-        channel=0,
-        program=29,
-        program_name="Overdriven Guitar",
-        program_family="guitar",
-        instrument_name=None,
-        notes=track.notes,
+    analysis = analyze_guitar_stream_section_aware(
+        _wheel_timeline(track),
+        _stream(track),
     )
-    timeline = NormalizedTimeline(
-        source="wheel.mid",
-        midi_type=1,
-        ticks_per_beat=480,
-        tempo_events=[TempoEvent(0, 0.0, 120.0)],
-        time_signature_events=[TimeSignatureEvent(0, 0.0, 4, 4)],
-        tracks=[track],
-        pitch_wheel_events=[
-            PitchWheelEvent(0, 0, 120, 0.25, 4096),
-            PitchWheelEvent(0, 0, 240, 0.5, 0),
-        ],
-        pitch_wheel_range_events=[
-            PitchWheelRangeEvent(0, 0, 0, 0.0, 2, 0),
-        ],
-    )
-
-    analysis = analyze_guitar_stream_section_aware(timeline, stream)
     decision = next(
         item for item in analysis.articulations.decisions
         if item.technique == "pitch_raise"
@@ -104,3 +118,31 @@ def test_stream_analysis_attaches_explicit_pitch_raise_parameters() -> None:
     assert decision.parameters["semitones"] == 1.0
     assert decision.parameters["range_semitones"] == 2.0
     assert decision.confidence == 0.94
+
+
+def test_pitch_wheel_without_declared_range_stays_unspecified() -> None:
+    track = _track([64], onsets=[0.0], durations=[1.0])
+    analysis = analyze_guitar_stream_section_aware(
+        _wheel_timeline(track, include_range=False),
+        _stream(track),
+    )
+    assert not any(
+        item.technique == "pitch_raise"
+        for item in analysis.articulations.decisions
+    )
+
+
+def test_pitch_wheel_during_overlapping_notes_stays_unspecified() -> None:
+    track = _track(
+        [64, 67],
+        onsets=[0.0, 0.0],
+        durations=[1.0, 1.0],
+    )
+    analysis = analyze_guitar_stream_section_aware(
+        _wheel_timeline(track),
+        _stream(track),
+    )
+    assert not any(
+        item.technique == "pitch_raise"
+        for item in analysis.articulations.decisions
+    )
