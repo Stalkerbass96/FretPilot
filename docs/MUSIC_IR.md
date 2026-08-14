@@ -32,7 +32,11 @@ Top-level shape:
 
 ```json
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
+  "knowledge": {
+    "snapshot_version": "2026.08.0",
+    "entry_ids": ["gk.profile.solo"]
+  },
   "title": "song",
   "source": "song.mid",
   "tempo_map": [],
@@ -42,6 +46,13 @@ Top-level shape:
   "warnings": []
 }
 ```
+
+`knowledge.snapshot_version` pins the musical knowledge asset used for the
+project. `entry_ids` is the ordered, de-duplicated union of approved profile
+entries that influenced its section contexts. Each serialized
+`PlayingContext` also keeps its local `knowledge_version` and
+`knowledge_entry_ids`, so project-level provenance does not erase which
+section used which profiles.
 
 ## Guitar track
 
@@ -176,13 +187,13 @@ Planned canonical vocabulary:
 
 The IR stores musical intent. It must never store Ample Guitar keyswitch note numbers.
 
-## Current V0.1 limitations
+## Current V0.2 limitations
 
 - one voice only;
 - duration spelling uses the selected rhythm grid;
 - no explicit rest events yet;
 - no dotted-note or tuplet spelling objects yet;
-- no phrase/section objects yet;
+- section contexts remain generic track metadata rather than typed IR regions;
 - role defaults to `unknown`;
 - fingering confidence is currently binary playable/unplayable;
 - note fragments repeat the original source performance timing;

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fretpilot.detection.models import BehaviorProfileMatch
 from fretpilot.knowledge import (
+    BUILTIN_KNOWLEDGE_SNAPSHOT_VERSION,
     compose_playing_context,
     context_from_behavior_matches,
     match_behavior_profiles,
@@ -22,6 +23,8 @@ def test_role_and_style_are_composed_instead_of_flattened() -> None:
     assert context.role_scores == {"solo": 0.9}
     assert context.style_scores == {"metal": 0.8}
     assert context.source_profiles == ["solo", "metal"]
+    assert context.knowledge_version == BUILTIN_KNOWLEDGE_SNAPSHOT_VERSION
+    assert context.knowledge_entry_ids == ["gk.profile.solo", "gk.profile.metal"]
     assert context.articulation.vibrato > 1.0
     assert context.fingering.low_register_bias > 1.0
 

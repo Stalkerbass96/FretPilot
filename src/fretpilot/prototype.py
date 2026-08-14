@@ -15,6 +15,7 @@ from fretpilot.exporters.ample_guitar import export_ample_sc_midi
 from fretpilot.exporters.guitar_pro import UnsupportedGuitarIR, export_gp5
 from fretpilot.exporters.pdf_score import export_score_pdf
 from fretpilot.ir import build_guitar_ir
+from fretpilot.knowledge import BUILTIN_KNOWLEDGE_SNAPSHOT_VERSION
 from fretpilot.midi.models import NormalizedTimeline
 from fretpilot.rewrite import (
     DEFAULT_MIDI_FIDELITY,
@@ -53,6 +54,7 @@ class PrototypeManifest:
     output_directory: str
     stream_results: list[PrototypeStreamResult]
     selected_stream_ids: list[str]
+    knowledge_snapshot_version: str = BUILTIN_KNOWLEDGE_SNAPSHOT_VERSION
     format_version: str = "0.1"
 
     def to_dict(self) -> dict[str, Any]:
@@ -130,6 +132,11 @@ def _build_processing_report(
             "style_scores": item.playing_context.style_scores,
             "technique_scores": item.playing_context.technique_scores,
             "source_profiles": item.playing_context.source_profiles,
+            "knowledge_version": item.playing_context.knowledge_version,
+            "knowledge_entry_ids": item.playing_context.knowledge_entry_ids,
+            "boundary_confidence": item.boundary_confidence,
+            "boundary_strength": item.boundary_strength,
+            "boundary_reason": item.boundary_reason,
         }
         for item in analysis.section_contexts
     ]
@@ -192,6 +199,14 @@ def _build_processing_report(
             "gp5": asdict(gp5_status),
             "ample_sc_midi": asdict(ample_status),
         },
+        "knowledge": (
+            asdict(project.knowledge)
+            if project.knowledge is not None
+            else {
+                "snapshot_version": BUILTIN_KNOWLEDGE_SNAPSHOT_VERSION,
+                "entry_ids": [],
+            }
+        ),
         "review_required": bool(
             rewrite.changes
             or low_confidence_rhythm
@@ -418,6 +433,7 @@ def generate_prototype_package(
         output_directory=str(root),
         selected_stream_ids=[candidate.stream.stream_id for candidate in candidates],
         stream_results=results,
+        knowledge_snapshot_version=BUILTIN_KNOWLEDGE_SNAPSHOT_VERSION,
     )
     _write_json(root / "manifest.json", manifest.to_dict(), compact=compact_json)
     return manifest

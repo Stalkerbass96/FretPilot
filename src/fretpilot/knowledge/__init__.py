@@ -1,5 +1,25 @@
 """Versioned musical knowledge used by FretPilot analysis and score planning."""
 
+from fretpilot.knowledge.models import (
+    KnowledgeEntry,
+    KnowledgeEvaluation,
+    KnowledgeProvenance,
+    KnowledgeSnapshot,
+)
+from fretpilot.knowledge.registry import (
+    BUILTIN_KNOWLEDGE_SNAPSHOT_VERSION,
+    KnowledgeRegistry,
+    SUPPORTED_KNOWLEDGE_SCHEMA_VERSION,
+    get_builtin_knowledge_registry,
+    load_knowledge_snapshot,
+)
+from fretpilot.knowledge.shapes import (
+    GuitarShapePrototype,
+    ShapeNote,
+    get_guitar_shape,
+    list_guitar_shapes,
+)
+
 from fretpilot.knowledge.guitar_behaviors import (
     LIBRARY_VERSION,
     PROFILES as BEHAVIOR_PROFILES,
@@ -34,6 +54,19 @@ __all__ = [
     "LIBRARY_VERSION",
     "PLAYING_KNOWLEDGE_VERSION",
     "RESEARCH_SOURCE_VERSION",
+    "BUILTIN_KNOWLEDGE_SNAPSHOT_VERSION",
+    "SUPPORTED_KNOWLEDGE_SCHEMA_VERSION",
+    "KnowledgeEntry",
+    "KnowledgeEvaluation",
+    "KnowledgeProvenance",
+    "KnowledgeSnapshot",
+    "KnowledgeRegistry",
+    "get_builtin_knowledge_registry",
+    "load_knowledge_snapshot",
+    "ShapeNote",
+    "GuitarShapePrototype",
+    "get_guitar_shape",
+    "list_guitar_shapes",
     "PROFILES",
     "BEHAVIOR_PROFILES",
     "PLAYING_PROFILES",

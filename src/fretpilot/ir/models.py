@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
-SCHEMA_VERSION = "0.1"
+SCHEMA_VERSION = "0.2"
 @dataclass(slots=True)
 class IRTempoEvent:
     beat: float
@@ -98,6 +98,11 @@ class GuitarTrackIR:
     hand_positions: list[dict[str, Any]] = field(default_factory=list)
     harmony_regions: list[IRHarmonyRegion] = field(default_factory=list)
 @dataclass(slots=True)
+class IRKnowledgeReference:
+    """Pinned musical-knowledge identity that influenced this project."""
+    snapshot_version: str
+    entry_ids: list[str] = field(default_factory=list)
+@dataclass(slots=True)
 class Transformation:
     id: str
     stage: str
@@ -113,6 +118,7 @@ class GuitarProjectIR:
     tempo_map: list[IRTempoEvent]
     time_signatures: list[IRTimeSignatureEvent]
     tracks: list[GuitarTrackIR]
+    knowledge: IRKnowledgeReference | None = None
     changes: list[Transformation] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     schema_version: str = SCHEMA_VERSION

@@ -12,6 +12,7 @@ from typing import Any
 from uuid import uuid4
 
 from fretpilot.midi import load_midi
+from fretpilot.knowledge import BUILTIN_KNOWLEDGE_SNAPSHOT_VERSION
 from fretpilot.prototype import PrototypeOutputStatus, generate_prototype_package
 
 
@@ -67,6 +68,7 @@ class JobRecord:
     requested_outputs: OutputRequest
     source_path: Path
     output_directory: Path
+    knowledge_snapshot_version: str = BUILTIN_KNOWLEDGE_SNAPSHOT_VERSION
     status: str = "queued"
     progress: int = 0
     error: str | None = None
@@ -130,6 +132,7 @@ class JobManager:
             )
             streams = [self._collect_stream(job_id, item) for item in manifest.stream_results]
             with self._lock:
+                record.knowledge_snapshot_version = manifest.knowledge_snapshot_version
                 record.streams = streams
                 record.status = "completed"
                 record.progress = 100
@@ -207,6 +210,7 @@ class JobManager:
                 "source_filename": record.source_filename,
                 "midi_fidelity": record.midi_fidelity,
                 "requested_outputs": record.requested_outputs.to_dict(),
+                "knowledge_snapshot_version": record.knowledge_snapshot_version,
                 "error": record.error,
                 "created_at": record.created_at,
                 "completed_at": record.completed_at,

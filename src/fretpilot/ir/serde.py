@@ -12,6 +12,7 @@ from fretpilot.ir.models import (
     IRArticulation,
     IRFingering,
     IRHarmonyRegion,
+    IRKnowledgeReference,
     IRRightHandIntent,
     IRTempoEvent,
     IRTimeSignatureEvent,
@@ -87,6 +88,7 @@ def project_from_dict(data: dict[str, Any]) -> GuitarProjectIR:
             )
         )
 
+    raw_knowledge = data.get("knowledge")
     return GuitarProjectIR(
         title=str(data.get("title", "")),
         source=str(data.get("source", "")),
@@ -96,6 +98,14 @@ def project_from_dict(data: dict[str, Any]) -> GuitarProjectIR:
             for item in data.get("time_signatures", [])
         ],
         tracks=tracks,
+        knowledge=(
+            IRKnowledgeReference(
+                snapshot_version=str(raw_knowledge["snapshot_version"]),
+                entry_ids=[str(item) for item in raw_knowledge.get("entry_ids", [])],
+            )
+            if isinstance(raw_knowledge, dict)
+            else None
+        ),
         changes=[Transformation(**item) for item in data.get("changes", [])],
         warnings=[str(item) for item in data.get("warnings", [])],
         schema_version=str(data.get("schema_version", "0.1")),

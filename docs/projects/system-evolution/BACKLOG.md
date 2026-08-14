@@ -21,7 +21,7 @@ Acceptance:
 - learning requires candidate/evaluation/promotion stages;
 - project ownership between `PV-*`, `TI-*`, `GK-*`, and `SE-*` is documented.
 
-### [ ] SE-002 — Runtime reproducibility manifest
+### [~] SE-002 — Runtime reproducibility manifest
 
 Define a common version/provenance record attached to analysis and output packages.
 
@@ -46,6 +46,10 @@ Likely dependencies:
 
 - current Guitar IR metadata;
 - `GK-035` knowledge snapshot format.
+
+Current baseline records the knowledge snapshot in manifest/API results and the
+snapshot plus exact used entry IDs in Guitar IR/reports. Engine/configuration
+versions and source fingerprint remain to complete the common manifest.
 
 ### [ ] SE-003 — Shared evaluation artifact identity
 
@@ -87,7 +91,7 @@ Acceptance:
 - downstream modules consume the same region identity instead of recomputing incompatible sections;
 - whole-track classification remains available as a fallback only.
 
-### [ ] SE-011 — Context provenance in Guitar IR
+### [~] SE-011 — Context provenance in Guitar IR
 
 Record enough context metadata in Guitar IR to explain why a fingering/articulation/performance decision was made.
 
@@ -98,6 +102,10 @@ Acceptance:
 - renderer-specific mappings remain outside the canonical intent model.
 
 Primary implementation dependency: `GK-002`.
+
+Current baseline persists section-level knowledge versions/entry IDs and an
+aggregated project-level IR reference. Stable region-to-decision references
+remain incomplete.
 
 ## P1 — feedback and review loop
 
@@ -147,7 +155,7 @@ Acceptance:
 
 ## P2 — approved knowledge snapshots
 
-### [ ] SE-030 — Knowledge Snapshot loader/pinning
+### [~] SE-030 — Knowledge Snapshot loader/pinning
 
 Create a runtime mechanism that loads an explicitly selected approved knowledge snapshot.
 
@@ -158,6 +166,9 @@ Acceptance:
 - snapshot version appears in reports and Guitar IR metadata.
 
 Canonical knowledge format work: `GK-035`.
+
+Current baseline loads a packaged, explicitly version-pinned approved snapshot.
+Runtime selection of another compatible approved snapshot remains pending.
 
 ### [ ] SE-031 — Candidate vs production snapshot separation
 

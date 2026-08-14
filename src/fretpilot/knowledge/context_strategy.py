@@ -65,4 +65,8 @@ def apply_style_scores_to_context(
     context.source_profiles = list(dict.fromkeys(
         [*modeled.source_profiles, *(f"strategy:{name}" for name in score_strategy.styles)]
     ))
+    context.knowledge_version = modeled.knowledge_version
+    context.knowledge_entry_ids = list(
+        dict.fromkeys([*context.knowledge_entry_ids, *modeled.knowledge_entry_ids])
+    )
     return score_strategy

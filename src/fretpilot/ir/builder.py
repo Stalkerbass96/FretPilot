@@ -15,6 +15,7 @@ from fretpilot.ir.models import (
     GuitarNoteEvent,
     GuitarProjectIR,
     GuitarTrackIR,
+    IRKnowledgeReference,
     IRArticulation,
     IRFingering,
     IRTempoEvent,
@@ -496,6 +497,33 @@ def build_guitar_ir(
         ),
     )
 
+    contexts = [
+        context
+        for context in (
+            [analysis.playing_context]
+            + [item.playing_context for item in analysis.section_contexts]
+        )
+        if context is not None
+    ]
+    knowledge_versions = {context.knowledge_version for context in contexts}
+    if len(knowledge_versions) > 1:
+        raise ValueError("Analysis mixed multiple playing-knowledge snapshots.")
+    knowledge_entry_ids = list(
+        dict.fromkeys(
+            entry_id
+            for context in contexts
+            for entry_id in context.knowledge_entry_ids
+        )
+    )
+    knowledge = (
+        IRKnowledgeReference(
+            snapshot_version=next(iter(knowledge_versions)),
+            entry_ids=knowledge_entry_ids,
+        )
+        if knowledge_versions
+        else None
+    )
+
     return GuitarProjectIR(
         title=Path(timeline.source).stem or "Untitled",
         source=timeline.source,
@@ -512,6 +540,7 @@ def build_guitar_ir(
             for event in timeline.time_signature_events
         ],
         tracks=[guitar_track],
+        knowledge=knowledge,
         changes=changes,
         warnings=warnings,
     )

@@ -118,6 +118,17 @@ def test_all_likely_guitars_receive_complete_output_packages(tmp_path: Path) -> 
         assert report_payload["sections"]["items"]
         assert report_payload["note_rewrite"]["midi_fidelity"] == 0.35
         assert report_payload["outputs"]["pdf"]["status"] == "success"
+        assert manifest.knowledge_snapshot_version
+        assert report_payload["knowledge"]["snapshot_version"] == (
+            manifest.knowledge_snapshot_version
+        )
+        ir_knowledge = json.loads(Path(result.guitar_ir.path).read_text(encoding="utf-8"))[
+            "knowledge"
+        ]
+        assert ir_knowledge["snapshot_version"] == manifest.knowledge_snapshot_version
+        assert set(ir_knowledge["entry_ids"]) == set(
+            report_payload["knowledge"]["entry_ids"]
+        )
 
 
 def test_unselected_formats_are_skipped_without_forcing_review(tmp_path: Path) -> None:

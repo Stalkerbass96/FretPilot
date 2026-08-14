@@ -1,0 +1,335 @@
+{
+  "schema_version": "1",
+  "snapshot_version": "2026.08.0",
+  "status": "approved",
+  "entries": [
+    {
+      "knowledge_id": "gk.profile.solo",
+      "domain": "guitar_playing",
+      "kind": "playing_profile",
+      "schema_version": "1",
+      "knowledge_version": "2026.08.0",
+      "status": "approved",
+      "scope": {"roles": ["solo"]},
+      "payload": {
+        "profile_id": "solo",
+        "label": "Solo / Lead",
+        "dimension": "role",
+        "description": "Melodic lead playing with phrasing, expressive articulation, and position-aware legato.",
+        "maturity": "experimental",
+        "fingering": {
+          "adjacent_string_arpeggio": 0.85,
+          "same_string_legato": 1.35,
+          "hand_position_stability": 1.15,
+          "shape_reuse": 0.90,
+          "open_string_usage": 0.65,
+          "wide_interval_position_shift": 1.15
+        },
+        "articulation": {
+          "hammer_pull": 1.35,
+          "slide": 1.30,
+          "bend": 1.45,
+          "vibrato": 1.45,
+          "palm_mute": 0.65,
+          "let_ring": 0.85
+        }
+      },
+      "provenance": {
+        "source_type": "hand_authored",
+        "reference": "FretPilot hand-authored V0 priors",
+        "notes": "Soft preference baseline; not a learned statistical claim."
+      },
+      "evaluation": {"benchmark_version": "builtin-v0", "status": "baseline"}
+    },
+    {
+      "knowledge_id": "gk.profile.riff",
+      "domain": "guitar_playing",
+      "kind": "playing_profile",
+      "schema_version": "1",
+      "knowledge_version": "2026.08.0",
+      "status": "approved",
+      "scope": {"roles": ["riff"]},
+      "payload": {
+        "profile_id": "riff",
+        "label": "Riff",
+        "dimension": "role",
+        "description": "Repeated phrase cells where shape memory and stable picking geometry are important.",
+        "maturity": "experimental",
+        "fingering": {
+          "adjacent_string_arpeggio": 1.20,
+          "same_string_legato": 0.90,
+          "hand_position_stability": 1.25,
+          "shape_reuse": 1.45,
+          "open_string_usage": 1.05,
+          "compact_chord_voicing": 1.15
+        },
+        "articulation": {
+          "hammer_pull": 0.90,
+          "slide": 0.95,
+          "bend": 0.55,
+          "vibrato": 0.65,
+          "palm_mute": 1.15,
+          "staccato": 1.15
+        },
+        "performance": {"timing_looseness": 0.80, "accent_strength": 1.20}
+      },
+      "provenance": {
+        "source_type": "hand_authored",
+        "reference": "FretPilot hand-authored V0 priors",
+        "notes": "Soft preference baseline; not a learned statistical claim."
+      },
+      "evaluation": {"benchmark_version": "builtin-v0", "status": "baseline"}
+    },
+    {
+      "knowledge_id": "gk.profile.strumming",
+      "domain": "guitar_playing",
+      "kind": "playing_profile",
+      "schema_version": "1",
+      "knowledge_version": "2026.08.0",
+      "status": "approved",
+      "scope": {"roles": ["strumming"]},
+      "payload": {
+        "profile_id": "strumming",
+        "label": "Strumming / Chord Rhythm",
+        "dimension": "role",
+        "description": "Chordal rhythm playing prioritizing playable voicings and hand-position continuity.",
+        "maturity": "experimental",
+        "fingering": {
+          "adjacent_string_arpeggio": 0.85,
+          "same_string_legato": 0.45,
+          "hand_position_stability": 1.40,
+          "shape_reuse": 1.35,
+          "open_string_usage": 1.25,
+          "compact_chord_voicing": 1.45
+        },
+        "articulation": {
+          "hammer_pull": 0.45,
+          "slide": 0.55,
+          "bend": 0.20,
+          "vibrato": 0.25,
+          "let_ring": 1.25
+        },
+        "performance": {
+          "timing_looseness": 1.15,
+          "velocity_variation": 1.15,
+          "accent_strength": 1.15
+        }
+      },
+      "provenance": {
+        "source_type": "hand_authored",
+        "reference": "FretPilot hand-authored V0 priors",
+        "notes": "Soft preference baseline; not a learned statistical claim."
+      },
+      "evaluation": {"benchmark_version": "builtin-v0", "status": "baseline"}
+    },
+    {
+      "knowledge_id": "gk.profile.metal",
+      "domain": "guitar_playing",
+      "kind": "playing_profile",
+      "schema_version": "1",
+      "knowledge_version": "2026.08.0",
+      "status": "approved",
+      "scope": {"styles": ["metal"]},
+      "payload": {
+        "profile_id": "metal",
+        "label": "Metal",
+        "dimension": "style",
+        "description": "Tight low-register guitar language with palm mute, pedal tones, power shapes, and controlled shifts.",
+        "maturity": "experimental",
+        "fingering": {
+          "adjacent_string_arpeggio": 1.05,
+          "same_string_legato": 0.75,
+          "hand_position_stability": 1.35,
+          "shape_reuse": 1.40,
+          "open_string_usage": 1.25,
+          "low_register_bias": 1.45,
+          "compact_chord_voicing": 1.30
+        },
+        "articulation": {
+          "hammer_pull": 0.85,
+          "slide": 1.00,
+          "bend": 0.70,
+          "vibrato": 0.80,
+          "palm_mute": 1.60,
+          "let_ring": 0.55,
+          "staccato": 1.35
+        },
+        "performance": {
+          "timing_looseness": 0.65,
+          "velocity_variation": 0.75,
+          "note_overlap": 0.70,
+          "accent_strength": 1.35
+        }
+      },
+      "provenance": {
+        "source_type": "hand_authored",
+        "reference": "FretPilot hand-authored V0 priors",
+        "notes": "Soft preference baseline; not a learned statistical claim."
+      },
+      "evaluation": {"benchmark_version": "builtin-v0", "status": "baseline"}
+    },
+    {
+      "knowledge_id": "gk.profile.jazz",
+      "domain": "guitar_playing",
+      "kind": "playing_profile",
+      "schema_version": "1",
+      "knowledge_version": "2026.08.0",
+      "status": "approved",
+      "scope": {"styles": ["jazz"]},
+      "payload": {
+        "profile_id": "jazz",
+        "label": "Jazz",
+        "dimension": "style",
+        "description": "Voice-leading-aware chord and melodic language with economical position changes and richer voicings.",
+        "maturity": "experimental",
+        "fingering": {
+          "adjacent_string_arpeggio": 1.05,
+          "same_string_legato": 0.85,
+          "hand_position_stability": 1.25,
+          "shape_reuse": 1.10,
+          "open_string_usage": 0.65,
+          "compact_chord_voicing": 1.35,
+          "wide_interval_position_shift": 1.20
+        },
+        "articulation": {
+          "hammer_pull": 0.85,
+          "slide": 0.95,
+          "bend": 0.65,
+          "vibrato": 0.85,
+          "palm_mute": 0.45,
+          "let_ring": 0.90,
+          "staccato": 1.05
+        },
+        "performance": {
+          "timing_looseness": 1.20,
+          "velocity_variation": 1.20,
+          "accent_strength": 0.95
+        }
+      },
+      "provenance": {
+        "source_type": "hand_authored",
+        "reference": "FretPilot hand-authored V0 priors",
+        "notes": "Soft preference baseline; not a learned statistical claim."
+      },
+      "evaluation": {"benchmark_version": "builtin-v0", "status": "baseline"}
+    },
+    {
+      "knowledge_id": "gk.profile.rock_arpeggio",
+      "domain": "guitar_playing",
+      "kind": "playing_profile",
+      "schema_version": "1",
+      "knowledge_version": "2026.08.0",
+      "status": "approved",
+      "scope": {"technique_families": ["rock_arpeggio"]},
+      "payload": {
+        "profile_id": "rock_arpeggio",
+        "label": "Rock Arpeggio",
+        "dimension": "technique_family",
+        "description": "Movable adjacent-string arpeggio shapes such as the Message in a Bottle reference pattern.",
+        "maturity": "experimental",
+        "fingering": {
+          "adjacent_string_arpeggio": 1.65,
+          "same_string_legato": 0.75,
+          "hand_position_stability": 1.30,
+          "shape_reuse": 1.60,
+          "open_string_usage": 0.65,
+          "compact_chord_voicing": 1.15
+        },
+        "articulation": {"let_ring": 1.30}
+      },
+      "provenance": {
+        "source_type": "hand_authored",
+        "reference": "FretPilot hand-authored V0 priors",
+        "notes": "Soft preference baseline; not a learned statistical claim."
+      },
+      "evaluation": {"benchmark_version": "builtin-v0", "status": "baseline"}
+    },
+    {
+      "knowledge_id": "gk.shape.power_chord",
+      "domain": "guitar_playing",
+      "kind": "shape_prototype",
+      "schema_version": "1",
+      "knowledge_version": "2026.08.0",
+      "status": "candidate",
+      "scope": {"roles": ["riff", "strumming"], "styles": ["rock", "metal"]},
+      "payload": {
+        "shape_id": "power_chord",
+        "label": "Root–fifth–octave power chord",
+        "coordinate_system": "relative_string_fret",
+        "tuning_families": ["standard-fourths-low-strings"],
+        "notes": [
+          {"string_offset": 0, "fret_offset": 0, "interval_semitones": 0, "function": "root"},
+          {"string_offset": 1, "fret_offset": 2, "interval_semitones": 7, "function": "fifth"},
+          {"string_offset": 2, "fret_offset": 2, "interval_semitones": 12, "function": "octave"}
+        ]
+      },
+      "provenance": {"source_type": "hand_authored", "reference": "GK-012 candidate baseline"},
+      "evaluation": {"status": "untested"}
+    },
+    {
+      "knowledge_id": "gk.shape.octave",
+      "domain": "guitar_playing",
+      "kind": "shape_prototype",
+      "schema_version": "1",
+      "knowledge_version": "2026.08.0",
+      "status": "candidate",
+      "scope": {"roles": ["riff", "solo"], "styles": ["rock", "funk"]},
+      "payload": {
+        "shape_id": "octave",
+        "label": "Low-string octave",
+        "coordinate_system": "relative_string_fret",
+        "tuning_families": ["standard-fourths-low-strings"],
+        "notes": [
+          {"string_offset": 0, "fret_offset": 0, "interval_semitones": 0, "function": "root"},
+          {"string_offset": 2, "fret_offset": 2, "interval_semitones": 12, "function": "octave"}
+        ]
+      },
+      "provenance": {"source_type": "hand_authored", "reference": "GK-012 candidate baseline"},
+      "evaluation": {"status": "untested"}
+    },
+    {
+      "knowledge_id": "gk.shape.sus2_arpeggio",
+      "domain": "guitar_playing",
+      "kind": "shape_prototype",
+      "schema_version": "1",
+      "knowledge_version": "2026.08.0",
+      "status": "candidate",
+      "scope": {"roles": ["riff"], "technique_families": ["rock_arpeggio"]},
+      "payload": {
+        "shape_id": "sus2_arpeggio",
+        "label": "Movable suspended-second arpeggio",
+        "coordinate_system": "relative_string_fret",
+        "tuning_families": ["standard-six-string"],
+        "notes": [
+          {"string_offset": 0, "fret_offset": 0, "interval_semitones": 0, "function": "root"},
+          {"string_offset": 1, "fret_offset": 2, "interval_semitones": 7, "function": "fifth"},
+          {"string_offset": 2, "fret_offset": 4, "interval_semitones": 14, "function": "ninth"}
+        ]
+      },
+      "provenance": {"source_type": "hand_authored", "reference": "GK-012 candidate baseline"},
+      "evaluation": {"status": "untested"}
+    },
+    {
+      "knowledge_id": "gk.shape.triad_inversion",
+      "domain": "guitar_playing",
+      "kind": "shape_prototype",
+      "schema_version": "1",
+      "knowledge_version": "2026.08.0",
+      "status": "candidate",
+      "scope": {"roles": ["strumming", "comping"], "styles": ["rock", "jazz"]},
+      "payload": {
+        "shape_id": "triad_inversion",
+        "label": "Compact first-inversion major triad",
+        "coordinate_system": "relative_string_fret",
+        "tuning_families": ["standard-upper-strings"],
+        "notes": [
+          {"string_offset": 0, "fret_offset": 0, "interval_semitones": 4, "function": "third"},
+          {"string_offset": 1, "fret_offset": -1, "interval_semitones": 7, "function": "fifth"},
+          {"string_offset": 2, "fret_offset": -1, "interval_semitones": 12, "function": "root"}
+        ]
+      },
+      "provenance": {"source_type": "hand_authored", "reference": "GK-012 candidate baseline"},
+      "evaluation": {"status": "untested"}
+    }
+  ]
+}
