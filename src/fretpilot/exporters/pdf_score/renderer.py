@@ -2,8 +2,9 @@
 
 The PDF output is intentionally independent of Guitar Pro. V0.1 renders six-line
 TAB, measure positions, duration labels, ties, generic guitar techniques,
-canonical harmony labels, and explicit rest spans. It is designed for review
-and prototype validation rather than final publishing.
+canonical harmony labels, explicit rest spans, and a deterministic rhythmic
+stem/beam lane. It is designed for review and prototype validation rather than
+final publishing.
 """
 
 from __future__ import annotations
@@ -16,7 +17,11 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 
-from fretpilot.exporters.pdf_score.rhythm import measure_rest_spans
+from fretpilot.exporters.pdf_score.rhythm import (
+    measure_beam_segments,
+    measure_rest_spans,
+    measure_rhythm_onsets,
+)
 from fretpilot.ir.models import (
     GuitarMeasure,
     GuitarNoteEvent,
@@ -107,6 +112,17 @@ def _harmony_label_map(track: GuitarTrackIR) -> dict[float, str]:
         beat = anchor.score.start_beat if anchor is not None else region.start_beat
         labels.setdefault(round(beat, 7), region.symbol)
     return labels
+
+
+def _time_x(
+    measure_x: float,
+    measure_width: float,
+    measure: GuitarMeasure,
+    absolute_beat: float,
+) -> float:
+    beat_in_measure = absolute_beat - measure.start_beat
+    ratio = max(0.0, min(1.0, beat_in_measure / measure.duration_beats))
+    return measure_x + 7 + (measure_width - 14) * ratio
 
 
 class _PDFScoreRenderer:
@@ -228,6 +244,7 @@ class _PDFScoreRenderer:
         legend = [
             "Chord symbols above TAB come from canonical Guitar IR harmony regions.",
             "R + duration marks explicit silent score spans, for example R 1/4.",
+            "Stems, flags, and beams below TAB show the written rhythmic skeleton.",
             "Duration labels: 1/4 quarter, 1/8 eighth, 1/16 sixteenth, 8T eighth-note triplet.",
             "Technique labels: H hammer-on, P pull-off, S slide, LS legato slide, vib., let ring, P.M.",
             "Fret numbers are positioned on standard six-line TAB. Ties are drawn at measure boundaries.",
@@ -292,24 +309,24 @@ class _PDFScoreRenderer:
                     < measure_end - 1e-7
                 ):
                     continue
-                beat_in_measure = absolute_start - measure.start_beat
-                ratio = max(
-                    0.0,
-                    min(1.0, beat_in_measure / measure.duration_beats),
+                chord_x = _time_x(
+                    measure_x,
+                    measure_width,
+                    measure,
+                    absolute_start,
                 )
-                chord_x = measure_x + 7 + (measure_width - 14) * ratio
                 self.canvas.setFillColor(colors.HexColor("#111827"))
                 self.canvas.setFont("Helvetica-Bold", 7.4)
                 self.canvas.drawCentredString(chord_x, tab_top + 29, symbol)
 
             for rest in measure_rest_spans(measure):
                 midpoint = rest.start_beat + rest.duration_beats / 2.0
-                beat_in_measure = midpoint - measure.start_beat
-                ratio = max(
-                    0.0,
-                    min(1.0, beat_in_measure / measure.duration_beats),
+                rest_x = _time_x(
+                    measure_x,
+                    measure_width,
+                    measure,
+                    midpoint,
                 )
-                rest_x = measure_x + 7 + (measure_width - 14) * ratio
                 self.canvas.setFillColor(colors.HexColor("#6B7280"))
                 self.canvas.setFont("Helvetica-Oblique", 5.8)
                 self.canvas.drawCentredString(
@@ -318,14 +335,66 @@ class _PDFScoreRenderer:
                     f"R {_duration_label(rest.duration_beats)}",
                 )
 
+            onsets = measure_rhythm_onsets(measure)
+            beam_segments = measure_beam_segments(measure, onsets)
+            onset_x = [
+                _time_x(measure_x, measure_width, measure, onset.start_beat)
+                for onset in onsets
+            ]
+            stem_top_y = tab_bottom - 12
+            primary_beam_y = tab_bottom - 24
+            covered_beams: set[tuple[int, int]] = set()
+            for segment in beam_segments:
+                for onset_index in range(segment.first_onset, segment.last_onset + 1):
+                    covered_beams.add((onset_index, segment.level))
+
+            self.canvas.setStrokeColor(colors.HexColor("#374151"))
+            for onset_index, onset in enumerate(onsets):
+                if not onset.stemmed:
+                    continue
+                stem_bottom_y = primary_beam_y - max(0, onset.beam_level - 1) * 3.0
+                self.canvas.setLineWidth(0.75)
+                self.canvas.line(
+                    onset_x[onset_index],
+                    stem_top_y,
+                    onset_x[onset_index],
+                    stem_bottom_y,
+                )
+
+            for segment in beam_segments:
+                beam_y = primary_beam_y - (segment.level - 1) * 3.0
+                self.canvas.setLineWidth(1.45)
+                self.canvas.line(
+                    onset_x[segment.first_onset],
+                    beam_y,
+                    onset_x[segment.last_onset],
+                    beam_y,
+                )
+
+            for onset_index, onset in enumerate(onsets):
+                for level in range(1, onset.beam_level + 1):
+                    if (onset_index, level) in covered_beams:
+                        continue
+                    flag_y = primary_beam_y - (level - 1) * 3.0
+                    self.canvas.setLineWidth(1.15)
+                    self.canvas.line(
+                        onset_x[onset_index],
+                        flag_y,
+                        onset_x[onset_index] + 4.5,
+                        flag_y - 1.5,
+                    )
+
             grouped: dict[float, list[GuitarNoteEvent]] = defaultdict(list)
             for event in measure.events:
                 grouped[round(event.score.start_beat, 7)].append(event)
 
             for absolute_start, events in sorted(grouped.items()):
-                beat_in_measure = absolute_start - measure.start_beat
-                ratio = max(0.0, min(1.0, beat_in_measure / measure.duration_beats))
-                note_x = measure_x + 7 + (measure_width - 14) * ratio
+                note_x = _time_x(
+                    measure_x,
+                    measure_width,
+                    measure,
+                    absolute_start,
+                )
                 duration = min(event.score.duration_beats for event in events)
                 self.canvas.setFillColor(colors.HexColor("#374151"))
                 self.canvas.setFont("Helvetica", 5.8)
@@ -391,7 +460,7 @@ class _PDFScoreRenderer:
         self.canvas.setStrokeColor(colors.HexColor("#111827"))
         self.canvas.setLineWidth(0.9)
         self.canvas.line(x1, tab_top + 1, x1, tab_bottom - 1)
-        return tab_bottom - 21
+        return tab_bottom - 36
 
     def draw_tracks(self) -> None:
         for track in self.project.tracks:
@@ -413,7 +482,7 @@ class _PDFScoreRenderer:
             self.current_y -= 22
             systems = 0
             for offset in range(0, len(track.measures), self.measures_per_system):
-                if systems >= self.systems_per_page or self.current_y < 115:
+                if systems >= self.systems_per_page or self.current_y < 125:
                     self._new_page(section)
                     systems = 0
                 chunk = track.measures[offset : offset + self.measures_per_system]
