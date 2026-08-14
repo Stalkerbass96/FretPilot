@@ -19,18 +19,14 @@ def _digit(offset: int) -> int:
     return 4
 
 
-def assign_fretting_digits(
-    track: NormalizedTrack,
-    fingering: FingeringResult,
-) -> FingeringResult:
-    """Assign digits without changing any selected string/fret position."""
-
-    if len(track.notes) != len(fingering.notes):
-        raise ValueError("Track and fingering result contain different note counts.")
+def assign_digit_locations(
+    entries: list[tuple[int, int, int | None, int | None]],
+) -> list[int | None]:
+    """Assign digits to ``(start_tick, pitch, string, fret)`` tuples."""
 
     onset_groups: dict[int, list[int]] = defaultdict(list)
-    for index, note in enumerate(track.notes):
-        onset_groups[note.start_tick].append(index)
+    for index, entry in enumerate(entries):
+        onset_groups[entry[0]].append(index)
 
     assignments: dict[int, int] = {}
     anchor_fret: int | None = None
@@ -42,29 +38,27 @@ def assign_fretting_digits(
         fretted = [
             index
             for index in indices
-            if fingering.notes[index].playable
-            and fingering.notes[index].fret is not None
-            and fingering.notes[index].fret > 0
+            if entries[index][2] is not None
+            and entries[index][3] is not None
+            and int(entries[index][3]) > 0
         ]
         if not fretted:
             continue
 
         if len(indices) > 1:
-            frets = [int(fingering.notes[index].fret) for index in fretted]
+            frets = [int(entries[index][3]) for index in fretted]
             if max(frets) - min(frets) <= 4:
                 anchor_fret = min(frets)
                 for index in fretted:
-                    fret = int(fingering.notes[index].fret)
-                    assignments[index] = _digit(fret - anchor_fret)
-            anchor_index = min(fretted, key=lambda index: track.notes[index].pitch)
-            previous_fret = int(fingering.notes[anchor_index].fret)
-            previous_string = fingering.notes[anchor_index].string
+                    assignments[index] = _digit(int(entries[index][3]) - anchor_fret)
+            anchor_index = min(fretted, key=lambda index: entries[index][1])
+            previous_fret = int(entries[anchor_index][3])
+            previous_string = entries[anchor_index][2]
             continue
 
         index = fretted[0]
-        item = fingering.notes[index]
-        fret = int(item.fret)
-        string = item.string
+        string = entries[index][2]
+        fret = int(entries[index][3])
 
         shape_restart = (
             previous_fret is not None
@@ -77,8 +71,7 @@ def assign_fretting_digits(
             anchor_fret = fret
 
         stretched_same_string = (
-            anchor_fret is not None
-            and previous_fret == anchor_fret + 4
+            previous_fret == anchor_fret + 4
             and previous_string == string
             and fret == previous_fret + 1
         )
@@ -94,9 +87,25 @@ def assign_fretting_digits(
         previous_fret = fret
         previous_string = string
 
+    return [assignments.get(index) for index in range(len(entries))]
+
+
+def assign_fretting_digits(
+    track: NormalizedTrack,
+    fingering: FingeringResult,
+) -> FingeringResult:
+    """Assign digits without changing any selected string/fret position."""
+
+    if len(track.notes) != len(fingering.notes):
+        raise ValueError("Track and fingering result contain different note counts.")
+
+    digits = assign_digit_locations([
+        (note.start_tick, note.pitch, placed.string, placed.fret)
+        for note, placed in zip(track.notes, fingering.notes, strict=True)
+    ])
     notes = [
-        replace(item, fretting_digit=assignments.get(item.note_index))
-        for item in fingering.notes
+        replace(item, fretting_digit=digits[index])
+        for index, item in enumerate(fingering.notes)
     ]
     return FingeringResult(
         track_index=fingering.track_index,
