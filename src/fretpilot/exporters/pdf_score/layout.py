@@ -1,7 +1,7 @@
 """Density-aware system layout for the PDF/TAB review renderer.
 
 The planner changes measure width and line breaks, never score-time ordering or
-relative beat positions inside a measure.  This keeps the horizontal geometry
+relative beat positions inside a measure. This keeps the horizontal geometry
 musically truthful while giving dense passages more room.
 """
 
@@ -59,7 +59,7 @@ def chunk_measures_for_systems(
     min_onset_gap: float = DEFAULT_MIN_ONSET_GAP,
     min_measure_width: float = DEFAULT_MIN_MEASURE_WIDTH,
 ) -> list[list[GuitarMeasure]]:
-    """Greedily break systems before density would force horizontal compression."""
+    """Greedily break systems for later variable-width allocation."""
 
     if max_measures_per_system < 1:
         raise ValueError("max_measures_per_system must be at least one")
@@ -91,6 +91,59 @@ def chunk_measures_for_systems(
 
         current.append(measure)
         current_required += required
+
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def chunk_measures_for_equal_width_systems(
+    measures: list[GuitarMeasure],
+    *,
+    max_measures_per_system: int,
+    available_width: float,
+    min_onset_gap: float = DEFAULT_MIN_ONSET_GAP,
+    min_measure_width: float = DEFAULT_MIN_MEASURE_WIDTH,
+) -> list[list[GuitarMeasure]]:
+    """Break systems so equal widths still satisfy every measure's density need.
+
+    This is the safe compatibility strategy for the current core renderer, which
+    still draws equal-width measures inside one system. A candidate measure is
+    accepted only when every measure in the resulting line fits inside the
+    equal share `available_width / count`. Dense passages therefore receive
+    wider measures by reducing how many measures share the system.
+    """
+
+    if max_measures_per_system < 1:
+        raise ValueError("max_measures_per_system must be at least one")
+    if available_width <= 0:
+        raise ValueError("available_width must be positive")
+
+    chunks: list[list[GuitarMeasure]] = []
+    current: list[GuitarMeasure] = []
+
+    for measure in measures:
+        candidate = [*current, measure]
+        if len(candidate) > max_measures_per_system:
+            chunks.append(current)
+            current = [measure]
+            continue
+
+        share = available_width / len(candidate)
+        fits = all(
+            measure_required_width(
+                item,
+                min_onset_gap=min_onset_gap,
+                min_measure_width=min_measure_width,
+            )
+            <= share + 1e-7
+            for item in candidate
+        )
+        if current and not fits:
+            chunks.append(current)
+            current = [measure]
+        else:
+            current = candidate
 
     if current:
         chunks.append(current)
@@ -130,7 +183,6 @@ def allocate_measure_widths(
         scale = available_width / total_required
         widths = [item * scale for item in required]
 
-    # Keep the total exact enough that the final barline lands on the system edge.
     correction = available_width - sum(widths)
     widths[-1] += correction
     return widths
