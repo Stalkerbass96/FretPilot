@@ -116,6 +116,8 @@ Implemented:
 - processing, failure, and completed result states;
 - per-stream artifacts and safe downloads;
 - recent-project and project-library presentations;
+- read-only knowledge review console for playing profiles, shape candidates,
+  virtual-instrument mappings, limitations, and evidence;
 - visible design-system reference page;
 - foundational interaction tests.
 

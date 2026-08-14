@@ -78,6 +78,54 @@ def test_api_lists_virtual_instrument_knowledge_profiles(tmp_path: Path) -> None
     ]
 
 
+def test_api_exposes_full_knowledge_entries_for_human_review(tmp_path: Path) -> None:
+    with TestClient(create_app(job_root=tmp_path)) as client:
+        response = client.get("/api/knowledge")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["snapshot_version"] == "2026.08.0"
+    assert payload["status"] == "approved"
+    assert len(payload["entries"]) == 10
+    metal = next(
+        entry for entry in payload["entries"]
+        if entry["knowledge_id"] == "gk.profile.metal"
+    )
+    assert metal["payload"]["articulation"]["palm_mute"] == 1.6
+    assert metal["provenance"]["source_type"] == "hand_authored"
+
+
+def test_api_exposes_full_virtual_instrument_profile_for_review(tmp_path: Path) -> None:
+    with TestClient(create_app(job_root=tmp_path)) as client:
+        response = client.get(
+            "/api/virtual-instruments/ample-metal-eclipse-v4.1"
+        )
+
+    assert response.status_code == 200
+    profile = response.json()
+    assert profile["knowledge_version"] == "2026.08.0"
+    assert profile["verification_status"] == "plugin_unverified"
+    assert len(profile["capabilities"]) == 11
+    action = profile["capabilities"][7]["actions"][0]
+    assert action["kind"] == "keyswitch"
+    assert action["target"] == 29
+    assert action["timing"] == "before_source_note"
+    assert action["display_label"] == "F0"
+    assert action["state"] == "momentary"
+    assert action["release_value"] is None
+    assert action["offset_ticks"] == 0
+    assert profile["evidence"][0]["status"] == "official"
+
+
+def test_api_returns_not_found_for_unknown_virtual_instrument_profile(
+    tmp_path: Path,
+) -> None:
+    with TestClient(create_app(job_root=tmp_path)) as client:
+        response = client.get("/api/virtual-instruments/not-a-profile")
+
+    assert response.status_code == 404
+
+
 def test_job_runs_real_engine_and_exposes_selected_downloads(tmp_path: Path) -> None:
     with TestClient(create_app(job_root=tmp_path)) as client:
         response = client.post(
