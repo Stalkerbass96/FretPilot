@@ -7,8 +7,9 @@ from dataclasses import asdict
 from fretpilot.analysis.guitar import GuitarTrackAnalysis
 from fretpilot.analysis.score_strategies import build_section_score_strategies
 from fretpilot.guitar.models import FingeredNote, FingeringResult
+from fretpilot.harmony import plan_harmony, plan_harmony_by_sections
 from fretpilot.ir.builder import build_guitar_ir as _build_core_guitar_ir
-from fretpilot.ir.models import GuitarProjectIR, IRRightHandIntent
+from fretpilot.ir.models import GuitarProjectIR, IRHarmonyRegion, IRRightHandIntent
 from fretpilot.midi.models import NormalizedTimeline, NormalizedTrack
 from fretpilot.picking import PickingDecision, PickingPlan, plan_picking
 
@@ -59,6 +60,19 @@ def _ensure_section_picking(track: NormalizedTrack, analysis: GuitarTrackAnalysi
                 )
             )
     analysis.picking = PickingPlan(track.index, track.name, decisions)
+
+
+def _ensure_harmony(track: NormalizedTrack, analysis: GuitarTrackAnalysis) -> None:
+    if analysis.harmony is not None:
+        return
+    if analysis.section_contexts:
+        analysis.harmony = plan_harmony_by_sections(
+            track,
+            analysis.fingering,
+            analysis.section_contexts,
+        )
+    else:
+        analysis.harmony = plan_harmony(track, analysis.fingering)
 
 
 def _attach_right_hand(project: GuitarProjectIR, analysis: GuitarTrackAnalysis) -> None:
@@ -120,6 +134,23 @@ def _attach_articulation_parameters(
                     articulation.parameters = dict(parameters)
 
 
+def _attach_harmony(project: GuitarProjectIR, analysis: GuitarTrackAnalysis) -> None:
+    if not project.tracks or analysis.harmony is None:
+        return
+    project.tracks[0].harmony_regions = [
+        IRHarmonyRegion(
+            start_beat=item.start_beat,
+            symbol=item.symbol,
+            root_pitch_class=item.root_pitch_class,
+            quality=item.quality,
+            confidence=item.confidence,
+            source_note_indices=list(item.note_indices),
+            reason=item.reason,
+        )
+        for item in analysis.harmony.decisions
+    ]
+
+
 def build_guitar_ir(
     timeline: NormalizedTimeline,
     track: NormalizedTrack,
@@ -132,6 +163,7 @@ def build_guitar_ir(
     """Build canonical Guitar IR and retain time-varying guitar knowledge."""
 
     _ensure_section_picking(track, analysis)
+    _ensure_harmony(track, analysis)
     project = _build_core_guitar_ir(
         timeline,
         track,
@@ -143,6 +175,7 @@ def build_guitar_ir(
     _attach_right_hand(project, analysis)
     _attach_fretting_digits(project, analysis)
     _attach_articulation_parameters(project, analysis)
+    _attach_harmony(project, analysis)
     if not project.tracks:
         return project
 
