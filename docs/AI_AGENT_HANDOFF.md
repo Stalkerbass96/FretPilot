@@ -21,6 +21,7 @@ MIDI
 → logical InstrumentStream resolution
 → Layers 1–3 guitar identity
 → selected guitar stream
+→ adjustable MIDI-fidelity note rationalization
 → rhythm / notation analysis
 → deterministic section segmentation
 → per-section behavior + style evidence
@@ -32,7 +33,7 @@ MIDI
 → conservative harmony regions
 → global source_note_index remap
 → GuitarTrackAnalysis
-→ canonical Guitar IR
+→ canonical Guitar IR + pinned knowledge provenance
 ├──→ GP5
 ├──→ PDF/TAB review output
 ├──→ Generic PerformancePlan sidecar
@@ -47,6 +48,10 @@ The normal `fretpilot prototype` command writes PerformancePlan and VI capabilit
 ### Guitar execution / Guitar IR
 
 - score timing and source/performance timing remain separate;
+- provenance-safe note delete/transpose/insert rationalization with an
+  adjustable 0.0–1.0 MIDI-fidelity control (default 0.35);
+- near-simultaneous chord capacity repair uses the minimum deletion needed for
+  a distinct-string assignment and preserves strict fidelity at 1.0;
 - standard six-string fretboard candidates and hard playability constraints;
 - section-aware `PlayingContext` with separate role/style/technique-family dimensions;
 - movable riff/arpeggio repair and chord-voicing continuity;
@@ -55,13 +60,22 @@ The normal `fretpilot prototype` command writes PerformancePlan and VI capabilit
 - hammer/pull, slide, vibrato, contextual palm mute/staccato, and source-backed positive pitch-raise intent;
 - right-hand down/up pick, strum, observed rolled strum, tremolo, and sweep baselines;
 - conservative simultaneous/sequential harmony regions;
+- safe second-voice assignment for clearly unequal same-onset chord releases
+  when the sustained string remains free;
 - canonical Guitar IR persists section, hand-position, fretting, right-hand, harmony, and articulation provenance.
 
 ### Score outputs
 
-GP5 currently supports the implemented string/fret path, rests/durations, ties, fretting digits, supported articulations, pick direction, observed rolled-strum `BeatStroke`, integer-semitone pitch curves with conservative fractional fallback, and harmony labels.
+GP5 currently supports the implemented string/fret path, rests/durations, ties,
+fretting digits, supported articulations, pick direction, observed rolled-strum
+`BeatStroke`, integer-semitone pitch curves with conservative fractional
+fallback, harmony labels, and the conservative two-voice chord-release case.
 
-PDF/TAB currently has six-line TAB, harmony labels, exact rests, stems/flags/beams, dotted marks, triplet brackets, ties, density-aware system breaking, and explicit over-density warnings. It remains a review renderer, not publication-grade engraving.
+PDF/TAB currently has six-line TAB, harmony labels, exact rests,
+stems/flags/beams, dotted marks, triplet brackets, ties, density-aware system
+breaking, explicit over-density warnings, separate V1/V2 rhythm lanes, and
+collision-aware technique-label lanes. It remains a review renderer, not
+publication-grade engraving.
 
 ### Performance / VI
 
@@ -75,6 +89,12 @@ The provider-neutral VI layer now includes:
 - capability negotiation and capability reports;
 - `report_only` / `warn` / `strict` pre-render capability policies;
 - a shadow `VirtualInstrumentControlPlan` that compiles generic `ControlAction` records for comparison with the proven legacy scheduler.
+- a separate review-only Ample Metal Eclipse 4.1 catalog; it is not registered
+  as a runtime renderer.
+
+The built-in guitar-playing knowledge snapshot is `2026.08.2`. Guitar IR,
+reports, manifests, and API jobs record the snapshot, while source records stay
+separate from derived runtime rules.
 
 Public Ample export uses the generic profile as the static knowledge source, normalizes it through a thin compatibility view, runs capability preflight, then delegates MIDI scheduling to the existing legacy renderer. Output-neutral profile-handoff and shadow-control parity regressions protect the transition.
 
@@ -86,14 +106,17 @@ Do not mistake these for finished production features:
 - `GK-012` reusable root-independent shape memory is not implemented yet;
 - hand-position/fretting baselines still lack first-class barre, stretch, thumb, and richer explicit shift semantics;
 - pitch-wheel interpretation currently covers conservative positive raises, not the full bend/pre-bend/downward gesture space;
-- no true multi-voice TAB/GP5 notation yet;
-- PDF/TAB still needs collision-aware layout, mixed-density variable measure widths, paired standard staff + TAB, and real-song musician acceptance;
+- conservative two-voice chord releases exist, but arbitrary overlap/voice
+  separation is not implemented;
+- PDF/TAB still needs mixed-density variable measure widths, paired standard
+  staff + TAB, and real-song musician acceptance;
 - Ample MIDI still does not consume Generic PerformancePlan target timing/velocity/duration or canonical pick/strum intent;
 - vibrato/pitch-raise rendering in the Ample adapter remains unsupported;
 - the generic shadow control plan is not yet the production MIDI scheduler;
 - Ample is the only implemented virtual-guitar target;
 - track identification is useful but is not yet measured/calibrated as a finished classifier;
-- runtime knowledge is versioned in code, but the formal reproducibility/knowledge-snapshot manifest remains `SE-*` work.
+- knowledge snapshot provenance exists; full engine/config/model identity and
+  selectable external approved snapshots remain `SE-*` work.
 
 ## Architectural boundaries
 
@@ -155,6 +178,8 @@ src/fretpilot/exporters/pdf_score/
 src/fretpilot/performance/
 src/fretpilot/prototype.py
 src/fretpilot/entrypoint.py
+src/fretpilot/api/
+web/
 ```
 
 ### Virtual instruments
@@ -174,7 +199,9 @@ fretpilot prototype song.mid \
   -o output/
 ```
 
-The package contains per-stream analysis, Guitar IR, GP5 when supported, Ample MIDI, processing reports, plus PerformancePlan and VI-capability sidecars/indexes.
+The package contains per-stream analysis, rewrite provenance, Guitar IR, PDF,
+GP5 when supported, Ample MIDI, processing reports, plus PerformancePlan and
+VI-capability sidecars/indexes.
 
 Useful focused commands:
 

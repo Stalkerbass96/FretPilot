@@ -20,6 +20,7 @@ MIDI
 → logical Track/Channel/Program InstrumentStreams
 → layered guitar candidate ranking
 → selected guitar stream
+→ adjustable MIDI-fidelity note rationalization
 → rhythm / notation analysis
 → section segmentation
 → per-section behavior/style PlayingContext
@@ -28,7 +29,7 @@ MIDI
 → articulation + source-backed pitch movement
 → right-hand pick / strum / sweep / tremolo intent
 → conservative harmony regions
-→ canonical Guitar IR
+→ canonical Guitar IR + pinned knowledge provenance
 ├──→ GP5
 ├──→ PDF/TAB
 ├──→ Generic PerformancePlan
@@ -75,7 +76,10 @@ fretpilot prototype song.mid \
   -o output/
 ```
 
-A successful package contains per-stream analysis, Guitar IR, GP5 when supported, Ample MIDI, and a processing report. The normal prototype post-hook also writes Generic PerformancePlan and VI capability sidecars.
+A successful package contains per-stream analysis, rewrite provenance, Guitar
+IR, PDF, GP5 when supported, Ample MIDI, and a processing report. The normal
+prototype post-hook also writes Generic PerformancePlan and VI capability
+sidecars.
 
 Representative layout:
 
@@ -86,7 +90,9 @@ output/
 ├── vi-capabilities.json
 ├── t0_ch2_p27/
 │   ├── t0_ch2_p27.analysis.json
+│   ├── t0_ch2_p27.rewrite.json
 │   ├── t0_ch2_p27.guitar-ir.json
+│   ├── t0_ch2_p27.pdf
 │   ├── t0_ch2_p27.gp5
 │   ├── t0_ch2_p27.ample-sc.mid
 │   ├── t0_ch2_p27.report.json
@@ -96,6 +102,17 @@ output/
 ```
 
 Unsupported outputs are recorded explicitly rather than causing unrelated outputs for the same stream to disappear.
+
+The note-rationalization balance is adjustable from 0.0 (prefer a playable,
+musically coherent result) to 1.0 (preserve MIDI notes). The default is 0.35,
+deliberately favoring reasonableness while every delete, transpose, or insert
+remains explicit in rewrite and Guitar IR provenance. For example:
+
+    fretpilot prototype song.mid --midi-fidelity 0.35 -o output/
+
+High-confidence repairs include guitar-range octave correction, exact duplicate
+removal, isolated spike repair, repeated-pulse completion, and minimum deletion
+for near-simultaneous chords that cannot fit six distinct strings.
 
 ## Useful focused commands
 
@@ -170,8 +187,12 @@ Current GP5 support includes:
 - source-backed integer-semitone pitch curves with conservative fallback for unsupported fractional representation;
 - harmony labels;
 - write + parse-back validation.
+- conservative second-voice preservation for same-onset chord members with
+  clearly different releases when the sustained string is not reused.
 
-Still pending: real Guitar Pro visual acceptance across full songs, true independent two-voice notation, and safer partial let-ring representation inside chords.
+Still pending: real Guitar Pro visual acceptance across full songs, general
+voice separation for arbitrary overlapping material, and richer partial
+let-ring representation inside chords.
 
 ## PDF/TAB baseline
 
@@ -184,8 +205,12 @@ The review renderer currently includes:
 - dotted marks and triplet brackets;
 - cross-measure ties;
 - density-aware system breaking and over-density warnings.
+- independent V1/V2 rhythm lanes for the conservative chord-release case;
+- collision-aware technique-label lanes with explicit condensation warnings.
 
-It is not publication-grade engraving yet. Mixed-density variable measure widths, collision-aware annotation placement, multi-voice TAB, and paired standard staff + TAB remain future score-quality work.
+It is not publication-grade engraving yet. Mixed-density variable measure
+widths, general voice separation, and paired standard staff + TAB remain future
+score-quality work.
 
 ## Ample Guitar SC 4.x baseline
 
@@ -219,6 +244,18 @@ shows probability, decision confidence, reasons, and a recommendation for each
 high-confidence guitar part; possible and unlikely streams are excluded from
 generation cards and summarized as a filtered count. Program fragments on the
 same physical track and channel are displayed as one guitar part.
+
+## Local frontend and API
+
+Start the local engine with `fretpilot-api`. In a second terminal, run
+`pnpm install` and `pnpm dev` from `web/`.
+
+The browser is a client of the Python engine; it does not duplicate musical
+policy. It provides guitar-only detection preflight, MIDI-fidelity and output
+controls, conversion/download states, and read-only review of the pinned
+guitar-playing and virtual-instrument knowledge catalogs. Ample Metal Eclipse
+4.1 is catalogued for review only; the verified runtime export target remains
+`ample-guitar-sc-v4`.
 
 ## Tests
 

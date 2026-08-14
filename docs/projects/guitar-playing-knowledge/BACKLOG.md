@@ -173,7 +173,7 @@ These are not Prototype 0.1 blockers.
 | GK-032 knowledge feature extractor | not started |
 | GK-033 dedup/source-family weighting | not started |
 | GK-034 quality estimator | not started |
-| GK-035 versioned Knowledge Snapshot format | not started |
+| GK-035 versioned Knowledge Snapshot format | baseline implemented: packaged 2026.08.2 registry, source/rule separation, runtime provenance; candidate release tooling pending |
 | GK-036 candidate/evaluation/promotion workflow | not started |
 
 Target lifecycle:

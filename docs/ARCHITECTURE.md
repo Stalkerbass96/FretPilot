@@ -160,7 +160,10 @@ Invariant:
 
 > Score timing and performance timing are different representations.
 
-Future work includes section-dependent grids, swing, richer tuplets, and true multi-voice notation.
+The IR/GP5/PDF path preserves a conservative second voice for clearly unequal
+same-onset chord releases when string reuse is safe. Future work includes
+section-dependent grids, swing, richer tuplets, and general voice separation
+for arbitrary overlapping material.
 
 ### `guitar`
 

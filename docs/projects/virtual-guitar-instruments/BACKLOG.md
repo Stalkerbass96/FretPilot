@@ -16,6 +16,7 @@ Use the `VI-` prefix for product-specific virtual-guitar knowledge, generic adap
 | VI-002 migrate Ample Guitar SC facts | [x] | generic profile is the public static truth; thin compatibility view preserves legacy scheduler output |
 | VI-003 adapter/profile registry | [x] | deterministic approved-profile lookup by `profile_id` |
 | VI-004 capability negotiation / handoff | [~] | negotiation, reports, preflight policy, and shadow control planning exist; production scheduler handoff remains |
+| VI-005 review-only product catalog | [x] | versioned Ample Metal Eclipse 4.1 knowledge is visible to API/UI without entering the runtime renderer registry |
 
 ### VI-001 — generic profile schema
 
@@ -99,6 +100,18 @@ Still pending before VI-004 is complete:
 - expose a stable capability/preflight summary in the broader product API/report contract where useful.
 
 Do not switch production scheduling until parity coverage is strong enough.
+
+### VI-005 — review-only product catalog
+
+The separately versioned virtual-instrument knowledge catalog includes
+`ample-metal-eclipse-v4.1` and exposes it through the local API/UI for manual
+review. Its evidence, controls, capabilities, and limitations are not an
+approved production renderer profile. Runtime `get_profile()` and export
+selection still resolve only the regression-covered Ample Guitar SC path.
+
+Promoting Eclipse requires exact-plugin playback, timing/state calibration,
+conformance fixtures, and an explicit renderer registration change; catalog
+presence alone must never activate it.
 
 ## P1 — rendering / state-machine quality
 

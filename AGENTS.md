@@ -61,6 +61,15 @@ src/fretpilot/prototype.py
 src/fretpilot/entrypoint.py
 ```
 
+### Product API / frontend
+
+The local product boundary lives in `src/fretpilot/api/`,
+`src/fretpilot/api_cli.py`, and `web/`.
+
+The Python engine is the only source of musical policy. TypeScript may present
+and submit controls, but must not reimplement detection, note rationalization,
+fingering, articulation, knowledge selection, or export decisions.
+
 ### VI — target virtual instruments
 
 ```text

@@ -12,6 +12,7 @@ MIDI
 → InstrumentStream resolution
 → Layers 1–3 guitar identity
 → selected guitar stream
+→ adjustable MIDI-fidelity note rationalization
 → rhythm / notation analysis
 → section segmentation
 → per-section behavior/style evidence
@@ -22,7 +23,7 @@ MIDI
 → right-hand pick / strum / sweep / tremolo intent
 → conservative harmony regions
 → GuitarTrackAnalysis
-→ canonical Guitar IR
+→ canonical Guitar IR + pinned knowledge provenance
 ├──→ GP5
 ├──→ PDF/TAB
 ├──→ Generic PerformancePlan sidecar
@@ -38,6 +39,9 @@ The score and performance paths share canonical musical intent, but adapter-spec
 
 - MIDI Type 0 / Type 1 import and logical `InstrumentStream` resolution;
 - layered guitar candidate ranking and explicit multi-guitar selection;
+- local guitar-only confidence preflight that groups same-track/channel program
+  fragments and filters low-confidence streams from generation;
+- provenance-safe note rationalization with adjustable MIDI fidelity;
 - score timing separated from source/performance timing;
 - section-aware `PlayingContext`;
 - six-string fretboard candidates and hard playability constraints;
@@ -48,13 +52,21 @@ The score and performance paths share canonical musical intent, but adapter-spec
 - source-backed positive pitch-raise intent from declared MIDI wheel range;
 - down/up pick, strum, observed rolled strum, tremolo, and sweep baselines;
 - conservative harmony labeling;
+- safe second-voice preservation for unequal same-onset chord releases when the
+  sustained string remains free;
 - canonical Guitar IR provenance for section, hand position, fretting, right hand, harmony, and articulation parameters.
 
 ### Score outputs
 
-GP5 baseline includes string/fret mapping, rests/durations, ties, fretting digits, supported articulations, pick direction, observed rolled-strum `BeatStroke`, conservative pitch curves, harmony labels, and write/parse-back validation.
+GP5 baseline includes string/fret mapping, rests/durations, ties, fretting
+digits, supported articulations, pick direction, observed rolled-strum
+`BeatStroke`, conservative pitch curves, harmony labels, the safe two-voice
+chord-release case, and write/parse-back validation.
 
-PDF/TAB baseline includes six-line TAB, harmony labels, exact rests, stems/flags/beams, dotted marks, triplet brackets, ties, density-aware system breaking, and over-density warnings.
+PDF/TAB baseline includes six-line TAB, harmony labels, exact rests,
+stems/flags/beams, dotted marks, triplet brackets, ties, density-aware system
+breaking, over-density warnings, separate V1/V2 rhythm lanes, and
+collision-aware technique labels.
 
 ### Performance / virtual instruments
 
@@ -67,6 +79,12 @@ PDF/TAB baseline includes six-line TAB, harmony labels, exact rests, stems/flags
 - pre-render `report_only` / `warn` / `strict` policy;
 - public Ample export uses generic profile truth through a thin compatibility view while retaining the proven legacy scheduler;
 - shadow generic control planning has regression coverage against legacy Ample keyswitch/legato behavior.
+- pinned guitar-playing snapshot `2026.08.2` is recorded in Guitar IR,
+  reports, manifests, and API jobs;
+- the local FastAPI/React product shell provides preflight, conversion, download,
+  and read-only knowledge review;
+- Ample Metal Eclipse 4.1 is present only in the review catalog; Ample Guitar SC
+  remains the runtime renderer.
 
 Track identification remains an incremental `TI-*` project and is not the main Prototype 0.1 blocker.
 
@@ -81,8 +99,8 @@ Priority fixes from real review should target:
 - incorrect string/fret/shape decisions;
 - phrase or hand-position discontinuity;
 - wrong/missing articulation or harmony labels;
-- mixed-density horizontal allocation and annotation collisions;
-- multi-voice material;
+- mixed-density horizontal allocation;
+- general voice separation beyond the safe chord-release case;
 - paired standard staff + TAB when the TAB baseline is stable enough.
 
 Acceptance:
@@ -120,7 +138,8 @@ Before Prototype 0.1 external testing:
 - README/current commands must match implementation;
 - authoritative handoff/backlogs must not contradict one another;
 - unsupported target capabilities must remain explicit;
-- formal runtime/knowledge/config version identity should begin under `SE-*` without blocking the release on the full learning platform.
+- extend existing knowledge provenance into full engine/config/model identity
+  and selectable approved snapshots under `SE-*`.
 
 ## One-command validation package
 
@@ -130,7 +149,10 @@ fretpilot prototype song.mid \
   -o output/
 ```
 
-Per selected stream the package produces analysis JSON, Guitar IR JSON, GP5 when supported, Ample MIDI, and a processing report. The prototype post-hook also produces PerformancePlan and VI-capability sidecars/indexes.
+Per selected stream the package produces analysis JSON, rewrite provenance,
+Guitar IR JSON, PDF, GP5 when supported, Ample MIDI, and a processing report.
+The prototype post-hook also produces PerformancePlan and VI-capability
+sidecars/indexes.
 
 ## Prototype 0.1 release gates
 
