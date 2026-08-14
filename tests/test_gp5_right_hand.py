@@ -10,6 +10,7 @@ from fretpilot.ir.models import (
     GuitarNoteEvent,
     GuitarProjectIR,
     GuitarTrackIR,
+    IRArticulation,
     IRFingering,
     IRRightHandIntent,
     IRTempoEvent,
@@ -94,3 +95,58 @@ def test_gp5_round_trips_pick_direction(tmp_path: Path) -> None:
         if beat.notes
     )
     assert beat.effect.pickStroke == gp.BeatStrokeDirection.down
+
+
+def test_gp5_round_trips_pitch_raise_curve(tmp_path: Path) -> None:
+    event = GuitarNoteEvent(
+        id="n-raise",
+        source_note_index=0,
+        pitch=64,
+        score=ScoreTiming(0.0, 1.0, 1, 0.0),
+        performance=PerformanceTiming(0.0, 1.0, 90),
+        fingering=IRFingering(2, 5),
+        articulations=[
+            IRArticulation(
+                type="pitch_raise",
+                confidence=0.94,
+                reason="fixture",
+                parameters={
+                    "semitones": 1.0,
+                    "peak_position": 0.25,
+                    "return_position": 0.5,
+                    "returned_to_center": 1.0,
+                },
+            )
+        ],
+    )
+    project = GuitarProjectIR(
+        title="pitch-raise",
+        source="fixture.mid",
+        tempo_map=[IRTempoEvent(0.0, 120.0)],
+        time_signatures=[IRTimeSignatureEvent(0.0, 4, 4)],
+        tracks=[GuitarTrackIR(
+            id="guitar-1",
+            name="Guitar",
+            source_stream_id=None,
+            role="solo",
+            tuning=[40, 45, 50, 55, 59, 64],
+            fret_count=24,
+            measures=[GuitarMeasure(1, 0.0, 4.0, 4, 4, [event])],
+        )],
+    )
+    output = tmp_path / "pitch-raise.gp5"
+    export_gp5(project, output)
+    parsed = gp.parse(output)
+    note = next(
+        note
+        for beat in parsed.tracks[0].measures[0].voices[0].beats
+        for note in beat.notes
+    )
+    assert note.effect.bend.type == gp.BendType.bendRelease
+    assert note.effect.bend.value == 1
+    assert [(point.position, point.value) for point in note.effect.bend.points] == [
+        (0, 0),
+        (3, 1),
+        (6, 0),
+        (12, 0),
+    ]
