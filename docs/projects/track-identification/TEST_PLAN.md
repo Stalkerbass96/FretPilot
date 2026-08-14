@@ -66,9 +66,7 @@ The committed CI corpus should contain deterministic synthetic fixtures covering
 
 ## Layer-4 behavior fixture matrix
 
-The deterministic baseline already tests a synthetic riff → strumming → solo
-stream as three time-bounded sections. Broader behavior evaluation must expand
-that baseline rather than reverting to whole-stream-only fixtures.
+Behavior tests must eventually operate on time-bounded sections, not only whole streams.
 
 Required section classes:
 

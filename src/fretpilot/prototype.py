@@ -180,11 +180,6 @@ def _build_processing_report(
             "unplayable_note_indices": unplayable,
             "unplayable_count": len(unplayable),
             "diagnostics": [asdict(item) for item in analysis.fingering.diagnostics],
-            "hand_position_plan": (
-                analysis.hand_position_plan.to_dict()
-                if analysis.hand_position_plan is not None
-                else None
-            ),
         },
         "articulations": {
             "counts": _count_articulations(analysis),

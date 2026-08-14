@@ -1,4 +1,8 @@
-"""Pinned loading and provider-neutral lookup for instrument knowledge."""
+"""Deterministic registry for approved virtual-guitar instrument profiles.
+
+Runtime profile discovery is intentionally local and versioned.  The registry
+must never crawl vendor pages or silently ingest candidate knowledge.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +12,7 @@ import json
 from pathlib import Path
 from typing import Iterable
 
+from fretpilot.virtual_instruments.ample_guitar_sc import AMPLE_GUITAR_SC_V4_PROFILE
 from fretpilot.virtual_instruments.models import (
     VirtualGuitarInstrumentProfile,
     VirtualInstrumentKnowledgeSnapshot,
@@ -15,14 +20,44 @@ from fretpilot.virtual_instruments.models import (
 
 
 BUILTIN_VIRTUAL_INSTRUMENT_SNAPSHOT_VERSION = "2026.08.0"
-BUILTIN_VIRTUAL_INSTRUMENT_RESOURCE = (
-    "assets/virtual-instruments-2026.08.0.json"
-)
+BUILTIN_VIRTUAL_INSTRUMENT_RESOURCE = "assets/virtual-instruments-2026.08.0.json"
 SUPPORTED_VIRTUAL_INSTRUMENT_SCHEMA_VERSION = "1"
 
 
+_PROFILES: tuple[VirtualGuitarInstrumentProfile, ...] = (
+    AMPLE_GUITAR_SC_V4_PROFILE,
+)
+_PROFILE_BY_ID = {profile.profile_id: profile for profile in _PROFILES}
+
+if len(_PROFILE_BY_ID) != len(_PROFILES):
+    raise RuntimeError("Virtual instrument profile ids must be unique.")
+
+
+def list_profiles() -> tuple[VirtualGuitarInstrumentProfile, ...]:
+    """Return the immutable approved runtime profile snapshot."""
+
+    return _PROFILES
+
+
+def get_profile(profile_id: str) -> VirtualGuitarInstrumentProfile:
+    """Resolve one approved target profile by stable id."""
+
+    try:
+        return _PROFILE_BY_ID[profile_id]
+    except KeyError as exc:
+        available = ", ".join(sorted(_PROFILE_BY_ID))
+        raise ValueError(
+            f"Unknown virtual-guitar profile {profile_id!r}; available: {available}."
+        ) from exc
+
+
 class VirtualInstrumentRegistry:
-    """Read-only lookup over one explicit virtual-instrument snapshot."""
+    """Read-only review catalog over one explicit knowledge snapshot.
+
+    This catalog may contain officially documented but plugin-unverified product
+    profiles. It is deliberately separate from ``get_profile``/``list_profiles``,
+    which expose only profiles approved for production rendering.
+    """
 
     def __init__(self, snapshot: VirtualInstrumentKnowledgeSnapshot) -> None:
         self.snapshot = snapshot
@@ -36,7 +71,8 @@ class VirtualInstrumentRegistry:
         if profile is None:
             available = ", ".join(sorted(self._by_id))
             raise ValueError(
-                f"Unknown virtual-instrument profile {profile_id!r}; available: {available}."
+                f"Unknown virtual-instrument profile {profile_id!r}; "
+                f"available: {available}."
             )
         return profile
 
@@ -60,6 +96,14 @@ class VirtualInstrumentRegistry:
         ]
 
 
+def _validate_snapshot_schema(snapshot: VirtualInstrumentKnowledgeSnapshot) -> None:
+    if snapshot.schema_version != SUPPORTED_VIRTUAL_INSTRUMENT_SCHEMA_VERSION:
+        raise ValueError(
+            f"Unsupported virtual-instrument schema {snapshot.schema_version!r}; "
+            f"expected {SUPPORTED_VIRTUAL_INSTRUMENT_SCHEMA_VERSION!r}."
+        )
+
+
 def load_virtual_instrument_snapshot(
     path: str | Path,
 ) -> VirtualInstrumentKnowledgeSnapshot:
@@ -67,14 +111,6 @@ def load_virtual_instrument_snapshot(
     snapshot = VirtualInstrumentKnowledgeSnapshot.from_dict(payload)
     _validate_snapshot_schema(snapshot)
     return snapshot
-
-
-def _validate_snapshot_schema(snapshot: VirtualInstrumentKnowledgeSnapshot) -> None:
-    if snapshot.schema_version != SUPPORTED_VIRTUAL_INSTRUMENT_SCHEMA_VERSION:
-        raise ValueError(
-            f"Unsupported virtual-instrument schema {snapshot.schema_version!r}; "
-            f"expected {SUPPORTED_VIRTUAL_INSTRUMENT_SCHEMA_VERSION!r}."
-        )
 
 
 @lru_cache(maxsize=1)

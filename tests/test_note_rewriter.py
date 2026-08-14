@@ -103,6 +103,58 @@ def test_default_policy_removes_an_exact_duplicate() -> None:
     assert deleted.reason == "duplicate_same_pitch_onset"
 
 
+def test_default_policy_reduces_overfull_chord_to_distinct_strings() -> None:
+    source = _stream(
+        [
+            _note(pitch, 0.0, duration=1.0, velocity=80 + index)
+            for index, pitch in enumerate([40, 45, 50, 55, 59, 64, 67])
+        ]
+    )
+
+    result = rewrite_instrument_stream(source)
+    analysis = analyze_guitar_track(result.stream.as_track())
+
+    assert len(result.stream.notes) == 6
+    assert all(item.playable and item.string is not None for item in analysis.fingering.notes)
+    assert len({item.string for item in analysis.fingering.notes}) == 6
+    deleted = [
+        change
+        for change in result.changes
+        if change.reason == "reduce_chord_to_distinct_guitar_strings"
+    ]
+    assert len(deleted) == 1
+    assert deleted[0].operation == "delete"
+    assert deleted[0].output_note_index is None
+
+
+def test_full_fidelity_preserves_overfull_chord() -> None:
+    source = _stream(
+        [_note(pitch, 0.0) for pitch in [40, 45, 50, 55, 59, 64, 67]]
+    )
+
+    result = rewrite_instrument_stream(source, midi_fidelity=1.0)
+
+    assert result.stream.notes == source.notes
+    assert result.changes == []
+
+
+def test_default_policy_accounts_for_near_onset_quantization() -> None:
+    source = _stream(
+        [
+            *[_note(pitch, 0.0) for pitch in [45, 50, 55, 59, 64, 69]],
+            _note(43, 0.0625),
+        ]
+    )
+
+    result = rewrite_instrument_stream(source)
+
+    assert len(result.stream.notes) == 6
+    assert any(
+        change.reason == "reduce_chord_to_distinct_guitar_strings"
+        for change in result.changes
+    )
+
+
 def test_default_policy_fills_one_strong_missing_repeated_pulse() -> None:
     source = _stream(
         [

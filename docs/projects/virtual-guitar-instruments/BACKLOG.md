@@ -1,186 +1,169 @@
 # Virtual Guitar Instrument Knowledge Backlog
 
-Use the `VI-` prefix for product-specific virtual-guitar knowledge, generic adapter schemas, compatibility testing, and renderer behavior.
-
-Status markers:
-
-- `[ ]` not started
-- `[~]` in progress
-- `[x]` implemented/verified
-
-## P0 — establish the adapter knowledge contract
-
-### [~] VI-001 — Generic VirtualGuitarInstrumentProfile schema
-
-Define a shared typed schema for virtual-guitar capabilities and control mappings.
-
-Minimum concepts:
+Use the `VI-` prefix for product-specific virtual-guitar knowledge, generic adapter contracts, compatibility testing, and renderer behavior.
 
 ```text
-profile_id
-vendor
-product
-version_family
-profile_schema_version
-playable_range
-supported_articulations
-control bindings
-state/latch semantics
-preroll/overlap requirements
-pitch-expression capabilities
-string/position forcing capabilities
-known limitations
+[x] implemented/verified baseline
+[~] in progress
+[ ] not started
+```
+
+## P0 — adapter knowledge contract
+
+| Task | Status | Current contract |
+|---|---|---|
+| VI-001 Generic VirtualGuitarInstrumentProfile | [x] | provider-neutral capability/profile schema |
+| VI-002 migrate Ample Guitar SC facts | [x] | generic profile is the public static truth; thin compatibility view preserves legacy scheduler output |
+| VI-003 adapter/profile registry | [x] | deterministic approved-profile lookup by `profile_id` |
+| VI-004 capability negotiation / handoff | [~] | negotiation, reports, preflight policy, and shadow control planning exist; production scheduler handoff remains |
+| VI-005 review-only product catalog | [x] | versioned Ample Metal Eclipse 4.1 knowledge is visible to API/UI without entering the runtime renderer registry |
+
+### VI-001 — generic profile schema
+
+The shared schema represents:
+
+```text
+profile identity/version
+playable range/channel
+capability support level
+ordered generic ControlAction records
+fallback intent
+preroll/overlap/reset timing
+pitch-expression flags
+string/position forcing flags
+limitations
 provenance/evidence
 maturity
 ```
 
-Acceptance:
+Raw keyswitch/CC/state facts remain outside Guitar IR and Guitar Playing Knowledge.
 
-- the schema can represent the current Ample Guitar SC profile without losing information;
-- raw keyswitch/CC numbers remain outside Guitar IR;
-- unsupported and approximated capabilities are distinguishable;
-- profile identity/version is serializable into output reports.
+### VI-002 — Ample Guitar SC 4.x migration
 
-### [ ] VI-002 — Migrate Ample Guitar SC profile to the generic schema
+**Implemented/verified baseline.** `AMPLE_GUITAR_SC_V4_PROFILE` carries the regression-backed Ample facts currently used by FretPilot. Public `export_ample_sc_midi` now selects the generic profile by default, runs provider-neutral capability preflight, normalizes profile data through a deliberately thin renderer view, and delegates event scheduling to the proven legacy renderer.
 
-Keep current rendering behavior green while moving static knowledge out of the Ample-only dataclass.
+Regression coverage protects:
 
-Acceptance:
+- playable range/channel/profile identity;
+- keyswitch mappings;
+- preroll/overlap/keyswitch-length values;
+- reset semantics;
+- explicit keyswitch release value and reset offset;
+- default generic path vs explicit generic/legacy overrides;
+- legacy MIDI event/tick neutrality for the covered fixtures.
 
-- existing Ample parse-back tests remain green;
-- the renderer consumes the generic profile or a thin Ample extension;
-- current `ample-guitar-sc-v4` profile remains selectable;
-- no musical intent changes are introduced by the migration.
+Remaining cleanup is non-blocking: duplicate legacy profile structures may be reduced only when compatibility and external callers remain safe. Do not remove the legacy scheduler merely to make the architecture look cleaner.
 
-### [x] VI-003 — Adapter registry
+### VI-003 — approved profile registry
 
-Create a registry/factory that resolves a requested virtual-guitar profile independently of the CLI command implementation.
-
-Example target:
+Implemented:
 
 ```text
-get_virtual_guitar_profile("ample-guitar-sc-v4")
-list_virtual_guitar_profiles()
+list_profiles()
+get_profile("ample-guitar-sc-v4")
 ```
 
-Acceptance:
+The runtime registry is deterministic and local. It never crawls vendor pages or auto-loads candidate mappings.
 
-- profile lookup is provider-neutral;
-- unknown profiles fail with an explicit available-profile list;
-- profile metadata is available to API/UI without importing product-specific renderer internals.
+### VI-004 — capability negotiation and adapter handoff
 
-### [ ] VI-004 — Capability negotiation
-
-Before rendering, compare Guitar IR intent with target-product capabilities.
-
-Required result categories:
+Implemented baseline:
 
 ```text
-native
-approximated
-unsupported
-requires_fallback
+canonical intent
+→ CapabilityResolution
+   native / approximated / unsupported / requires_fallback
+→ CapabilityReport
+→ pre-render policy
+   report_only / warn / strict
+→ shadow VirtualInstrumentControlPlan
 ```
 
-Acceptance:
+Additional implemented behavior:
 
-- unsupported bends/vibrato/etc. are reported before output when possible;
-- renderer does not silently discard important musical intent;
-- the processing report lists capability fallbacks and unsupported events.
+- undeclared intents resolve explicitly as unsupported;
+- fallback cycles fail instead of looping;
+- capability reports inventory Guitar IR articulation/right-hand requirements and optional Generic PerformancePlan timing/duration/velocity requirements;
+- tied fragments are deduplicated by source-note identity;
+- normal `fretpilot prototype` writes per-stream `*.vi-capabilities.json` plus top-level `vi-capabilities.json`;
+- current Ample limitations such as pick/strum/sweep/tremolo, vibrato/pitch raise, and Generic PerformancePlan adjustments are explicit;
+- public Ample rendering runs capability preflight before the legacy scheduler;
+- shadow generic control planning compiles approved `ControlAction` records and is regression-compared with legacy keyswitch/legato scheduling.
 
-## P1 — rendering/state-machine quality
+Current shadow parity includes exact keyswitch note-on/release semantics, reset `+1 tick` behavior, preroll, and linked-note overlap for the covered Ample fixture.
 
-### [ ] VI-010 — Generic articulation control binding model
+Still pending before VI-004 is complete:
 
-Support binding types such as:
+- let the production adapter consume the generic control plan instead of only shadow-comparing it;
+- preserve exact legacy output during that handoff;
+- connect selected Generic PerformancePlan target timing/duration/velocity intents only when the target profile declares a safe realization;
+- expose a stable capability/preflight summary in the broader product API/report contract where useful.
+
+Do not switch production scheduling until parity coverage is strong enough.
+
+### VI-005 — review-only product catalog
+
+The separately versioned virtual-instrument knowledge catalog includes
+`ample-metal-eclipse-v4.1` and exposes it through the local API/UI for manual
+review. Its evidence, controls, capabilities, and limitations are not an
+approved production renderer profile. Runtime `get_profile()` and export
+selection still resolve only the regression-covered Ample Guitar SC path.
+
+Promoting Eclipse requires exact-plugin playback, timing/state calibration,
+conformance fixtures, and an explicit renderer registration change; catalog
+presence alone must never activate it.
+
+## P1 — rendering / state-machine quality
+
+| Task | Status | Remaining focus |
+|---|---|---|
+| VI-010 generic ControlAction binding model | [~] | CC, velocity ranges, program change, pitch bend, channel policy, richer state metadata |
+| VI-011 instrument state-machine interface | [ ] | persistent/latching state, resets, final-state validation |
+| VI-012 timing/legato calibration profile | [~] | broader measured provenance and optional host/plugin latency |
+| VI-013 pitch-expression capability model | [~] | channel-wide policy, vibrato methods, polyphonic fallback, verified target mapping |
+| VI-014 string/position forcing abstraction | [ ] | target-neutral forcing capability + safe unsupported behavior |
+| VI-015 picking/strumming control abstraction | [~] | product realization for canonical pick/strum/sweep/tremolo intent |
+
+### VI-010 — ControlAction baseline
+
+Current generic actions already cover keyswitches, linked note overlap, timing anchors, duration, explicit release values, and relative tick offsets. One canonical capability may require multiple ordered actions.
+
+Still needed as actual products require them:
 
 ```text
-keyswitch
 cc
 velocity_range
 program_change
-note_overlap
 pitch_bend
 channel_policy
-compound/state-machine action
+persistent/latching state metadata
 ```
 
-Acceptance:
+### VI-012 — timing calibration
 
-- one canonical articulation can require multiple ordered control actions;
-- latch vs momentary state is explicit;
-- reset semantics are explicit.
+The Ample profile currently stores repository-regression-backed keyswitch length, preroll, legato overlap, release semantics, and reset timing. Future calibration must keep exact product/version/host evidence rather than turning measurements into unexplained magic numbers.
 
-### [ ] VI-011 — Instrument state-machine interface
+### VI-013 — pitch expression
 
-Some products require persistent articulation state, resets, or mutually exclusive controls.
+The generic schema can declare pitch-expression capability and bend range. Current Ample legacy handoff explicitly reports canonical `pitch_raise`/vibrato realization as unsupported. Add target mappings only with reliable evidence/plugin validation.
 
-Acceptance:
+### VI-015 — picking/strumming
 
-- state transitions are deterministic;
-- hanging/stale articulation state can be detected in tests;
-- renderers can expose a final-state validation report.
+Canonical Guitar IR already carries right-hand motion/direction and techniques such as `rolled_strum`, `tremolo`, and `sweep`. Capability negotiation can report those requirements. Current Ample baseline does not realize them through product-specific controls yet.
 
-### [ ] VI-012 — Timing and legato calibration profile
+## P1 — validation / evidence
 
-Represent product/version-specific timing requirements:
+| Task | Status | Remaining focus |
+|---|---|---|
+| VI-020 profile provenance | [~] | expand evidence categories and verified vendor/plugin references |
+| VI-021 reusable adapter conformance suite | [~] | turn current Ample parity/negotiation tests into reusable cross-adapter fixtures |
+| VI-022 manual plugin verification records | [ ] | real DAW/plugin evidence tied to exact product/version |
 
-- keyswitch preroll;
-- hammer/pull overlap;
-- legato slide overlap;
-- release ordering;
-- optional host/plugin latency compensation.
+### VI-020 — provenance
 
-Acceptance:
+`AdapterEvidence` distinguishes source type, reference, status, and notes. The Ample migration deliberately uses repository-regression evidence and does **not** claim official vendor verification.
 
-- timing parameters are profile data where possible, not magic numbers in renderer flow;
-- exact values carry provenance or test evidence.
-
-### [ ] VI-013 — Pitch-expression capability model
-
-Represent:
-
-- pitch-bend range;
-- monophonic/channel-wide bend limitations;
-- per-note/MPE support where applicable;
-- vibrato controller methods;
-- polyphonic-bend fallback rules.
-
-Acceptance:
-
-- Guitar IR bend/vibrato intent can be validated against target capabilities;
-- unsupported polyphonic expression is surfaced clearly.
-
-### [ ] VI-014 — String/position forcing abstraction
-
-Some virtual guitars can force strings, positions, or fretboard behavior.
-
-Acceptance:
-
-- the capability can be declared without assuming every product supports it;
-- FretPilot fingering may be translated when supported;
-- unsupported forcing does not alter canonical string/fret intent silently.
-
-### [ ] VI-015 — Picking/strumming control abstraction
-
-Represent optional product controls for:
-
-- down/up picking;
-- strum direction/spread;
-- repeated-note alternation;
-- sweep/rake controls;
-- accents/ghost notes.
-
-Acceptance:
-
-- upstream `PerformancePlan` expresses musical intent;
-- the adapter maps that intent to available product controls or reports approximation.
-
-## P1 — validation and evidence
-
-### [~] VI-020 — Profile provenance schema
-
-Every nontrivial product mapping should record evidence such as:
+Future evidence types may include:
 
 ```text
 official_manual
@@ -190,187 +173,73 @@ user_report
 inferred_behavior
 ```
 
-Minimum metadata:
+### VI-021 — conformance
 
-```text
-source type
-document/product version
-retrieval/test date
-evidence notes
-verification status
-```
+Current tests already cover substantial Ample behavior: parseability, profile parity, event order, legato overlap, capability negotiation, preflight policy, and generic shadow-plan parity. The remaining task is to define a reusable suite every future adapter can run.
 
-Acceptance:
+Expected shared checks:
 
-- official documented controls and inferred behavior are distinguishable;
-- changing a mapping requires updating evidence/version metadata.
-
-### [ ] VI-021 — Adapter conformance test suite
-
-Define reusable tests every adapter/profile should run where applicable:
-
-- output MIDI parses successfully;
-- notes remain in supported range;
-- state resets correctly;
+- supported note range;
 - no hanging notes;
-- keyswitch/control ordering is valid;
-- legato overlap conditions are met;
-- unsupported intent produces warnings;
-- deterministic rendering from the same inputs.
+- deterministic rendering;
+- valid control ordering/reset/final state;
+- required overlap/timing;
+- explicit unsupported warnings/errors;
+- output-neutral profile/control-plan handoff where applicable.
 
-### [ ] VI-022 — Manual plugin verification records
+### VI-022 — real plugin verification
 
-Create a structured record for DAW/plugin verification by product/version.
+Prototype 0.1 still needs at least one structured verification record from actual Ample Guitar SC 4.x playback in a DAW/plugin host.
 
-Example checks:
+Record:
 
 ```text
+profile/product/version
+host/setup
 articulation triggers
-string forcing
 legato behavior
-bend behavior
-vibrato behavior
 release/hanging notes
-host-specific quirks
+bend/vibrato behavior
+known host quirks
+verification date/result
 ```
 
-Acceptance:
-
-- verified behavior is tied to exact product/version/profile version;
-- unverifiable assumptions remain marked experimental.
+Automated MIDI parse-back is necessary but not equivalent to plugin verification.
 
 ## P2 — multi-product support
 
-### [ ] VI-030 — Add second virtual-guitar adapter
+| Task | Status |
+|---|---|
+| VI-030 second virtual-guitar adapter | [ ] |
+| VI-031 third/different adapter family | [ ] |
+| VI-032 product/version compatibility matrix | [ ] |
 
-Choose the next product based on user demand and availability of reliable documentation/testing.
+Do not add a second product until the generic contract is sufficiently proven by Ample conformance and the new adapter has reliable documentation/testing access.
 
-Acceptance:
+## P2 — adapter knowledge evolution
 
-- implementation uses the generic profile/capability contract;
-- no Ample-specific assumptions are copied into shared code;
-- at least one common Guitar IR fixture renders through both adapters for comparison.
+| Task | Status |
+|---|---|
+| VI-040 adapter candidate lifecycle | [ ] |
+| VI-041 calibration dataset | [ ] |
+| VI-042 learned expressive adapter tuning | [ ] |
 
-### [ ] VI-031 — Add third adapter family
-
-Target a meaningfully different control architecture so the abstraction is tested against more than two similar products.
-
-### [ ] VI-032 — Product/version compatibility matrix
-
-Maintain a matrix such as:
-
-```text
-profile
-product/version
-verified host(s)
-articulation coverage
-string forcing
-bend/vibrato support
-maturity
-last verified
-```
-
-Acceptance:
-
-- API/UI can expose adapter maturity and limitations;
-- product upgrades can be tracked without silently treating versions as equivalent.
-
-## P2 — knowledge evolution
-
-### [ ] VI-040 — Adapter knowledge candidate lifecycle
-
-Use a controlled lifecycle for new mappings or changed behavior:
+Target lifecycle:
 
 ```text
-candidate
+candidate mapping/calibration
 → evidence review
-→ automated conformance tests
-→ plugin/manual verification where required
-→ approved profile version
+→ automated conformance
+→ plugin/manual verification where needed
+→ approved versioned profile
 ```
 
-Acceptance:
+New web/manual/user evidence never changes production mappings automatically.
 
-- newly discovered web/manual information never changes production mappings immediately;
-- runtime only loads approved adapter profiles by default.
+## Boundary rules
 
-### [ ] VI-041 — Calibration dataset
-
-Collect reproducible calibration cases for timing, velocity, overlap, and expression behavior.
-
-Examples:
-
-- minimum legato overlap that reliably triggers;
-- safe keyswitch lead time;
-- velocity ranges producing intended articulations;
-- bend curve response;
-- repeated-note behavior.
-
-Acceptance:
-
-- results identify plugin/product version and host/test setup;
-- calibration affects only adapter knowledge, not canonical guitar-playing knowledge.
-
-### [ ] VI-042 — Learned expressive adapter tuning
-
-After enough verified data exists, allow learned/optimized parameters for expressive rendering, such as:
-
-- overlap amount;
-- velocity scaling;
-- strum spread;
-- accent translation;
-- fallback selection among several supported articulations.
-
-Hard protocol/control mappings remain source-backed/versioned facts.
-
-Acceptance:
-
-- learned parameters are versioned separately from official control mappings;
-- candidate vs approved separation follows the System Evolution lifecycle;
-- deterministic fallback remains available.
-
-## P3 — product integration
-
-### [ ] VI-050 — Generic export command/API target selection
-
-Long-term interface example:
-
-```bash
-fretpilot export-performance song.mid \
-  --instrument-profile ample-guitar-sc-v4
-```
-
-The current Ample-specific command may remain as a convenience alias.
-
-Acceptance:
-
-- API/UI can list supported targets from the registry;
-- output package records exact profile/version;
-- renderer warnings are product-specific but returned through a common report schema.
-
-### [ ] VI-051 — User calibration/override profile
-
-Allow users to override safe adapter parameters for their local setup without modifying canonical profiles.
-
-Examples:
-
-- keyswitch preroll adjustment;
-- overlap adjustment;
-- velocity scaling;
-- host latency compensation.
-
-Acceptance:
-
-- overrides are separated from official profile knowledge;
-- reports record active overrides;
-- unsafe/invalid control changes are validated.
-
-## Guardrails
-
-- Never put vendor-specific keyswitch/CC numbers into Guitar IR.
-- Never make Guitar Playing Knowledge depend on one plugin's limitations.
-- Official control mappings and learned expressive preferences are different knowledge types.
-- Version product profiles by product/version family and verification state.
-- A new plugin version is not assumed compatible until verified.
-- Runtime does not crawl vendor/internet pages to discover mappings during export.
-- Unsupported musical intent must be reported, approximated explicitly, or preserved for another target; never silently discarded when material.
+- Guitar IR expresses canonical musical intent, not product controls.
+- Guitar Playing Knowledge (`GK-*`) describes real-guitar choices, not plugin behavior.
+- Adapter approximations/unsupported cases must be explicit.
+- Product facts require provenance and version identity.
+- Preserve the proven legacy output while migrating architecture; architecture cleanup is not a license to change musical behavior.

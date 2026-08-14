@@ -1,9 +1,10 @@
 """Render canonical Guitar IR as a review-friendly PDF TAB score.
 
 The PDF output is intentionally independent of Guitar Pro. V0.1 renders six-line
-TAB, measure positions, up to two independent rhythm rows, ties, and generic
-guitar techniques. It is designed for review and prototype validation rather
-than final publishing.
+TAB, measure positions, exact duration labels, ties, generic guitar techniques,
+canonical harmony labels, explicit rest spans, and deterministic per-voice
+rhythmic stem/beam lanes with dotted and tuplet marks. It is designed for
+review and prototype validation rather than final publishing.
 """
 
 from __future__ import annotations
@@ -16,7 +17,18 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 
-from fretpilot.ir.models import GuitarMeasure, GuitarNoteEvent, GuitarProjectIR
+from fretpilot.exporters.pdf_score.rhythm import (
+    measure_beam_segments,
+    measure_notated_rests,
+    measure_rhythm_onsets,
+    measure_tuplet_groups,
+)
+from fretpilot.ir.models import (
+    GuitarMeasure,
+    GuitarNoteEvent,
+    GuitarProjectIR,
+    GuitarTrackIR,
+)
 
 
 @dataclass(slots=True)
@@ -42,23 +54,6 @@ class PDFScoreExportResult:
 
 
 @dataclass(frozen=True, slots=True)
-class _RhythmMark:
-    label: str
-    stem: bool
-    filled: bool
-    beam_count: int = 0
-    dotted: bool = False
-    tuplet: int | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class _RhythmPlacement:
-    x: float
-    beat_in_measure: float
-    mark: _RhythmMark
-
-
-@dataclass(frozen=True, slots=True)
 class _TechniquePlacement:
     x: float
     text: str
@@ -72,47 +67,27 @@ class _TechniqueDraw:
     text: str
 
 
-def _rhythm_mark(beats: float) -> _RhythmMark:
-    candidates = [
-        (4.0, _RhythmMark("1", stem=False, filled=False)),
-        (3.0, _RhythmMark("1/2.", stem=True, filled=False, dotted=True)),
-        (2.0, _RhythmMark("1/2", stem=True, filled=False)),
-        (1.5, _RhythmMark("1/4.", stem=True, filled=True, dotted=True)),
-        (1.0, _RhythmMark("1/4", stem=True, filled=True)),
-        (0.75, _RhythmMark("1/8.", stem=True, filled=True, beam_count=1, dotted=True)),
-        (2 / 3, _RhythmMark("4T", stem=True, filled=True, tuplet=3)),
-        (0.5, _RhythmMark("1/8", stem=True, filled=True, beam_count=1)),
-        (1 / 3, _RhythmMark("8T", stem=True, filled=True, beam_count=1, tuplet=3)),
-        (0.25, _RhythmMark("1/16", stem=True, filled=True, beam_count=2)),
-        (1 / 6, _RhythmMark("16T", stem=True, filled=True, beam_count=2, tuplet=3)),
-        (0.125, _RhythmMark("1/32", stem=True, filled=True, beam_count=3)),
-    ]
-    return min(candidates, key=lambda item: abs(item[0] - beats))[1]
-
-
 def _layout_technique_labels(
     placements: list[_TechniquePlacement],
     *,
     base_y: float,
     lane_gap: float = 6.5,
-    maximum_lanes: int = 3,
+    maximum_lanes: int = 2,
     horizontal_gap: float = 2.0,
 ) -> tuple[list[_TechniqueDraw], int]:
-    """Place compact technique labels without horizontal collisions.
-
-    Repeated identical labels that would touch are visually condensed; their
-    complete event-level intent remains in Guitar IR. Other labels move through
-    up to three vertical lanes before being condensed as a last resort.
-    """
+    """Place technique labels in deterministic lanes without overlap."""
 
     lane_ends = [float("-inf")] * maximum_lanes
     last_right_by_text: dict[str, float] = {}
     draws: list[_TechniqueDraw] = []
     condensed = 0
-    for placement in sorted(placements, key=lambda item: item.x):
+    for placement in sorted(placements, key=lambda item: (item.x, item.text)):
         left = placement.x - placement.width / 2
         right = placement.x + placement.width / 2
-        if left <= last_right_by_text.get(placement.text, float("-inf")) + horizontal_gap:
+        if left <= last_right_by_text.get(
+            placement.text,
+            float("-inf"),
+        ) + horizontal_gap:
             condensed += 1
             continue
 
@@ -139,6 +114,30 @@ def _layout_technique_labels(
     return draws, condensed
 
 
+def _duration_label(beats: float) -> str:
+    candidates = [
+        (4.0, "1"),
+        (3.0, "1/2."),
+        (2.0, "1/2"),
+        (1.5, "1/4."),
+        (4 / 3, "1/2T"),
+        (1.0, "1/4"),
+        (0.75, "1/8."),
+        (2 / 3, "4T"),
+        (0.5, "1/8"),
+        (0.375, "1/16."),
+        (1 / 3, "8T"),
+        (0.25, "1/16"),
+        (0.1875, "1/32."),
+        (1 / 6, "16T"),
+        (0.125, "1/32"),
+    ]
+    value, label = min(candidates, key=lambda item: abs(item[0] - beats))
+    if abs(value - beats) <= 1e-6:
+        return label
+    return f"{beats:.3g}b"
+
+
 def _technique_label(event: GuitarNoteEvent) -> list[str]:
     mapping = {
         "hammer_on": "H",
@@ -150,6 +149,7 @@ def _technique_label(event: GuitarNoteEvent) -> list[str]:
         "palm_mute": "P.M.",
         "natural_harmonic": "N.H.",
         "bend": "bend",
+        "pitch_raise": "bend",
     }
     labels: list[str] = []
     for articulation in event.articulations:
@@ -159,44 +159,79 @@ def _technique_label(event: GuitarNoteEvent) -> list[str]:
     return labels
 
 
-def _group_rhythm_events(
-    measure: GuitarMeasure,
-) -> dict[int, list[tuple[float, list[GuitarNoteEvent]]]]:
-    """Group measure events by notation voice and absolute score onset."""
+def _harmony_label_map(track: GuitarTrackIR) -> dict[float, str]:
+    """Map canonical harmony regions to their first score-time anchor."""
 
-    grouped: dict[int, dict[float, list[GuitarNoteEvent]]] = defaultdict(
-        lambda: defaultdict(list)
-    )
-    for event in measure.events:
-        voice = event.score.voice
-        if voice not in {1, 2}:
-            raise ValueError(
-                "PDF/TAB supports voices 1 and 2 only; "
-                f"event {event.id} uses voice {voice}."
-            )
-        grouped[voice][round(event.score.start_beat, 7)].append(event)
-    return {
-        voice: sorted(onsets.items())
-        for voice, onsets in sorted(grouped.items())
-    }
-
-
-def _maximum_voice_count(project: GuitarProjectIR) -> int:
-    voices = {
-        event.score.voice
-        for track in project.tracks
+    events = [
+        event
         for measure in track.measures
         for event in measure.events
-    }
-    return max(voices, default=1)
+        if not event.score.tie_in
+    ]
+    labels: dict[float, str] = {}
+    for region in track.harmony_regions:
+        source_indices = set(region.source_note_indices)
+        anchor = next(
+            (
+                event
+                for event in events
+                if event.source_note_index in source_indices
+            ),
+            None,
+        )
+        beat = anchor.score.start_beat if anchor is not None else region.start_beat
+        labels.setdefault(round(beat, 7), region.symbol)
+    return labels
+
+
+def _time_x(
+    measure_x: float,
+    measure_width: float,
+    measure: GuitarMeasure,
+    absolute_beat: float,
+) -> float:
+    beat_in_measure = absolute_beat - measure.start_beat
+    ratio = max(0.0, min(1.0, beat_in_measure / measure.duration_beats))
+    return measure_x + 7 + (measure_width - 14) * ratio
+
+
+def _measure_for_voice(measure: GuitarMeasure, voice: int) -> GuitarMeasure:
+    """Return a score-layout view containing only one notation voice."""
+
+    if voice not in {1, 2}:
+        raise ValueError(f"PDF/TAB supports voices 1 and 2 only, not voice {voice}.")
+    return GuitarMeasure(
+        number=measure.number,
+        start_beat=measure.start_beat,
+        duration_beats=measure.duration_beats,
+        numerator=measure.numerator,
+        denominator=measure.denominator,
+        events=[event for event in measure.events if event.score.voice == voice],
+    )
+
+
+def _measure_voices(measure: GuitarMeasure) -> list[int]:
+    voices = sorted({event.score.voice for event in measure.events})
+    unsupported = [voice for voice in voices if voice not in {1, 2}]
+    if unsupported:
+        raise ValueError(
+            f"PDF/TAB supports voices 1 and 2 only; measure {measure.number} "
+            f"uses {unsupported}."
+        )
+    return voices or [1]
 
 
 def _system_uses_voice_two(measures: list[GuitarMeasure]) -> bool:
-    return any(
-        event.score.voice == 2
-        for measure in measures
-        for event in measure.events
-    )
+    return any(2 in _measure_voices(measure) for measure in measures)
+
+
+def _maximum_voice_count(project: GuitarProjectIR) -> int:
+    maximum = 1
+    for track in project.tracks:
+        for measure in track.measures:
+            voices = _measure_voices(measure)
+            maximum = max(maximum, *voices)
+    return maximum
 
 
 class _PDFScoreRenderer:
@@ -316,8 +351,11 @@ class _PDFScoreRenderer:
         self.canvas.setFont("Helvetica", 8.5)
         self.canvas.setFillColor(colors.HexColor("#374151"))
         legend = [
-            "Rhythm row: hollow/filled heads, stems, beams, dots, and triplet marks show written duration.",
-            "Two-voice TAB uses separate V1/V2 rhythm rows; V1 stems point up and V2 stems point down.",
+            "Chord symbols above TAB come from canonical Guitar IR harmony regions.",
+            "R + duration marks explicit silent score spans, for example R 1/4.",
+            "Stems, flags, beams, dots, and tuplet brackets below TAB show the written rhythmic skeleton.",
+            "Two-voice TAB uses separate V1/V2 rhythm lanes; V1 stems descend and V2 stems ascend.",
+            "Duration labels use exact written values; unsupported values show their beat length instead of being rounded.",
             "Technique labels: H hammer-on, P pull-off, S slide, LS legato slide, vib., let ring, P.M.",
             "Fret numbers are positioned on standard six-line TAB. Ties are drawn at measure boundaries.",
             "This V0.1 PDF is a review format; standard notation and advanced engraving remain future work.",
@@ -326,16 +364,127 @@ class _PDFScoreRenderer:
             self.canvas.drawString(self.margin_x, y, line)
             y -= 16
 
+    def _draw_rhythm_lane(
+        self,
+        measure: GuitarMeasure,
+        *,
+        measure_x: float,
+        measure_width: float,
+        note_y: float,
+        direction: int,
+    ) -> None:
+        """Draw the remote rhythm model for one isolated notation voice."""
+
+        onsets = measure_rhythm_onsets(measure)
+        beam_segments = measure_beam_segments(measure, onsets)
+        tuplet_groups = measure_tuplet_groups(measure, onsets)
+        onset_x = [
+            _time_x(measure_x, measure_width, measure, onset.start_beat)
+            for onset in onsets
+        ]
+        primary_beam_y = note_y + direction * 12.0
+        covered_beams: set[tuple[int, int]] = set()
+        for segment in beam_segments:
+            for onset_index in range(segment.first_onset, segment.last_onset + 1):
+                covered_beams.add((onset_index, segment.level))
+
+        self.canvas.setStrokeColor(colors.HexColor("#374151"))
+        for onset_index, onset in enumerate(onsets):
+            if not onset.stemmed:
+                continue
+            stem_end_y = primary_beam_y + direction * max(
+                0,
+                onset.beam_level - 1,
+            ) * 3.0
+            self.canvas.setLineWidth(0.75)
+            self.canvas.line(
+                onset_x[onset_index],
+                note_y,
+                onset_x[onset_index],
+                stem_end_y,
+            )
+            if onset.dot_count:
+                self.canvas.setFillColor(colors.HexColor("#374151"))
+                self.canvas.circle(
+                    onset_x[onset_index] + 4.0,
+                    note_y + 1.0,
+                    0.95,
+                    fill=1,
+                    stroke=0,
+                )
+
+        for segment in beam_segments:
+            beam_y = primary_beam_y + direction * (segment.level - 1) * 3.0
+            self.canvas.setStrokeColor(colors.HexColor("#374151"))
+            self.canvas.setLineWidth(1.45)
+            self.canvas.line(
+                onset_x[segment.first_onset],
+                beam_y,
+                onset_x[segment.last_onset],
+                beam_y,
+            )
+
+        for onset_index, onset in enumerate(onsets):
+            for level in range(1, onset.beam_level + 1):
+                if (onset_index, level) in covered_beams:
+                    continue
+                flag_y = primary_beam_y + direction * (level - 1) * 3.0
+                self.canvas.setStrokeColor(colors.HexColor("#374151"))
+                self.canvas.setLineWidth(1.15)
+                self.canvas.line(
+                    onset_x[onset_index],
+                    flag_y,
+                    onset_x[onset_index] + 4.5,
+                    flag_y + direction * 1.5,
+                )
+
+        for group in tuplet_groups:
+            max_level = max(
+                onsets[item].beam_level
+                for item in range(group.first_onset, group.last_onset + 1)
+            )
+            bracket_y = primary_beam_y + direction * max(
+                9.0,
+                (max_level - 1) * 3.0 + 9.0,
+            )
+            left = onset_x[group.first_onset]
+            right = onset_x[group.last_onset]
+            middle = (left + right) / 2.0
+            self.canvas.setStrokeColor(colors.HexColor("#4B5563"))
+            self.canvas.setLineWidth(0.55)
+            self.canvas.line(left, bracket_y, middle - 4.0, bracket_y)
+            self.canvas.line(middle + 4.0, bracket_y, right, bracket_y)
+            self.canvas.line(
+                left,
+                bracket_y,
+                left,
+                bracket_y - direction * 2.5,
+            )
+            self.canvas.line(
+                right,
+                bracket_y,
+                right,
+                bracket_y - direction * 2.5,
+            )
+            self.canvas.setFillColor(colors.HexColor("#374151"))
+            self.canvas.setFont("Helvetica-Bold", 5.5)
+            self.canvas.drawCentredString(
+                middle,
+                bracket_y + direction * 1.8,
+                str(group.number),
+            )
+
     def _draw_system(
         self,
         measures: list[GuitarMeasure],
         y: float,
+        harmony_labels: dict[float, str],
     ) -> float:
         x0 = self.margin_x + 38
         x1 = self.width - self.margin_x
         measure_width = (x1 - x0) / self.measures_per_system
         line_gap = 8.2
-        tab_top = y - 31
+        tab_top = y - 27
         tab_bottom = tab_top - 5 * line_gap
         has_voice_two = _system_uses_voice_two(measures)
         tuning_labels = {1: "e", 2: "B", 3: "G", 4: "D", 5: "A", 6: "E"}
@@ -355,14 +504,6 @@ class _PDFScoreRenderer:
             yy = tab_top - (string - 1) * line_gap
             self.canvas.line(x0, yy, x1, yy)
 
-        voice_row_y = {1: tab_bottom - 14}
-        if has_voice_two:
-            voice_row_y[2] = tab_bottom - 34
-            self.canvas.setFont("Helvetica-Bold", 5.8)
-            self.canvas.setFillColor(colors.HexColor("#4B5563"))
-            for voice, row_y in voice_row_y.items():
-                self.canvas.drawRightString(x0 - 4, row_y - 2, f"V{voice}")
-
         for index in range(self.measures_per_system):
             measure_x = x0 + index * measure_width
             measure = measures[index] if index < len(measures) else None
@@ -381,95 +522,142 @@ class _PDFScoreRenderer:
                 guide_x = measure_x + measure_width * (beat / measure.numerator)
                 self.canvas.line(guide_x, tab_top + 2, guide_x, tab_bottom - 2)
 
-            grouped = _group_rhythm_events(measure)
-            rhythm_placements: dict[int, list[_RhythmPlacement]] = defaultdict(list)
-            technique_placements: list[_TechniquePlacement] = []
-            for voice, voice_groups in grouped.items():
-                for absolute_start, events in voice_groups:
-                    beat_in_measure = absolute_start - measure.start_beat
-                    ratio = max(
-                        0.0,
-                        min(1.0, beat_in_measure / measure.duration_beats),
-                    )
-                    note_x = measure_x + 7 + (measure_width - 14) * ratio
-                    duration = min(
-                        event.score.duration_beats for event in events
-                    )
-                    rhythm_placements[voice].append(
-                        _RhythmPlacement(
-                            x=note_x,
-                            beat_in_measure=beat_in_measure,
-                            mark=_rhythm_mark(duration),
-                        )
-                    )
-
-                    labels: list[str] = []
-                    for event in events:
-                        for label in _technique_label(event):
-                            if label not in labels:
-                                labels.append(label)
-                    if labels:
-                        text = ", ".join(labels[:3])
-                        technique_placements.append(
-                            _TechniquePlacement(
-                                x=note_x,
-                                text=text,
-                                width=self.canvas.stringWidth(
-                                    text,
-                                    "Helvetica-Oblique",
-                                    5.4,
-                                ),
-                            )
-                        )
-
-                    for event in events:
-                        string = event.fingering.string
-                        fret = event.fingering.fret
-                        if string is None or fret is None or not 1 <= string <= 6:
-                            string = 3
-                            text = "?"
-                            warning = f"Event {event.id} has no printable string/fret assignment."
-                            if warning not in self.warnings:
-                                self.warnings.append(warning)
-                        else:
-                            text = str(fret)
-                        yy = tab_top - (string - 1) * line_gap
-                        self.canvas.setFont("Helvetica-Bold", 7.4)
-                        width = self.canvas.stringWidth(text, "Helvetica-Bold", 7.4)
-                        self.canvas.setFillColor(colors.white)
-                        self.canvas.rect(
-                            note_x - width / 2 - 1.4,
-                            yy - 3.2,
-                            width + 2.8,
-                            7.1,
-                            fill=1,
-                            stroke=0,
-                        )
-                        self.canvas.setFillColor(colors.HexColor("#111827"))
-                        self.canvas.drawCentredString(note_x, yy - 2.3, text)
-                        if event.score.tie_out:
-                            self.canvas.setStrokeColor(colors.HexColor("#4B5563"))
-                            path = self.canvas.beginPath()
-                            path.moveTo(note_x + 4, yy - 4)
-                            path.curveTo(
-                                note_x + 9,
-                                yy - 9,
-                                measure_x + measure_width - 4,
-                                yy - 9,
-                                measure_x + measure_width - 1,
-                                yy - 4,
-                            )
-                            self.canvas.drawPath(path, stroke=1, fill=0)
-
-            for voice, placements in rhythm_placements.items():
-                self._draw_rhythm_row(
-                    placements,
-                    y=voice_row_y[voice],
-                    stem_direction=-1 if voice == 2 else 1,
+            measure_end = measure.start_beat + measure.duration_beats
+            for absolute_start, symbol in sorted(harmony_labels.items()):
+                if not (
+                    measure.start_beat - 1e-7
+                    <= absolute_start
+                    < measure_end - 1e-7
+                ):
+                    continue
+                chord_x = _time_x(
+                    measure_x,
+                    measure_width,
+                    measure,
+                    absolute_start,
                 )
+                self.canvas.setFillColor(colors.HexColor("#111827"))
+                self.canvas.setFont("Helvetica-Bold", 7.4)
+                self.canvas.drawCentredString(chord_x, tab_top + 29, symbol)
+
+            voices = _measure_voices(measure)
+            voice_measures = {
+                voice: _measure_for_voice(measure, voice)
+                for voice in voices
+            }
+            for voice, voice_measure in voice_measures.items():
+                label_y = tab_top + 2.5 if voice == 1 else tab_bottom - 5.5
+                for rest in measure_notated_rests(voice_measure):
+                    midpoint = rest.start_beat + rest.duration_beats / 2.0
+                    rest_x = _time_x(
+                        measure_x,
+                        measure_width,
+                        measure,
+                        midpoint,
+                    )
+                    self.canvas.setFillColor(colors.HexColor("#6B7280"))
+                    self.canvas.setFont("Helvetica-Oblique", 5.4)
+                    prefix = f"V{voice} " if has_voice_two else ""
+                    self.canvas.drawCentredString(
+                        rest_x,
+                        label_y,
+                        f"{prefix}R {_duration_label(rest.duration_beats)}",
+                    )
+
+                self._draw_rhythm_lane(
+                    voice_measure,
+                    measure_x=measure_x,
+                    measure_width=measure_width,
+                    note_y=tab_bottom - (12 if voice == 1 else 55),
+                    direction=-1 if voice == 1 else 1,
+                )
+
+            grouped: dict[tuple[int, float], list[GuitarNoteEvent]] = defaultdict(list)
+            for event in measure.events:
+                grouped[
+                    (event.score.voice, round(event.score.start_beat, 7))
+                ].append(event)
+
+            technique_placements: list[_TechniquePlacement] = []
+            for (voice, absolute_start), events in sorted(grouped.items()):
+                note_x = _time_x(
+                    measure_x,
+                    measure_width,
+                    measure,
+                    absolute_start,
+                )
+                duration = min(event.score.duration_beats for event in events)
+                self.canvas.setFillColor(colors.HexColor("#374151"))
+                self.canvas.setFont("Helvetica", 5.8)
+                duration_y = tab_top + 2.5 if voice == 1 else tab_bottom - 5.5
+                prefix = f"V{voice} " if has_voice_two else ""
+                self.canvas.drawCentredString(
+                    note_x,
+                    duration_y,
+                    f"{prefix}{_duration_label(duration)}",
+                )
+
+                labels: list[str] = []
+                for event in events:
+                    for label in _technique_label(event):
+                        if label not in labels:
+                            labels.append(label)
+                if labels:
+                    text = ", ".join(labels[:3])
+                    technique_placements.append(
+                        _TechniquePlacement(
+                            x=note_x,
+                            text=text,
+                            width=self.canvas.stringWidth(
+                                text,
+                                "Helvetica-Oblique",
+                                5.4,
+                            ),
+                        )
+                    )
+
+                for event in events:
+                    string = event.fingering.string
+                    fret = event.fingering.fret
+                    if string is None or fret is None or not 1 <= string <= 6:
+                        string = 3
+                        text = "?"
+                        warning = f"Event {event.id} has no printable string/fret assignment."
+                        if warning not in self.warnings:
+                            self.warnings.append(warning)
+                    else:
+                        text = str(fret)
+                    yy = tab_top - (string - 1) * line_gap
+                    self.canvas.setFont("Helvetica-Bold", 7.4)
+                    width = self.canvas.stringWidth(text, "Helvetica-Bold", 7.4)
+                    self.canvas.setFillColor(colors.white)
+                    self.canvas.rect(
+                        note_x - width / 2 - 1.4,
+                        yy - 3.2,
+                        width + 2.8,
+                        7.1,
+                        fill=1,
+                        stroke=0,
+                    )
+                    self.canvas.setFillColor(colors.HexColor("#111827"))
+                    self.canvas.drawCentredString(note_x, yy - 2.3, text)
+                    if event.score.tie_out:
+                        self.canvas.setStrokeColor(colors.HexColor("#4B5563"))
+                        path = self.canvas.beginPath()
+                        path.moveTo(note_x + 4, yy - 4)
+                        path.curveTo(
+                            note_x + 9,
+                            yy - 9,
+                            measure_x + measure_width - 4,
+                            yy - 9,
+                            measure_x + measure_width - 1,
+                            yy - 4,
+                        )
+                        self.canvas.drawPath(path, stroke=1, fill=0)
+
             technique_draws, condensed = _layout_technique_labels(
                 technique_placements,
-                base_y=tab_top + 17,
+                base_y=tab_top + 16,
             )
             self.canvas.setFillColor(colors.HexColor("#1F4B73"))
             self.canvas.setFont("Helvetica-Oblique", 5.4)
@@ -486,120 +674,12 @@ class _PDFScoreRenderer:
         self.canvas.setStrokeColor(colors.HexColor("#111827"))
         self.canvas.setLineWidth(0.9)
         self.canvas.line(x1, tab_top + 1, x1, tab_bottom - 1)
-        return tab_bottom - (62 if has_voice_two else 42)
-
-    def _draw_rhythm_row(
-        self,
-        placements: list[_RhythmPlacement],
-        *,
-        y: float,
-        stem_direction: int = 1,
-    ) -> None:
-        if not placements:
-            return
-
-        head_width = 5.2
-        head_height = 3.7
-        stem_height = 13.0
-        beam_gap = 3.0
-        stem_x_offset = head_width / 2 - 0.3
-        stem_end_y = y + stem_direction * stem_height
-
-        self.canvas.setStrokeColor(colors.HexColor("#111827"))
-        self.canvas.setFillColor(colors.HexColor("#111827"))
-        self.canvas.setLineWidth(0.75)
-
-        for placement in placements:
-            mark = placement.mark
-            self.canvas.ellipse(
-                placement.x - head_width / 2,
-                y - head_height / 2,
-                placement.x + head_width / 2,
-                y + head_height / 2,
-                fill=1 if mark.filled else 0,
-                stroke=1,
-            )
-            if mark.stem:
-                stem_x = placement.x + stem_x_offset
-                self.canvas.line(stem_x, y, stem_x, stem_end_y)
-            if mark.dotted:
-                self.canvas.circle(
-                    placement.x + head_width / 2 + 3.0,
-                    y,
-                    0.8,
-                    fill=1,
-                    stroke=0,
-                )
-
-        connected: set[tuple[int, int]] = set()
-        for index in range(len(placements) - 1):
-            left = placements[index]
-            right = placements[index + 1]
-            if int(left.beat_in_measure + 1e-7) != int(
-                right.beat_in_measure + 1e-7
-            ):
-                continue
-            shared_beams = min(left.mark.beam_count, right.mark.beam_count)
-            for level in range(shared_beams):
-                beam_y = stem_end_y - stem_direction * level * beam_gap
-                self.canvas.setLineWidth(1.35)
-                self.canvas.line(
-                    left.x + stem_x_offset,
-                    beam_y,
-                    right.x + stem_x_offset,
-                    beam_y,
-                )
-                connected.add((index, level))
-                connected.add((index + 1, level))
-
-        self.canvas.setLineWidth(1.0)
-        for index, placement in enumerate(placements):
-            for level in range(placement.mark.beam_count):
-                if (index, level) in connected:
-                    continue
-                beam_y = stem_end_y - stem_direction * level * beam_gap
-                path = self.canvas.beginPath()
-                path.moveTo(placement.x + stem_x_offset, beam_y)
-                path.curveTo(
-                    placement.x + stem_x_offset + 2.8,
-                    beam_y - stem_direction * 1.2,
-                    placement.x + stem_x_offset + 5.0,
-                    beam_y - stem_direction * 3.0,
-                    placement.x + stem_x_offset + 5.6,
-                    beam_y - stem_direction * 5.0,
-                )
-                self.canvas.drawPath(path, stroke=1, fill=0)
-
-        triplet_runs: list[list[_RhythmPlacement]] = []
-        current_run: list[_RhythmPlacement] = []
-        current_beat: int | None = None
-        for placement in placements:
-            beat = int(placement.beat_in_measure + 1e-7)
-            if placement.mark.tuplet == 3:
-                if current_run and beat != current_beat:
-                    triplet_runs.append(current_run)
-                    current_run = []
-                current_run.append(placement)
-                current_beat = beat
-            elif current_run:
-                triplet_runs.append(current_run)
-                current_run = []
-                current_beat = None
-        if current_run:
-            triplet_runs.append(current_run)
-
-        self.canvas.setFont("Helvetica-Bold", 6.0)
-        for run in triplet_runs:
-            center_x = (run[0].x + run[-1].x) / 2
-            self.canvas.drawCentredString(
-                center_x,
-                stem_end_y + stem_direction * 3.0,
-                "3",
-            )
+        return tab_bottom - (82 if has_voice_two else 48)
 
     def draw_tracks(self) -> None:
         for track in self.project.tracks:
             section = track.name or track.id
+            harmony_labels = _harmony_label_map(track)
             self._new_page(section)
             self.canvas.setFillColor(colors.HexColor("#111827"))
             self.canvas.setFont("Helvetica-Bold", 15)
@@ -617,17 +697,18 @@ class _PDFScoreRenderer:
             systems = 0
             for offset in range(0, len(track.measures), self.measures_per_system):
                 chunk = track.measures[offset : offset + self.measures_per_system]
-                # A V2 row adds 20 points below the normal rhythm row. Preflight
-                # the actual next system height so a mixed single/two-voice page
-                # cannot push downward stems or tuplets into the footer.
-                minimum_start_y = 150 if _system_uses_voice_two(chunk) else 130
+                minimum_start_y = 175 if _system_uses_voice_two(chunk) else 140
                 if (
                     systems >= self.systems_per_page
                     or self.current_y < minimum_start_y
                 ):
                     self._new_page(section)
                     systems = 0
-                self.current_y = self._draw_system(chunk, self.current_y) - 8
+                self.current_y = self._draw_system(
+                    chunk,
+                    self.current_y,
+                    harmony_labels,
+                ) - 8
                 systems += 1
 
     def save(self) -> None:

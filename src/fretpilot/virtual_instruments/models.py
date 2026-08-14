@@ -3,10 +3,6 @@
 These models describe *how a target virtual instrument is controlled*. They do
 not describe how a real guitarist should play, and vendor-specific control data
 must never leak back into canonical Guitar IR or Guitar Playing Knowledge.
-
-Raw MIDI numbers are canonical in this layer. ``display_label`` may retain a
-vendor's octave label (for example Ample ``C0``), which is useful to a human but
-is not safe enough to drive rendering by itself.
 """
 
 from __future__ import annotations
@@ -47,7 +43,16 @@ class AdapterEvidence:
 
 @dataclass(frozen=True, slots=True)
 class ControlAction:
-    """One target-specific control action used to realize musical intent."""
+    """One target-specific control action used to realize musical intent.
+
+    Examples include a keyswitch note, CC value, velocity range, note-overlap
+    requirement, pitch-bend setup, or a product-specific state transition.
+    ``target`` and ``value`` remain generic because different control types use
+    different MIDI/control payloads. ``release_value`` carries a target-specific
+    release payload when one exists (for example a keyswitch note-off velocity),
+    while ``offset_ticks`` applies an exact signed tick offset after the timing
+    anchor has been resolved.
+    """
 
     kind: str
     target: int | str | None = None
@@ -55,6 +60,8 @@ class ControlAction:
     timing: str = "at_event"
     duration_ticks: int | None = None
     notes: str = ""
+    release_value: int | float | str | None = None
+    offset_ticks: int = 0
     display_label: str = ""
     state: str = ""
     conditions: Mapping[str, str | int | float] = field(default_factory=dict)
@@ -254,7 +261,7 @@ class VirtualGuitarInstrumentProfile:
 
 @dataclass(frozen=True, slots=True)
 class VirtualInstrumentKnowledgeSnapshot:
-    """An immutable, release-pinned collection of instrument profiles."""
+    """An immutable, release-pinned collection of reviewable profiles."""
 
     snapshot_version: str
     schema_version: str
@@ -263,7 +270,9 @@ class VirtualInstrumentKnowledgeSnapshot:
 
     def __post_init__(self) -> None:
         if self.status not in VALID_SNAPSHOT_STATUSES:
-            raise ValueError(f"Unsupported virtual-instrument snapshot status {self.status!r}.")
+            raise ValueError(
+                f"Unsupported virtual-instrument snapshot status {self.status!r}."
+            )
         profile_ids = [profile.profile_id for profile in self.profiles]
         if len(profile_ids) != len(set(profile_ids)):
             raise ValueError("profile IDs must be unique within one snapshot.")

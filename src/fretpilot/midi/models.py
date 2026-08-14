@@ -1,10 +1,4 @@
-"""Canonical data structures produced by FretPilot's MIDI import layer.
-
-The importer intentionally preserves raw MIDI ticks while also exposing musical
-beat values. Later stages should never need to guess what the original file
-contained. Physical MIDI tracks, channels, and program changes remain distinct
-because a type-0 MIDI file may place an entire arrangement in one track.
-"""
+"""Canonical data structures produced by FretPilot's MIDI import layer."""
 
 from __future__ import annotations
 
@@ -40,6 +34,25 @@ class ProgramEvent:
 
 
 @dataclass(slots=True)
+class PitchWheelEvent:
+    track_index: int
+    channel: int
+    tick: int
+    beat: float
+    value: int
+
+
+@dataclass(slots=True)
+class PitchWheelRangeEvent:
+    track_index: int
+    channel: int
+    tick: int
+    beat: float
+    semitones: int
+    cents: int = 0
+
+
+@dataclass(slots=True)
 class NormalizedNote:
     track_index: int
     track_name: str
@@ -50,8 +63,6 @@ class NormalizedNote:
     duration_ticks: int
     start_beat: float
     duration_beats: float
-    # Program active when note-on occurred. None means the source did not
-    # provide an explicit program before the note.
     program: int | None = None
 
     @property
@@ -90,6 +101,8 @@ class NormalizedTimeline:
     tracks: list[NormalizedTrack]
     program_events: list[ProgramEvent] = field(default_factory=list)
     diagnostics: list[Diagnostic] = field(default_factory=list)
+    pitch_wheel_events: list[PitchWheelEvent] = field(default_factory=list)
+    pitch_wheel_range_events: list[PitchWheelRangeEvent] = field(default_factory=list)
 
     @property
     def note_count(self) -> int:
@@ -97,11 +110,7 @@ class NormalizedTimeline:
 
     @property
     def duration_beats(self) -> float:
-        end_beats = [
-            note.end_beat
-            for track in self.tracks
-            for note in track.notes
-        ]
+        end_beats = [note.end_beat for track in self.tracks for note in track.notes]
         return max(end_beats, default=0.0)
 
     def to_dict(self) -> dict[str, Any]:
@@ -110,6 +119,8 @@ class NormalizedTimeline:
             "physical_track_count": len(self.tracks),
             "note_count": self.note_count,
             "program_event_count": len(self.program_events),
+            "pitch_wheel_event_count": len(self.pitch_wheel_events),
+            "pitch_wheel_range_event_count": len(self.pitch_wheel_range_events),
             "duration_beats": self.duration_beats,
         }
         return payload

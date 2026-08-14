@@ -134,17 +134,14 @@ def test_api_exposes_full_virtual_instrument_profile_for_review(tmp_path: Path) 
     assert profile["knowledge_version"] == "2026.08.0"
     assert profile["verification_status"] == "plugin_unverified"
     assert len(profile["capabilities"]) == 11
-    assert profile["capabilities"][7]["actions"][0] == {
-        "kind": "keyswitch",
-        "target": 29,
-        "value": None,
-        "timing": "before_source_note",
-        "duration_ticks": None,
-        "notes": "",
-        "display_label": "F0",
-        "state": "momentary",
-        "conditions": {},
-    }
+    action = profile["capabilities"][7]["actions"][0]
+    assert action["kind"] == "keyswitch"
+    assert action["target"] == 29
+    assert action["timing"] == "before_source_note"
+    assert action["display_label"] == "F0"
+    assert action["state"] == "momentary"
+    assert action["release_value"] is None
+    assert action["offset_ticks"] == 0
     assert profile["evidence"][0]["status"] == "official"
 
 

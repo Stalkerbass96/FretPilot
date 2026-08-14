@@ -61,10 +61,6 @@ The local product shell wraps this pipeline without duplicating music policy:
 
 ```text
 React client
-  ↓ MIDI preflight
-FastAPI `POST /api/detect`
-  ↓ grouped guitar candidates + confidence + recommendation
-React review UI
   ↓ multipart MIDI + fidelity + requested formats
 FastAPI `api` module
   ↓ bounded local job queue
@@ -91,10 +87,9 @@ The Ample path is the first implementation of a broader virtual-guitar adapter a
 Responsibilities include:
 
 - validated, size-limited MIDI uploads;
-- lightweight guitar-only detection preflight;
 - bounded in-process conversion jobs;
 - queued/processing/completed/failed state;
-- all-likely-guitar batch execution with product-facing part grouping;
+- all-likely-guitar batch execution;
 - selected-format generation;
 - per-stream output status;
 - artifact lookup through opaque IDs rather than client-supplied paths.
@@ -165,7 +160,10 @@ Invariant:
 
 > Score timing and performance timing are different representations.
 
-Future work includes section-dependent grids, swing, richer tuplets, and true multi-voice notation.
+The IR/GP5/PDF path preserves a conservative second voice for clearly unequal
+same-onset chord releases when string reuse is safe. Future work includes
+section-dependent grids, swing, richer tuplets, and general voice separation
+for arbitrary overlapping material.
 
 ### `guitar`
 

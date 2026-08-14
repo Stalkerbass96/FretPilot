@@ -238,11 +238,7 @@ Acceptance criteria:
 
 ## P0/P1 — Layer 4 section and behavior architecture
 
-### [x] TI-040 — Define section/phrase data model
-
-Implemented in `src/fretpilot/analysis/sections.py` and serialized independently
-from Layers 1–3 identity output. Section-context interpretation remains
-experimental.
+### [ ] TI-040 — Define section/phrase data model
 
 Create a representation for time-bounded behavior classification.
 
@@ -264,11 +260,7 @@ Acceptance criteria:
 - section results serialize independently from guitar identity;
 - no behavior profile is permanently attached to the full stream by default.
 
-### [x] TI-041 — Implement baseline windowed segmentation
-
-Implemented as deterministic measure windows, feature-distance boundaries, and
-adjacent-region merging. Synthetic riff → strumming → solo coverage lives in
-`tests/test_section_segmentation.py`.
+### [ ] TI-041 — Implement baseline windowed segmentation
 
 Start with deterministic windows and feature-change boundaries.
 
@@ -324,8 +316,11 @@ Acceptance criteria:
 
 ### [~] TI-050 — Define auto-selection policy
 
-Current gap: unify CLI/API policy and add manual override plus remembered choice.
-Implemented behavior is recorded in [`STATUS.md`](STATUS.md).
+Partial implementation (2026-08-14): the local API and frontend use
+`guitar-only-v1`, which selects only `likely_guitar`, filters possible/unlikely
+streams from generation cards, groups same-track/channel Program fragments, and
+marks sparse likely parts as optional. CLI unification, manual override, and
+remembered choices remain open.
 
 Document and implement policies for:
 
@@ -343,8 +338,10 @@ Acceptance criteria:
 
 ### [~] TI-051 — Add review-friendly detection report
 
-Current gap: add Layer-4 profiles, metadata-conflict warnings, and unsupported-
-assumption warnings. Implemented fields are recorded in [`STATUS.md`](STATUS.md).
+Partial implementation (2026-08-14): `/api/detect` and completed jobs expose a
+compact grouped summary with track name, channel, programs, note count,
+probability, confidence, recommendation, and top reasons. Layer-4 profiles,
+metadata-conflict warnings, and unsupported-assumption warnings remain open.
 
 Produce a compact product-facing summary in addition to the full debug JSON.
 

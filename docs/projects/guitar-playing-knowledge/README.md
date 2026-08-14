@@ -49,9 +49,7 @@ The repository currently has two related knowledge layers:
 
 1. `knowledge/guitar_behaviors.py`
    - Layer-4 behavior matching used by stream analysis.
-   - Experimental vocabulary: solo, riff, strumming, breakdown, jazz comping.
-   - Identity/debug reports retain whole-stream matches; prototype execution
-     applies the same profiles independently to deterministic sections.
+   - Experimental whole-stream profiles: solo, riff, strumming, breakdown, jazz comping.
 
 2. `knowledge/playing_contexts.py`
    - Composable role/style/technique profiles.

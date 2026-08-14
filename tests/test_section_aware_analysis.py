@@ -54,9 +54,6 @@ def _context_section(
     start_beat: float,
     end_beat: float,
     context: PlayingContext,
-    *,
-    boundary_strength: float = 0.0,
-    boundary_reason: str = "test_boundary",
 ) -> SectionContextAnalysis:
     return SectionContextAnalysis(
         section_id=section_id,
@@ -67,8 +64,6 @@ def _context_section(
         end_beat=end_beat,
         behavior_profiles=[],
         playing_context=context,
-        boundary_strength=boundary_strength,
-        boundary_reason=boundary_reason,
     )
 
 
@@ -174,93 +169,3 @@ def test_auto_section_analysis_round_trips_global_indices_into_guitar_ir() -> No
     ]
     assert {event.source_note_index for event in events} == set(range(len(notes)))
     assert all(event.fingering.playable for event in events)
-
-
-def test_weak_boundary_carries_hand_position_but_strong_boundary_resets() -> None:
-    track = NormalizedTrack(
-        index=0,
-        name="Lead Guitar",
-        notes=[
-            # Avoiding the open E string puts section 1 around frets 5-7.
-            _note(64, 3.0),
-            _note(66, 3.5),
-            # Independently these prefer frets 1-3; a weak boundary should keep
-            # their alternative frets 6-8 near the previous hand position.
-            _note(65, 4.0),
-            _note(67, 4.5),
-        ],
-    )
-    positioned = PlayingContext(
-        fingering=FingeringPreferences(open_string_usage=0.0)
-    )
-    neutral = PlayingContext()
-
-    weak = analyze_guitar_track_by_sections(
-        track,
-        [
-            _context_section("section-001", 0.0, 4.0, positioned),
-            _context_section(
-                "section-002",
-                4.0,
-                8.0,
-                neutral,
-                boundary_strength=0.20,
-                boundary_reason="similar_lead_phrase",
-            ),
-        ],
-    )
-    strong = analyze_guitar_track_by_sections(
-        track,
-        [
-            _context_section("section-001", 0.0, 4.0, positioned),
-            _context_section(
-                "section-002",
-                4.0,
-                8.0,
-                neutral,
-                boundary_strength=0.90,
-                boundary_reason="role_change",
-            ),
-        ],
-    )
-
-    assert [item.fret for item in weak.fingering.notes[2:]] == [6, 8]
-    assert [item.fret for item in strong.fingering.notes[2:]] == [1, 3]
-
-    weak_transition = weak.hand_position_plan.transitions[0]
-    assert weak_transition.action == "carry"
-    assert weak_transition.shift_distance <= 2.0
-    assert weak_transition.reason == "similar_lead_phrase"
-
-    strong_transition = strong.hand_position_plan.transitions[0]
-    assert strong_transition.action == "reset"
-    assert strong_transition.shift_distance >= 3.0
-    assert strong_transition.reason == "role_change"
-
-
-def test_hand_position_plan_is_persisted_in_guitar_ir() -> None:
-    track = NormalizedTrack(
-        index=0,
-        name="Lead Guitar",
-        notes=[_note(64, 0.0), _note(66, 0.5), _note(65, 4.0), _note(67, 4.5)],
-    )
-    sections = [
-        _context_section("section-001", 0.0, 4.0, PlayingContext()),
-        _context_section(
-            "section-002",
-            4.0,
-            8.0,
-            PlayingContext(),
-            boundary_strength=0.20,
-        ),
-    ]
-    analysis = analyze_guitar_track_by_sections(track, sections)
-
-    project = build_guitar_ir(_timeline(track), track, analysis)
-
-    plan = project.tracks[0].hand_position_plan
-    assert plan is not None
-    assert len(plan["sections"]) == 2
-    assert len(plan["transitions"]) == 1
-    assert plan["transitions"][0]["from_section_id"] == "section-001"
-    assert plan["transitions"][0]["to_section_id"] == "section-002"

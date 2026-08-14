@@ -84,18 +84,7 @@ Implemented in `src/fretpilot/knowledge/guitar_behaviors.py`:
 - profile match output with score, status, matched features, and missing features;
 - experimental profiles for solo, riff, strumming, breakdown, and jazz comping.
 
-The identity classifier still reports whole-stream profile matches for debugging.
-The production prototype additionally uses `src/fretpilot/analysis/sections.py`
-and `section_contexts.py` to:
-
-- create deterministic measure-window regions;
-- split/merge regions by behavior-feature distance;
-- run the experimental profile library per section;
-- derive an independent `PlayingContext` for each section.
-
-Current limitation: labels and boundaries are deterministic experimental rules,
-not calibrated truth. They do not yet understand harmony, strum timing,
-physical chord voicings, palm muting, or reliable genre context.
+Current limitation: profiles run on whole-stream summary features. They do not yet understand sections, phrases, harmony, strum timing, physical chord voicings, palm muting, or genre context.
 
 ### CLI integration
 
@@ -153,10 +142,6 @@ API and frontend tests additionally cover:
 - confidence/recommendation rendering and the `/api/detect` upload contract;
 - propagation of detection metadata into completed conversion jobs.
 
-Section tests additionally cover deterministic riff → strumming → solo
-segmentation, adjacent-window merging, per-section contexts, and stream-wide
-source-note remapping.
-
 GitHub Actions runs `pytest -q` on pushes to `main` and pull requests.
 
 ## Known limitations
@@ -199,11 +184,9 @@ GitHub Actions runs `pytest -q` on pushes to `main` and pull requests.
 
 ### Layer 4 behavior/style
 
-- Whole-stream matches remain in identity/debug reports; runtime execution is
-  section-aware.
-- Section boundaries and profiles are uncalibrated deterministic baselines.
-- No beat-level/free-form phrase model beyond deterministic measure-window
-  change points.
+- Whole-stream only.
+- Profiles are uncalibrated placeholders.
+- No phrase segmentation or change-point detection.
 - No repeated-motif similarity.
 - No chord recognition or harmonic vocabulary.
 - No strum direction/timing features.
@@ -233,9 +216,6 @@ src/fretpilot/detection/guitar_classifier.py
 
 src/fretpilot/detection/review.py
     Guitar-only selection policy and product-facing grouped candidate summaries
-
-src/fretpilot/analysis/sections.py, src/fretpilot/analysis/section_contexts.py
-    Section model, deterministic segmentation, and per-section behavior context
 
 src/fretpilot/api/app.py, src/fretpilot/api/jobs.py
     Upload preflight and detection metadata in conversion jobs

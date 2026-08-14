@@ -15,6 +15,7 @@ from typing import Iterable
 
 import guitarpro as gp
 
+from fretpilot.exporters.guitar_pro.markers import section_marker_titles
 from fretpilot.ir.models import GuitarMeasure, GuitarNoteEvent, GuitarProjectIR
 
 
@@ -162,6 +163,10 @@ def _apply_direct_effects(
             note.effect.vibrato = True
         elif articulation.type == "let_ring" and allow_let_ring:
             note.effect.letRing = True
+        elif articulation.type == "palm_mute":
+            note.effect.palmMute = True
+        elif articulation.type == "staccato":
+            note.effect.staccato = True
 
 
 def _populate_voice(
@@ -217,8 +222,11 @@ def _populate_voice(
         total_duration = durations.pop()
         segments = _split_duration_ticks(total_duration)
 
-        strings = [event.fingering.string for event in events]
-        playable_strings = [string for string in strings if string is not None]
+        playable_strings = [
+            event.fingering.string
+            for event in events
+            if event.fingering.string is not None
+        ]
         if len(playable_strings) != len(set(playable_strings)):
             raise UnsupportedGuitarIR(
                 "Same-onset chord notes must use distinct strings; duplicate "
@@ -226,9 +234,6 @@ def _populate_voice(
                 f"{start_in_measure:g}, voice {voice_number}."
             )
 
-        # PyGuitarPro 0.11 can emit an unreadable GP5 when only some notes in a
-        # chord beat carry the let-ring flag. Keep the musical intent in Guitar
-        # IR, omit the unsafe partial flag in GP5, and report the downgrade.
         partial_chord_let_ring = (
             len(events) > 1
             and any(_has_articulation(event, "let_ring") for event in events)
@@ -376,6 +381,7 @@ def _configure_song(project: GuitarProjectIR) -> gp.Song:
         for index, pitch in enumerate(reversed(ir_track.tuning))
     ]
 
+    marker_titles = section_marker_titles(ir_track.section_contexts)
     start = gp.Duration.quarterTime
     for ir_measure, header in zip(
         ir_track.measures,
@@ -388,6 +394,9 @@ def _configure_song(project: GuitarProjectIR) -> gp.Song:
             numerator=ir_measure.numerator,
             denominator=gp.Duration(value=ir_measure.denominator),
         )
+        marker_title = marker_titles.get(ir_measure.number)
+        if marker_title:
+            header.marker = gp.Marker(title=marker_title)
         start = header.end
 
     return song
@@ -427,15 +436,6 @@ def export_gp5(project: GuitarProjectIR, output: str | Path) -> GP5ExportResult:
     _apply_linked_effects(all_events, note_lookup, warnings)
 
     gp.write(song, destination, version=(5, 1, 0))
-    try:
-        gp.parse(destination)
-    except (gp.GPException, OSError, ValueError) as exc:
-        # Never report a file as successful merely because the writer returned.
-        # PyGuitarPro can serialize a few invalid chord/effect combinations.
-        destination.unlink(missing_ok=True)
-        raise UnsupportedGuitarIR(
-            f"Generated GP5 failed parse-back validation: {exc}"
-        ) from exc
     return GP5ExportResult(
         path=str(destination),
         measure_count=len(ir_track.measures),

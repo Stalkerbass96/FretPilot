@@ -586,12 +586,6 @@ def build_guitar_ir(
             if analysis.playing_context is not None
             else None
         ),
-        section_contexts=[item.to_dict() for item in analysis.section_contexts],
-        hand_position_plan=(
-            analysis.hand_position_plan.to_dict()
-            if analysis.hand_position_plan is not None
-            else None
-        ),
     )
 
     contexts = [

@@ -1,5 +1,5 @@
 """PDF score export."""
 
-from .renderer import PDFScoreExportResult, export_score_pdf
+from .density_renderer import PDFScoreExportResult, export_score_pdf
 
 __all__ = ["PDFScoreExportResult", "export_score_pdf"]

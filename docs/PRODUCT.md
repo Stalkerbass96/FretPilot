@@ -30,8 +30,7 @@ The first version is not intended to replace a professional engraver or guitaris
 ### Input
 
 - Standard MIDI File (`.mid`)
-- full-arrangement or guitar-only MIDI
-- automatic guitar-part recommendations before generation
+- one selected guitar track at a time
 - initial focus: monophonic or mostly monophonic lead/riff material
 - 6-string guitar
 - standard tuning by default: E2 A2 D3 G3 B3 E4
@@ -97,7 +96,7 @@ These may be revisited after the guitar pipeline is validated.
 
 ```text
 1. Import MIDI
-2. Review automatically detected guitar parts and confidence
+2. Select guitar track
 3. Analyze musical structure
 4. Repair rhythm
 5. Build candidate guitar fingerings
@@ -110,10 +109,7 @@ These may be revisited after the guitar pipeline is validated.
 12. Export GP5 + MIDI
 ```
 
-Likely guitar parts are currently generated automatically; possible and
-unlikely parts are filtered. Manual include/exclude override remains planned.
-The normal workflow should stay close to one action, while advanced controls
-remain optional.
+The user should eventually experience this as one action, for example **Humanize Guitar**, while advanced settings remain optional.
 
 ---
 

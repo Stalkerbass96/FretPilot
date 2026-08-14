@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fretpilot.analysis import analyze_guitar_track
-from fretpilot.ir import build_guitar_ir
+from fretpilot.ir import SCHEMA_VERSION, build_guitar_ir
 from fretpilot.knowledge import compose_playing_context
 from fretpilot.midi.models import (
     NormalizedNote,
@@ -71,7 +71,7 @@ def test_builder_splits_cross_measure_note_with_ties() -> None:
         source_stream_id="t0:ch0:p27",
     )
 
-    assert project.schema_version == "0.2"
+    assert project.schema_version == SCHEMA_VERSION
     assert project.tracks[0].source_stream_id == "t0:ch0:p27"
     assert project.tracks[0].playing_context is None
     assert len(project.tracks[0].measures) == 2

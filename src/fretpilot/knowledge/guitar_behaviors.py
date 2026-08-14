@@ -13,7 +13,7 @@ from typing import Mapping
 
 from fretpilot.detection.models import BehaviorProfileMatch
 
-LIBRARY_VERSION = "0.1"
+LIBRARY_VERSION = "0.2"
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,6 +68,21 @@ PROFILES: tuple[GuitarBehaviorProfile, ...] = (
             FeatureRule("pitch_range_semitones", 0.20, maximum=24),
             FeatureRule("short_note_ratio", 0.20, minimum=0.45),
             FeatureRule("adjacent_interval_within_octave_ratio", 0.30, minimum=0.80),
+        ),
+    ),
+    GuitarBehaviorProfile(
+        profile_id="arpeggio",
+        label="Arpeggio / Broken Chord",
+        category="technique",
+        description="Broken-chord texture with compact guitar-sized interval motion and low pitch repetition.",
+        rules=(
+            FeatureRule("monophonic_onset_ratio", 0.15, minimum=0.55, maximum=0.95),
+            FeatureRule("chord_onset_ratio", 0.20, minimum=0.08, maximum=0.40),
+            FeatureRule("mean_onset_polyphony", 0.15, minimum=1.05, maximum=1.80),
+            FeatureRule("adjacent_interval_within_octave_ratio", 0.20, minimum=0.70),
+            FeatureRule("repeated_pitch_ratio", 0.10, maximum=0.10),
+            FeatureRule("short_note_ratio", 0.10, maximum=0.55),
+            FeatureRule("pitch_range_semitones", 0.10, minimum=12),
         ),
     ),
     GuitarBehaviorProfile(

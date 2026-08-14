@@ -34,7 +34,7 @@ Top-level shape:
 {
   "schema_version": "0.2",
   "knowledge": {
-    "snapshot_version": "2026.08.0",
+    "snapshot_version": "2026.08.2",
     "entry_ids": ["gk.profile.solo"]
   },
   "title": "song",

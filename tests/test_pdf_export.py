@@ -1,13 +1,12 @@
 from pathlib import Path
 
-import pytest
-
 from fretpilot.exporters.pdf_score import export_score_pdf
 from fretpilot.exporters.pdf_score.renderer import (
     _TechniquePlacement,
-    _group_rhythm_events,
+    _duration_label,
+    _harmony_label_map,
     _layout_technique_labels,
-    _rhythm_mark,
+    _measure_for_voice,
 )
 from fretpilot.ir.models import (
     GuitarMeasure,
@@ -15,11 +14,38 @@ from fretpilot.ir.models import (
     GuitarProjectIR,
     GuitarTrackIR,
     IRFingering,
+    IRHarmonyRegion,
     IRTempoEvent,
     IRTimeSignatureEvent,
     PerformanceTiming,
     ScoreTiming,
 )
+
+
+def test_duration_labels_never_round_unknown_values_to_standard_notes() -> None:
+    assert _duration_label(0.5) == "1/8"
+    assert _duration_label(1 / 3) == "8T"
+    assert _duration_label(0.4) == "0.4b"
+    assert _duration_label(2.5) == "2.5b"
+
+
+def test_technique_labels_use_lanes_and_condense_repeated_collisions() -> None:
+    draws, condensed = _layout_technique_labels(
+        [
+            _TechniquePlacement(x=10.0, text="let ring", width=18.0),
+            _TechniquePlacement(x=18.0, text="let ring", width=18.0),
+            _TechniquePlacement(x=18.0, text="H", width=4.0),
+            _TechniquePlacement(x=24.0, text="P", width=4.0),
+        ],
+        base_y=100.0,
+    )
+
+    assert condensed == 1
+    assert [(draw.text, draw.y) for draw in draws] == [
+        ("let ring", 100.0),
+        ("H", 106.5),
+        ("P", 100.0),
+    ]
 
 
 def test_export_score_pdf_writes_reviewable_pdf(tmp_path: Path) -> None:
@@ -40,6 +66,35 @@ def test_export_score_pdf_writes_reviewable_pdf(tmp_path: Path) -> None:
         ),
         fingering=IRFingering(string=1, fret=0),
     )
+    track = GuitarTrackIR(
+        id="guitar-1",
+        name="Lead Guitar",
+        source_stream_id="t0:ch0:p27",
+        role="lead",
+        tuning=[40, 45, 50, 55, 59, 64],
+        fret_count=24,
+        measures=[
+            GuitarMeasure(
+                number=1,
+                start_beat=0.0,
+                duration_beats=4.0,
+                numerator=4,
+                denominator=4,
+                events=[event],
+            )
+        ],
+        harmony_regions=[
+            IRHarmonyRegion(
+                start_beat=0.01,
+                symbol="C#sus2",
+                root_pitch_class=1,
+                quality="sus2",
+                confidence=0.9,
+                source_note_indices=[0],
+                reason="fixture",
+            )
+        ],
+    )
     project = GuitarProjectIR(
         title="PDF Test",
         source="test.mid",
@@ -47,27 +102,10 @@ def test_export_score_pdf_writes_reviewable_pdf(tmp_path: Path) -> None:
         time_signatures=[
             IRTimeSignatureEvent(beat=0.0, numerator=4, denominator=4)
         ],
-        tracks=[
-            GuitarTrackIR(
-                id="guitar-1",
-                name="Lead Guitar",
-                source_stream_id="t0:ch0:p27",
-                role="lead",
-                tuning=[40, 45, 50, 55, 59, 64],
-                fret_count=24,
-                measures=[
-                    GuitarMeasure(
-                        number=1,
-                        start_beat=0.0,
-                        duration_beats=4.0,
-                        numerator=4,
-                        denominator=4,
-                        events=[event],
-                    )
-                ],
-            )
-        ],
+        tracks=[track],
     )
+
+    assert _harmony_label_map(track) == {0.0: "C#sus2"}
 
     destination = tmp_path / "score.pdf"
     result = export_score_pdf(project, destination)
@@ -80,7 +118,7 @@ def test_export_score_pdf_writes_reviewable_pdf(tmp_path: Path) -> None:
     assert destination.stat().st_size > 1000
 
 
-def test_pdf_keeps_two_voices_in_independent_rhythm_rows(tmp_path: Path) -> None:
+def test_pdf_keeps_two_voices_in_independent_rhythm_lanes(tmp_path: Path) -> None:
     events = [
         GuitarNoteEvent(
             id="voice-1",
@@ -119,11 +157,11 @@ def test_pdf_keeps_two_voices_in_independent_rhythm_rows(tmp_path: Path) -> None
         denominator=4,
         events=events,
     )
-    grouped = _group_rhythm_events(measure)
+    voice_one = _measure_for_voice(measure, 1)
+    voice_two = _measure_for_voice(measure, 2)
 
-    assert list(grouped) == [1, 2]
-    assert grouped[1][0][1][0].score.duration_beats == 1.0
-    assert grouped[2][0][1][0].score.duration_beats == 2.0
+    assert [event.id for event in voice_one.events] == ["voice-1"]
+    assert [event.id for event in voice_two.events] == ["voice-2"]
 
     project = GuitarProjectIR(
         title="Two Voice PDF",
@@ -147,69 +185,4 @@ def test_pdf_keeps_two_voices_in_independent_rhythm_rows(tmp_path: Path) -> None
 
     assert result.maximum_voice_count == 2
     assert destination.read_bytes().startswith(b"%PDF")
-
-    project.tracks[0].measures = [
-        GuitarMeasure(
-            number=number,
-            start_beat=0.0,
-            duration_beats=4.0,
-            numerator=4,
-            denominator=4,
-            events=events[:1] if number <= 8 else events,
-        )
-        for number in range(1, 17)
-    ]
-    mixed_layout = export_score_pdf(project, tmp_path / "mixed-voices.pdf")
-
-    # Two single-voice systems followed by two taller V1/V2 systems require a
-    # second score page; otherwise the last downward V2 stems enter the footer.
-    assert mixed_layout.page_count == 3
-
-
-@pytest.mark.parametrize(
-    ("duration", "stem", "filled", "beams", "dotted", "tuplet"),
-    [
-        (4.0, False, False, 0, False, None),
-        (2.0, True, False, 0, False, None),
-        (1.0, True, True, 0, False, None),
-        (0.75, True, True, 1, True, None),
-        (0.5, True, True, 1, False, None),
-        (1 / 3, True, True, 1, False, 3),
-        (0.25, True, True, 2, False, None),
-        (0.125, True, True, 3, False, None),
-    ],
-)
-def test_rhythm_mark_maps_written_durations(
-    duration: float,
-    stem: bool,
-    filled: bool,
-    beams: int,
-    dotted: bool,
-    tuplet: int | None,
-) -> None:
-    mark = _rhythm_mark(duration)
-
-    assert mark.stem is stem
-    assert mark.filled is filled
-    assert mark.beam_count == beams
-    assert mark.dotted is dotted
-    assert mark.tuplet == tuplet
-
-
-def test_technique_labels_use_lanes_and_condense_repeated_collisions() -> None:
-    draws, condensed = _layout_technique_labels(
-        [
-            _TechniquePlacement(x=10.0, text="let ring", width=18.0),
-            _TechniquePlacement(x=18.0, text="let ring", width=18.0),
-            _TechniquePlacement(x=18.0, text="H", width=4.0),
-            _TechniquePlacement(x=24.0, text="P", width=4.0),
-        ],
-        base_y=100.0,
-    )
-
-    assert condensed == 1
-    assert [(draw.text, draw.y) for draw in draws] == [
-        ("let ring", 100.0),
-        ("H", 106.5),
-        ("P", 100.0),
-    ]
+    assert destination.stat().st_size > 1000

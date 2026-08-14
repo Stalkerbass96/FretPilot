@@ -186,14 +186,13 @@ Initial experimental profiles:
 - Breakdown / Heavy Low Riff
 - Jazz Comping
 
-The identity/debug report still scores whole-stream summary features. The
-prototype execution path also segments a stream into deterministic
-measure-window regions and classifies each region independently before deriving
-its `PlayingContext`. Both outputs use the same experimental profile vocabulary.
+The current implementation scores whole-stream summary features. This is a
+baseline only. The intended design is to segment the stream into musical
+sections or phrases and classify each time-bounded region independently.
 
 Future profile features may include:
 
-- finer phrase boundaries beyond deterministic measure windows
+- phrase and section segmentation
 - repeated-pattern similarity
 - strum-direction timing signatures
 - chord-shape feasibility
@@ -219,10 +218,13 @@ fretpilot analyze song.mid --stream-id t0:ch2:p27
 The report ranks logical streams rather than physical tracks. Downstream rhythm,
 fingering, and articulation analysis can consume a selected `InstrumentStream`.
 
-API/UI implementation details and real-file regression evidence are maintained
-in the track-identification
-[`STATUS.md`](projects/track-identification/STATUS.md), rather than duplicated
-in this algorithm document.
+## Local API and frontend
+
+`POST /api/detect` performs the lightweight guitar-only preflight used when a
+file is selected in the frontend. It returns the grouped candidate summary
+before output generation starts. `POST /api/jobs` reruns the same deterministic
+policy and includes the summary in the job response so result cards cannot drift
+from the preflight decision.
 
 ## Development priorities
 
