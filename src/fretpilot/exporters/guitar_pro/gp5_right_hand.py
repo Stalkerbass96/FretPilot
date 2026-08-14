@@ -131,8 +131,10 @@ def _apply_pitch_raises(events, note_lookup, warnings) -> None:
             value = max(1, min(12, round(semitones)))
             if abs(semitones - value) > 0.26:
                 warnings.append(
-                    f"Rounded pitch raise on {event.id} from {semitones:.3f} to {value} semitones for GP5."
+                    f"Omitted non-integer pitch raise on {event.id}: {semitones:.3f} semitones cannot be represented faithfully by the current GP5 adapter; exact intent remains in Guitar IR."
                 )
+                continue
+
             peak = max(
                 1,
                 min(12, round(float(articulation.parameters.get("peak_position", 0.5)) * 12)),
