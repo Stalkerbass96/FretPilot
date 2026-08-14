@@ -36,6 +36,19 @@ def test_metal_riff_repeated_low_notes_prefer_downstrokes() -> None:
     plan = plan_picking(track, fingering, context=context)
     assert [item.motion for item in plan.decisions] == ["pick"] * 4
     assert [item.direction for item in plan.decisions] == ["down"] * 4
+    assert all(item.technique is None for item in plan.decisions)
+
+
+def test_rapid_repeated_notes_become_tremolo_alternate_picking() -> None:
+    track = _track([_note(52, i * 0.125, 0.1) for i in range(6)])
+    context = compose_playing_context({"riff": 0.8, "metal": 0.8})
+    fingering = optimize_fingering(track, preferences=context.fingering)
+    plan = plan_picking(track, fingering, context=context)
+    assert [item.direction for item in plan.decisions] == [
+        "down", "up", "down", "up", "down", "up",
+    ]
+    assert all(item.motion == "pick" for item in plan.decisions)
+    assert all(item.technique == "tremolo" for item in plan.decisions)
 
 
 def test_arpeggio_context_uses_alternate_pick_direction() -> None:
