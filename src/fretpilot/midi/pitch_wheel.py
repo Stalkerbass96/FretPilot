@@ -116,16 +116,34 @@ def extract_monophonic_pitch_raises(timeline, stream):
         semitones = peak.value / 8192.0 * total_range
         if semitones < 0.25:
             continue
+
+        center_events = [
+            event for event in events
+            if event.tick >= peak.tick and abs(event.value) <= 64
+        ]
+        return_event = center_events[0] if center_events else None
+        duration_ticks = max(1, note.duration_ticks)
+        peak_position = max(
+            0.0,
+            min(1.0, (peak.tick - note.start_tick) / duration_ticks),
+        )
+        return_position = (
+            max(
+                peak_position,
+                min(1.0, (return_event.tick - note.start_tick) / duration_ticks),
+            )
+            if return_event is not None
+            else 1.0
+        )
         results.append(
             {
                 "note_index": note_index,
                 "semitones": round(semitones, 6),
                 "peak_wheel": float(peak.value),
                 "range_semitones": round(total_range, 6),
-                "returned_to_center": any(
-                    event.tick >= peak.tick and abs(event.value) <= 64
-                    for event in events
-                ),
+                "peak_position": round(peak_position, 6),
+                "return_position": round(return_position, 6),
+                "returned_to_center": return_event is not None,
             }
         )
     return results
