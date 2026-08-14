@@ -92,12 +92,14 @@ def test_all_likely_guitars_receive_complete_output_packages(tmp_path: Path) -> 
         assert result.analysis.status == "success"
         assert result.rewrite.status == "success"
         assert result.guitar_ir.status == "success"
+        assert result.pdf.status == "success"
         assert result.gp5.status == "success"
         assert result.ample_sc_midi.status == "success"
         assert result.report.status == "success"
         assert result.analysis.path and Path(result.analysis.path).exists()
         assert result.rewrite.path and Path(result.rewrite.path).exists()
         assert result.guitar_ir.path and Path(result.guitar_ir.path).exists()
+        assert result.pdf.path and Path(result.pdf.path).exists()
         assert result.gp5.path and Path(result.gp5.path).exists()
         assert result.ample_sc_midi.path and Path(result.ample_sc_midi.path).exists()
         assert result.report.path and Path(result.report.path).exists()
@@ -115,3 +117,43 @@ def test_all_likely_guitars_receive_complete_output_packages(tmp_path: Path) -> 
         assert report_payload["sections"]["count"] >= 1
         assert report_payload["sections"]["items"]
         assert report_payload["note_rewrite"]["midi_fidelity"] == 0.35
+        assert report_payload["outputs"]["pdf"]["status"] == "success"
+
+
+def test_unselected_formats_are_skipped_without_forcing_review(tmp_path: Path) -> None:
+    notes = [
+        _note(channel=0, program=27, pitch=pitch, start_beat=index * 0.5)
+        for index, pitch in enumerate([64, 66, 67, 69, 67, 66, 64, 64])
+    ]
+    timeline = NormalizedTimeline(
+        source="single-guitar.mid",
+        midi_type=0,
+        ticks_per_beat=480,
+        tempo_events=[TempoEvent(tick=0, beat=0.0, bpm=120.0)],
+        time_signature_events=[
+            TimeSignatureEvent(tick=0, beat=0.0, numerator=4, denominator=4)
+        ],
+        tracks=[NormalizedTrack(index=0, name="Guitar", notes=notes)],
+    )
+
+    manifest = generate_prototype_package(
+        timeline,
+        tmp_path / "selected-outputs",
+        all_likely_guitars=True,
+        include_pdf=False,
+        include_gp5=True,
+        include_ample_sc_midi=False,
+    )
+
+    result = manifest.stream_results[0]
+    assert result.pdf.status == "skipped"
+    assert result.pdf.path is None
+    assert result.gp5.status == "success"
+    assert result.ample_sc_midi.status == "skipped"
+    assert not list((tmp_path / "selected-outputs").rglob("*.pdf"))
+    assert not list((tmp_path / "selected-outputs").rglob("*.ample-sc.mid"))
+
+    report = json.loads(Path(result.report.path).read_text(encoding="utf-8"))
+    assert report["outputs"]["pdf"]["status"] == "skipped"
+    assert report["outputs"]["ample_sc_midi"]["status"] == "skipped"
+    assert report["review_required"] is False
