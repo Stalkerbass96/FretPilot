@@ -189,6 +189,9 @@ def _build_processing_report(
             "schema_version": project.schema_version,
             "measure_count": sum(len(track.measures) for track in project.tracks),
             "event_count": len(ir_events),
+            "voice_counts": dict(
+                Counter(str(event.score.voice) for event in ir_events)
+            ),
             "transformation_counts": _count_transformations(project.changes),
             "let_ring_source_note_indices": let_ring_sources,
             "let_ring_count": len(let_ring_sources),

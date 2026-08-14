@@ -117,6 +117,7 @@ def test_all_likely_guitars_receive_complete_output_packages(tmp_path: Path) -> 
         assert report_payload["sections"]["count"] >= 1
         assert report_payload["sections"]["items"]
         assert report_payload["note_rewrite"]["midi_fidelity"] == 0.35
+        assert report_payload["guitar_ir"]["voice_counts"]["1"] > 0
         assert report_payload["outputs"]["pdf"]["status"] == "success"
         assert manifest.knowledge_snapshot_version
         assert report_payload["knowledge"]["snapshot_version"] == (

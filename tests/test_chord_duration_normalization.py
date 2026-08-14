@@ -32,7 +32,7 @@ def _note(*, pitch: int, duration_beats: float) -> NormalizedNote:
     )
 
 
-def test_longer_chord_member_becomes_let_ring_and_gp5_exports(tmp_path: Path) -> None:
+def test_longer_chord_member_becomes_independent_second_voice(tmp_path: Path) -> None:
     track = NormalizedTrack(
         index=0,
         name="Chord Guitar",
@@ -60,25 +60,34 @@ def test_longer_chord_member_becomes_let_ring_and_gp5_exports(tmp_path: Path) ->
     project = build_guitar_ir(timeline, track, analyze_guitar_track(track))
     events = project.tracks[0].measures[0].events
 
-    assert {event.score.duration_beats for event in events} == {1.0}
+    assert {event.score.duration_beats for event in events} == {1.0, 2.0}
     longer = next(event for event in events if event.pitch == 67)
+    shorter = next(event for event in events if event.pitch == 64)
+    assert shorter.score.voice == 1
+    assert longer.score.voice == 2
     assert longer.performance.source_duration_beats == 1.5
-    assert any(item.type == "let_ring" for item in longer.articulations)
+    assert not any(item.type == "let_ring" for item in longer.articulations)
     assert any(
-        change.stage == "rhythm_overlap"
+        change.stage == "voice_assignment"
         and change.source_note_index == longer.source_note_index
-        and "normalize_same_onset_chord_duration" in change.reason
+        and change.after == {"voice": 2}
         for change in project.changes
     )
 
     output = tmp_path / "unequal-chord.gp5"
     report = export_gp5(project, output)
     parsed = gp.parse(output)
-    first_normal_beat = next(
+    first_voice_beat = next(
         beat
         for beat in parsed.tracks[0].measures[0].voices[0].beats
         if beat.status == gp.BeatStatus.normal
     )
-    assert len(first_normal_beat.notes) == 2
-    assert not any(note.effect.letRing for note in first_normal_beat.notes)
-    assert any("Omitted partial let-ring" in warning for warning in report.warnings)
+    second_voice_beat = next(
+        beat
+        for beat in parsed.tracks[0].measures[0].voices[1].beats
+        if beat.status == gp.BeatStatus.normal
+    )
+    assert len(first_voice_beat.notes) == 1
+    assert len(second_voice_beat.notes) == 1
+    assert first_voice_beat.duration.time != second_voice_beat.duration.time
+    assert not any("Omitted partial let-ring" in warning for warning in report.warnings)
