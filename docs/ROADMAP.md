@@ -190,7 +190,7 @@ Two-voice baseline evidence (2026-08-13):
 - [x] `VI-*` project boundary
 - [x] provider-neutral `VirtualGuitarInstrumentProfile` skeleton
 - [ ] migrate Ample static knowledge into generic profile (`VI-002`)
-- [ ] adapter registry (`VI-003`)
+- [x] provider-neutral profile registry (`VI-003`)
 - [ ] capability negotiation: native / approximated / unsupported (`VI-004`)
 - [ ] common conformance suite (`VI-021`)
 - [ ] second target after Ample is validated (`VI-030`)

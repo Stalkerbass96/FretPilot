@@ -238,7 +238,11 @@ Acceptance criteria:
 
 ## P0/P1 — Layer 4 section and behavior architecture
 
-### [ ] TI-040 — Define section/phrase data model
+### [x] TI-040 — Define section/phrase data model
+
+Implemented in `src/fretpilot/analysis/sections.py` and serialized independently
+from Layers 1–3 identity output. Section-context interpretation remains
+experimental.
 
 Create a representation for time-bounded behavior classification.
 
@@ -260,7 +264,11 @@ Acceptance criteria:
 - section results serialize independently from guitar identity;
 - no behavior profile is permanently attached to the full stream by default.
 
-### [ ] TI-041 — Implement baseline windowed segmentation
+### [x] TI-041 — Implement baseline windowed segmentation
+
+Implemented as deterministic measure windows, feature-distance boundaries, and
+adjacent-region merging. Synthetic riff → strumming → solo coverage lives in
+`tests/test_section_segmentation.py`.
 
 Start with deterministic windows and feature-change boundaries.
 

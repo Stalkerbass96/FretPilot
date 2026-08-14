@@ -39,7 +39,8 @@ Remaining work is now narrow:
 
 - `GK-005`: make `PerformancePreferences` influence a generic performance plan before any virtual-instrument adapter;
 - persist complete section/knowledge provenance as a stable Guitar IR contract;
-- `GK-013`: replace unconditional section-boundary hand-position resets with explicit hand-position state.
+- calibrate the implemented `GK-013` hand-position transition costs against
+  reviewed songs.
 
 Acceptance:
 
@@ -83,7 +84,7 @@ Current behavior:
 
 ### GK-005 — generic Performance Plan consumes PerformancePreferences
 
-Status: **not started — recommended next architecture task after/alongside GK-013**
+Status: **not started — recommended next architecture task**
 
 Goal:
 
@@ -206,7 +207,7 @@ Status: **implemented baseline**
 Current behavior:
 
 - solve fingering and articulation independently with each section's PlayingContext;
-- section boundaries currently act as phrase resets;
+- weak section boundaries may carry prior hand position; strong boundaries may reset it;
 - remap local section note indices back to original stream-wide indices;
 - preserve global source timing for Guitar IR and performance rendering;
 - support stable `section_id`-keyed context overrides for future user corrections;

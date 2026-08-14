@@ -186,13 +186,14 @@ Initial experimental profiles:
 - Breakdown / Heavy Low Riff
 - Jazz Comping
 
-The current implementation scores whole-stream summary features. This is a
-baseline only. The intended design is to segment the stream into musical
-sections or phrases and classify each time-bounded region independently.
+The identity/debug report still scores whole-stream summary features. The
+prototype execution path also segments a stream into deterministic
+measure-window regions and classifies each region independently before deriving
+its `PlayingContext`. Both outputs use the same experimental profile vocabulary.
 
 Future profile features may include:
 
-- phrase and section segmentation
+- finer phrase boundaries beyond deterministic measure windows
 - repeated-pattern similarity
 - strum-direction timing signatures
 - chord-shape feasibility

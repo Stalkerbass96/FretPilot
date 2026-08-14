@@ -197,22 +197,30 @@ Answers: **did a new heuristic/profile/model/adapter actually improve the system
 
 If the user does not specify another task, prefer one of these in order.
 
-### A. `GK-013` — Hand-position calibration
+### A. `PV-002` — musician-readable PDF/TAB
 
-**Baseline implemented; validate and tune before expanding its state model.**
+The renderer exists but output is not yet comparable to normal playable TAB.
 
-Current section-aware execution solves each section independently. Add an explicit hand-position state / transition layer so weak boundaries can preserve position and strong musical boundaries can allow deliberate repositioning.
+Focus on:
 
-Acceptance direction:
+- rhythmic stems/beams;
+- proportional musical spacing;
+- rests/ties/slides/let-ring notation;
+- readable measure/system layout;
+- section-aware phrase spacing;
+- visual golden fixtures.
 
-- represent hand center/span/state explicitly;
-- estimate section-entry and section-exit hand positions;
-- carry state across weak boundaries when cheaper/more natural;
-- allow resets/shifts at strong phrase/style boundaries;
-- record shift cost/reason for explainability;
-- preserve current physical constraints;
-- keep existing Message-in-a-Bottle movable-arpeggio regression green;
-- add tests where identical note material produces different section-boundary behavior under different contexts.
+Do not solve engraving by changing musical analysis merely to make the page prettier.
+
+### B. `GK-013` — Hand-position calibration
+
+**The state/transition baseline is implemented. Calibrate it before expanding
+the model.**
+
+Current behavior already estimates section entry/exit hand state, carries state
+across weak boundaries, resets at strong boundaries, and records transition
+cost/reason. Remaining work is reviewed-song calibration, reusable shape state,
+and future finger/barre state.
 
 Primary files:
 
@@ -224,7 +232,7 @@ src/fretpilot/knowledge/playing_contexts.py
 tests/test_section_aware_analysis.py
 ```
 
-### B. Generic Performance Plan — finish `GK-002`
+### C. Generic Performance Plan — finish `GK-002` through `GK-005`
 
 `PerformancePreferences` currently exist but do not affect a canonical performance-intent layer.
 
@@ -240,21 +248,6 @@ Guitar IR / section PlayingContext
 The generic plan may describe timing feel, accent, overlap, pick/strum intent, etc. Product-specific keyswitch/CC translation stays in `VI-*`.
 
 Do not let Ample-specific behavior define the generic model.
-
-### C. `PV-002` — musician-readable PDF/TAB
-
-The renderer exists but output is not yet comparable to normal playable TAB.
-
-Focus on:
-
-- rhythmic stems/beams;
-- proportional musical spacing;
-- rests/ties/slides/let-ring notation;
-- readable measure/system layout;
-- section-aware phrase spacing;
-- visual golden fixtures.
-
-Do not solve engraving by changing musical analysis merely to make the page prettier.
 
 ### D. `VI-002` — migrate Ample profile to generic VI schema
 
