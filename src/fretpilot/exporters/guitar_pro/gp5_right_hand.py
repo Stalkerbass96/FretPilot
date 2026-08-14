@@ -1,4 +1,4 @@
-"""GP5 enrichment wrapper for right-hand direction and pitch curves."""
+"""GP5 enrichment wrapper for picking, fretting digits, and pitch curves."""
 
 from pathlib import Path
 
@@ -10,7 +10,16 @@ from fretpilot.exporters.guitar_pro.gp5 import (
     _configure_song,
     _populate_measure,
 )
+from fretpilot.guitar.fretting_digits import assign_digit_locations
 from fretpilot.ir.models import GuitarMeasure, GuitarProjectIR
+
+
+_GP_FRETTING_DIGITS = {
+    1: gp.Fingering.index,
+    2: gp.Fingering.middle,
+    3: gp.Fingering.annular,
+    4: gp.Fingering.little,
+}
 
 
 def _apply_right_hand(ir_measure: GuitarMeasure, gp_measure: gp.Measure) -> None:
@@ -33,6 +42,67 @@ def _apply_right_hand(ir_measure: GuitarMeasure, gp_measure: gp.Measure) -> None
             if intent.direction == "down"
             else gp.BeatStrokeDirection.up
         )
+
+
+def _fretting_digit_map(project: GuitarProjectIR) -> dict[int, int]:
+    events_by_source = {}
+    for measure in project.tracks[0].measures:
+        for event in measure.events:
+            if not event.score.tie_in:
+                events_by_source.setdefault(event.source_note_index, event)
+
+    source_indices = sorted(events_by_source)
+    entries = []
+    for source_index in source_indices:
+        event = events_by_source[source_index]
+        entries.append(
+            (
+                round(event.performance.source_start_beat * 1_000_000),
+                event.pitch,
+                event.fingering.string,
+                event.fingering.fret,
+            )
+        )
+    digits = assign_digit_locations(entries)
+    return {
+        source_index: digit
+        for source_index, digit in zip(source_indices, digits, strict=True)
+        if digit is not None
+    }
+
+
+def _apply_fretting_digits(
+    ir_measure: GuitarMeasure,
+    gp_measure: gp.Measure,
+    digits: dict[int, int],
+) -> None:
+    for beat in gp_measure.voices[0].beats:
+        if beat.status != gp.BeatStatus.normal or beat.start is None:
+            continue
+        start = ir_measure.start_beat + (
+            beat.start - gp_measure.start
+        ) / gp.Duration.quarterTime
+        events = [
+            event
+            for event in ir_measure.events
+            if not event.score.tie_in
+            and abs(event.score.start_beat - start) <= 1e-8
+        ]
+        for event in events:
+            digit = digits.get(event.source_note_index)
+            if digit is None:
+                continue
+            gp_note = next(
+                (
+                    note
+                    for note in beat.notes
+                    if note.string == event.fingering.string
+                    and note.value == event.fingering.fret
+                ),
+                None,
+            )
+            if gp_note is not None:
+                gp_note.effect.leftHandFinger = _GP_FRETTING_DIGITS[digit]
 
 
 def _apply_pitch_raises(events, note_lookup, warnings) -> None:
@@ -96,6 +166,7 @@ def export_gp5(project: GuitarProjectIR, output: str | Path) -> GP5ExportResult:
     note_lookup: dict[str, gp.Note] = {}
     warnings: list[str] = []
     note_count = 0
+    fretting_digits = _fretting_digit_map(project)
 
     for ir_measure, gp_measure in zip(
         ir_track.measures,
@@ -108,6 +179,7 @@ def export_gp5(project: GuitarProjectIR, output: str | Path) -> GP5ExportResult:
             note_lookup=note_lookup,
         )
         _apply_right_hand(ir_measure, gp_measure)
+        _apply_fretting_digits(ir_measure, gp_measure, fretting_digits)
         note_count += exported
         warnings.extend(measure_warnings)
 
