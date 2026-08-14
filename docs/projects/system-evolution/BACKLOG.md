@@ -251,8 +251,10 @@ Canonical guitar ranker development remains `GK-041/GK-042`.
 Current baseline adds provider-neutral AI rewrite-advisor contracts, an
 OpenAI-compatible adapter, bounded/privacy-conscious context, deterministic
 proposal validation, and CLI/API/frontend shadow reporting. Advice is never
-applied. Candidate ranking, model registry compatibility, and comparative
-quality evaluation remain pending.
+applied. Provider configuration is environment-only; the frontend can inspect
+non-secret status but cannot edit it. A backend-owned write-only configuration
+flow, candidate ranking, model registry compatibility, and comparative quality
+evaluation remain pending.
 
 ### [ ] SE-051 — Model registry and compatibility metadata
 

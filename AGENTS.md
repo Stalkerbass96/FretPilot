@@ -76,6 +76,9 @@ The Python engine is the only source of musical policy. TypeScript may present
 and submit controls, but must not reimplement detection, note rationalization,
 fingering, articulation, knowledge selection, or export decisions.
 
+Provider secrets are backend-only. The frontend must not persist API keys,
+echo them through status responses, or place them in URLs, logs, or artifacts.
+
 ### VI — target virtual instruments
 
 ```text
@@ -139,15 +142,6 @@ Runtime must never learn directly from arbitrary web pages while processing a so
 
 ## Default priority
 
-If the user has not specified a task, follow `docs/ROADMAP.md`. Prototype 0.1 currently prioritizes:
-
-```text
-keep CI/output parity green
-→ real-song GP5/TAB musician review
-→ real Ample plugin verification
-→ VI-004 output-neutral generic control handoff
-→ GK-012 / advanced left-hand refinement
-→ release/documentation closeout
-```
-
-Do not expand distant crawling/training or multi-product work ahead of those release gates unless explicitly requested.
+If the user has not specified a task, take the first actionable item in
+`docs/ROADMAP.md`. The exact continuation point from the latest work belongs in
+`docs/AI_AGENT_HANDOFF.md`; do not copy changing priority lists into this file.

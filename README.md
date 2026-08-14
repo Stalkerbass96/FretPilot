@@ -141,6 +141,8 @@ fretpilot ai-shadow song.mid \
 
 The frontend exposes the same capability under **高级设置 → AI 智能增强**.
 It requires explicit consent before sending structured context externally.
+The panel currently reports backend configuration status; provider URL, model,
+and API key are still configured on the backend through environment variables.
 
 ## Useful focused commands
 

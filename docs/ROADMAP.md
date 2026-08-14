@@ -67,6 +67,10 @@ selectable approved snapshots under `SE-*`.
 
 ### 6. AI shadow evaluation
 
+First add a backend-owned, write-only provider configuration flow so the local
+frontend can configure and test a model without browser-side secret storage.
+Keep the environment-variable path as a deterministic deployment fallback.
+
 Compare accepted/rejected LLM proposals against deterministic baselines and
 human review on real songs. Do not allow automatic rewrite application until
 the provider/model/version is recorded and measurable improvement is shown.

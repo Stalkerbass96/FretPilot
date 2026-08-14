@@ -12,16 +12,16 @@ MIDI
 → logical InstrumentStream resolution
 → guitar detection and selection
 → adjustable note rationalization
-├─→ optional bounded AI shadow advice (never applied)
-→ section/context analysis
-→ fingering, articulation, picking, harmony
-→ GuitarTrackAnalysis
-→ canonical Guitar IR
-├─→ PDF/TAB
-├─→ GP5
-├─→ Generic PerformancePlan
-├─→ VI capability report
-└─→ Ample Guitar SC MIDI
+├─→ optional bounded AI shadow report (read-only; does not rejoin conversion)
+└─→ section/context analysis
+    → fingering, articulation, picking, harmony
+    → GuitarTrackAnalysis
+    → canonical Guitar IR
+    ├─→ PDF/TAB
+    ├─→ GP5
+    ├─→ Generic PerformancePlan
+    ├─→ VI capability report
+    └─→ Ample Guitar SC MIDI
 ```
 
 `generate_prototype_package()` is the product-level conversion pipeline. The
@@ -86,6 +86,8 @@ keyswitches, CCs, latch state, and approximations never enter Guitar IR.
   but knowledge does not import detection.
 - AI shadow advice uses `ai/providers/` and `ai/shadow.py`; it is optional,
   provider-neutral at the engine boundary, and cannot modify Guitar IR.
+- AI provider credentials remain in the API/CLI process. Status and report
+  contracts expose provider identity but never credentials.
 
 ## Runtime knowledge
 
