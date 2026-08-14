@@ -146,3 +146,17 @@ def test_pitch_wheel_during_overlapping_notes_stays_unspecified() -> None:
         item.technique == "pitch_raise"
         for item in analysis.articulations.decisions
     )
+
+
+def test_quantized_chord_onset_uses_distinct_strings() -> None:
+    track = _track(
+        [57, 59],
+        onsets=[0.0, 0.02],
+        durations=[0.5, 0.5],
+    )
+
+    analysis = analyze_guitar_track(track)
+
+    strings = [item.string for item in analysis.fingering.notes]
+    assert all(string is not None for string in strings)
+    assert len(set(strings)) == 2

@@ -73,6 +73,9 @@ class GuitarNoteEvent:
     articulations: list[IRArticulation] = field(default_factory=list)
     confidence: NoteConfidence | None = None
     right_hand: IRRightHandIntent | None = None
+    # Synthetic notes receive stable indices after the original MIDI note range.
+    # The explicit origin prevents inferred material from masquerading as input.
+    source_note_origin: str = "midi"
 @dataclass(slots=True)
 class GuitarMeasure:
     number: int

@@ -53,6 +53,9 @@ def project_from_dict(data: dict[str, Any]) -> GuitarProjectIR:
                             if isinstance(right_hand, dict)
                             else None
                         ),
+                        source_note_origin=str(
+                            raw_event.get("source_note_origin", "midi")
+                        ),
                     )
                 )
             measures.append(

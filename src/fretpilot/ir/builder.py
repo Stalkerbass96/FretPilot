@@ -6,6 +6,7 @@ from collections import defaultdict
 from dataclasses import dataclass, replace
 from math import floor
 from pathlib import Path
+from typing import TYPE_CHECKING, Sequence
 
 from fretpilot.analysis.guitar import GuitarTrackAnalysis
 from fretpilot.guitar.instrument import STANDARD_TUNING
@@ -24,6 +25,9 @@ from fretpilot.ir.models import (
     Transformation,
 )
 from fretpilot.midi.models import NormalizedNote, NormalizedTimeline, NormalizedTrack
+
+if TYPE_CHECKING:
+    from fretpilot.rewrite.models import NoteRewriteChange
 
 _EPSILON = 1e-8
 
@@ -255,6 +259,9 @@ def build_guitar_ir(
     source_stream_id: str | None = None,
     track_id: str = "guitar-1",
     role: str = "unknown",
+    source_note_indices: Sequence[int] | None = None,
+    source_note_origins: Sequence[str] | None = None,
+    rewrite_changes: Sequence[NoteRewriteChange] = (),
 ) -> GuitarProjectIR:
     """Build schema-versioned, measure-aware Guitar IR.
 
@@ -267,6 +274,23 @@ def build_guitar_ir(
         raise ValueError("Track and rhythm analysis contain different note counts.")
     if len(track.notes) != len(analysis.fingering.notes):
         raise ValueError("Track and fingering analysis contain different note counts.")
+    if source_note_indices is not None and len(source_note_indices) != len(track.notes):
+        raise ValueError("source_note_indices must match the rewritten track note count.")
+    if source_note_origins is not None and len(source_note_origins) != len(track.notes):
+        raise ValueError("source_note_origins must match the rewritten track note count.")
+
+    stable_source_indices = (
+        list(source_note_indices)
+        if source_note_indices is not None
+        else list(range(len(track.notes)))
+    )
+    stable_source_origins = (
+        list(source_note_origins)
+        if source_note_origins is not None
+        else ["midi"] * len(track.notes)
+    )
+    if any(origin not in {"midi", "synthetic"} for origin in stable_source_origins):
+        raise ValueError("source_note_origins may only contain 'midi' or 'synthetic'.")
 
     prepared = _prepare_notated_notes(track, analysis)
     maximum_end = max((item.end_beat for item in prepared), default=0.0)
@@ -291,11 +315,32 @@ def build_guitar_ir(
     for decision in analysis.articulations.decisions:
         articulations_by_index[decision.note_index].append(decision)
 
-    changes: list[Transformation] = []
-    event_id_by_source: dict[int, str] = {}
+    operation_stages = {
+        "transpose": "note_rewrite_pitch",
+        "delete": "note_rewrite_delete",
+        "insert": "note_rewrite_insert",
+    }
+    changes: list[Transformation] = [
+        Transformation(
+            id=change.id,
+            stage=operation_stages.get(
+                change.operation,
+                f"note_rewrite_{change.operation}",
+            ),
+            source_note_index=change.source_note_index,
+            before=change.before,
+            after=change.after,
+            confidence=change.confidence,
+            reason=change.reason,
+        )
+        for change in rewrite_changes
+    ]
+    event_id_by_working_index: dict[int, str] = {}
 
     for item in prepared:
-        base_id = f"n-{item.source_index + 1:05d}"
+        stable_source_index = stable_source_indices[item.source_index]
+        source_origin = stable_source_origins[item.source_index]
+        base_id = f"n-{stable_source_index + 1:05d}"
         fragments = _split_across_measures(
             item.start_beat,
             item.duration_beats,
@@ -313,7 +358,7 @@ def build_guitar_ir(
                 Transformation(
                     id=f"chg-onset-{item.source_index + 1:05d}",
                     stage="rhythm_onset",
-                    source_note_index=item.source_index,
+                    source_note_index=stable_source_index,
                     before={"start_beat": item.note.start_beat},
                     after={"start_beat": item.start_beat},
                     confidence=item.rhythm_confidence,
@@ -331,7 +376,7 @@ def build_guitar_ir(
                 Transformation(
                     id=f"chg-duration-{item.source_index + 1:05d}",
                     stage="rhythm_duration",
-                    source_note_index=item.source_index,
+                    source_note_index=stable_source_index,
                     before={"duration_beats": item.note.duration_beats},
                     after={"duration_beats": initial_grid_duration},
                     confidence=item.rhythm_confidence,
@@ -344,7 +389,7 @@ def build_guitar_ir(
                 Transformation(
                     id=f"chg-overlap-{item.source_index + 1:05d}",
                     stage="rhythm_overlap",
-                    source_note_index=item.source_index,
+                    source_note_index=stable_source_index,
                     before={"score_duration_beats": item.pre_overlap_duration_beats},
                     after={"score_duration_beats": item.duration_beats},
                     confidence=0.8,
@@ -374,7 +419,7 @@ def build_guitar_ir(
                     )
                 for decision in decisions:
                     source_note_id = (
-                        event_id_by_source.get(decision.source_note_index)
+                        event_id_by_working_index.get(decision.source_note_index)
                         if decision.source_note_index is not None
                         else None
                     )
@@ -398,7 +443,7 @@ def build_guitar_ir(
             )
             note_event = GuitarNoteEvent(
                 id=event_id,
-                source_note_index=item.source_index,
+                source_note_index=stable_source_index,
                 pitch=item.note.pitch,
                 score=ScoreTiming(
                     start_beat=fragment_start,
@@ -423,11 +468,12 @@ def build_guitar_ir(
                     fingering=1.0 if fingering.playable else 0.0,
                     articulation=articulation_confidence,
                 ),
+                source_note_origin=source_origin,
             )
             measures_by_number[measure.number].events.append(note_event)
 
         if fragment_event_ids:
-            event_id_by_source[item.source_index] = fragment_event_ids[-1]
+            event_id_by_working_index[item.source_index] = fragment_event_ids[-1]
 
     for measure in measures:
         measure.events.sort(

@@ -15,6 +15,11 @@ from fretpilot.exporters.ample_guitar import export_ample_sc_midi
 from fretpilot.exporters.guitar_pro import UnsupportedGuitarIR, export_gp5
 from fretpilot.ir import build_guitar_ir
 from fretpilot.midi.models import NormalizedTimeline
+from fretpilot.rewrite import (
+    DEFAULT_MIDI_FIDELITY,
+    NoteRewriteResult,
+    rewrite_instrument_stream,
+)
 
 
 @dataclass(slots=True)
@@ -30,6 +35,7 @@ class PrototypeStreamResult:
     stream_id: str
     directory: str
     analysis: PrototypeOutputStatus
+    rewrite: PrototypeOutputStatus
     guitar_ir: PrototypeOutputStatus
     gp5: PrototypeOutputStatus
     ample_sc_midi: PrototypeOutputStatus
@@ -81,6 +87,7 @@ def _count_articulations(analysis: Any) -> dict[str, int]:
 
 def _build_processing_report(
     candidate: GuitarStreamCandidate,
+    rewrite: NoteRewriteResult,
     analysis: Any,
     project: Any,
     *,
@@ -141,6 +148,16 @@ def _build_processing_report(
             "count": len(section_summary),
             "items": section_summary,
         },
+        "note_rewrite": {
+            "midi_fidelity": rewrite.midi_fidelity,
+            "rationality_weight": rewrite.rationality_weight,
+            "original_note_count": rewrite.original_note_count,
+            "rewritten_note_count": len(rewrite.stream.notes),
+            "change_counts": dict(
+                Counter(change.operation for change in rewrite.changes)
+            ),
+            "change_count": len(rewrite.changes),
+        },
         "rhythm": {
             "selected_grid": asdict(analysis.rhythm.selected_grid),
             "note_count": len(analysis.rhythm.suggestions),
@@ -172,7 +189,8 @@ def _build_processing_report(
             "ample_sc_midi": asdict(ample_status),
         },
         "review_required": bool(
-            low_confidence_rhythm
+            rewrite.changes
+            or low_confidence_rhythm
             or unplayable
             or project.warnings
             or gp5_status.status != "success"
@@ -237,6 +255,7 @@ def generate_prototype_package(
     stream_id: str | None = None,
     all_likely_guitars: bool = False,
     max_fret: int = 24,
+    midi_fidelity: float = DEFAULT_MIDI_FIDELITY,
     compact_json: bool = False,
 ) -> PrototypeManifest:
     """Generate section-aware analysis, IR, GP5, Ample MIDI, and reports."""
@@ -245,6 +264,8 @@ def generate_prototype_package(
         raise ValueError("stream_id and all_likely_guitars are mutually exclusive.")
     if max_fret < 0:
         raise ValueError("max_fret must be zero or greater.")
+    if not 0.0 <= midi_fidelity <= 1.0:
+        raise ValueError("midi_fidelity must be between 0.0 and 1.0.")
 
     root = Path(output_directory)
     root.mkdir(parents=True, exist_ok=True)
@@ -261,10 +282,17 @@ def generate_prototype_package(
         stream_dir.mkdir(parents=True, exist_ok=True)
         prefix = stream_dir / stream_name
 
-        track = candidate.stream.as_track()
+        rewrite = rewrite_instrument_stream(
+            candidate.stream,
+            midi_fidelity=midi_fidelity,
+            max_fret=max_fret,
+            ticks_per_beat=timeline.ticks_per_beat,
+        )
+        rewritten_stream = rewrite.stream
+        track = rewritten_stream.as_track()
         analysis = analyze_guitar_stream_section_aware(
             timeline,
-            candidate.stream,
+            rewritten_stream,
             max_fret=max_fret,
         )
         project = build_guitar_ir(
@@ -272,17 +300,26 @@ def generate_prototype_package(
             track,
             analysis,
             source_stream_id=candidate.stream.stream_id,
+            source_note_indices=rewrite.source_note_indices,
+            source_note_origins=rewrite.source_note_origins,
+            rewrite_changes=rewrite.changes,
         )
 
+        rewrite_path = prefix.with_suffix(".rewrite.json")
         analysis_path = prefix.with_suffix(".analysis.json")
         ir_path = prefix.with_suffix(".guitar-ir.json")
         gp5_path = prefix.with_suffix(".gp5")
         ample_path = prefix.with_suffix(".ample-sc.mid")
         report_path = prefix.with_suffix(".report.json")
 
+        _write_json(rewrite_path, rewrite.to_dict(), compact=compact_json)
         _write_json(analysis_path, analysis.to_dict(), compact=compact_json)
         _write_json(ir_path, project.to_dict(), compact=compact_json)
 
+        rewrite_status = PrototypeOutputStatus(
+            path=str(rewrite_path),
+            status="success",
+        )
         analysis_status = PrototypeOutputStatus(
             path=str(analysis_path),
             status="success",
@@ -319,6 +356,7 @@ def generate_prototype_package(
 
         processing_report = _build_processing_report(
             candidate,
+            rewrite,
             analysis,
             project,
             gp5_status=gp5_status,
@@ -335,6 +373,7 @@ def generate_prototype_package(
                 stream_id=candidate.stream.stream_id,
                 directory=str(stream_dir),
                 analysis=analysis_status,
+                rewrite=rewrite_status,
                 guitar_ir=ir_status,
                 gp5=gp5_status,
                 ample_sc_midi=ample_status,

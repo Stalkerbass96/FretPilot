@@ -208,6 +208,18 @@ def _populate_measure(
         total_duration = durations.pop()
         segments = _split_duration_ticks(total_duration)
 
+        playable_strings = [
+            event.fingering.string
+            for event in events
+            if event.fingering.string is not None
+        ]
+        if len(playable_strings) != len(set(playable_strings)):
+            raise UnsupportedGuitarIR(
+                "Same-onset chord notes must use distinct strings; duplicate "
+                f"string assignment in measure {ir_measure.number}, beat "
+                f"{start_in_measure:g}."
+            )
+
         partial_chord_let_ring = (
             len(events) > 1
             and any(_has_articulation(event, "let_ring") for event in events)

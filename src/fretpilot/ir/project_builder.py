@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from typing import TYPE_CHECKING, Sequence
 
 from fretpilot.analysis.guitar import GuitarTrackAnalysis
 from fretpilot.analysis.score_strategies import build_section_score_strategies
@@ -12,6 +13,20 @@ from fretpilot.ir.builder import build_guitar_ir as _build_core_guitar_ir
 from fretpilot.ir.models import GuitarProjectIR, IRHarmonyRegion, IRRightHandIntent
 from fretpilot.midi.models import NormalizedTimeline, NormalizedTrack
 from fretpilot.picking import PickingDecision, PickingPlan, plan_picking
+
+if TYPE_CHECKING:
+    from fretpilot.rewrite.models import NoteRewriteChange
+
+
+def _stable_source_index(
+    working_index: int,
+    source_note_indices: Sequence[int] | None,
+) -> int:
+    return (
+        int(source_note_indices[working_index])
+        if source_note_indices is not None
+        else working_index
+    )
 
 
 def _ensure_section_picking(track: NormalizedTrack, analysis: GuitarTrackAnalysis) -> None:
@@ -75,7 +90,11 @@ def _ensure_harmony(track: NormalizedTrack, analysis: GuitarTrackAnalysis) -> No
         analysis.harmony = plan_harmony(track, analysis.fingering)
 
 
-def _attach_right_hand(project: GuitarProjectIR, analysis: GuitarTrackAnalysis) -> None:
+def _attach_right_hand(
+    project: GuitarProjectIR,
+    analysis: GuitarTrackAnalysis,
+    source_note_indices: Sequence[int] | None,
+) -> None:
     if not project.tracks or analysis.picking is None:
         return
     by_source: dict[int, IRRightHandIntent] = {}
@@ -87,8 +106,8 @@ def _attach_right_hand(project: GuitarProjectIR, analysis: GuitarTrackAnalysis) 
             reason=decision.reason,
             technique=decision.technique,
         )
-        for source_index in decision.note_indices:
-            by_source[source_index] = intent
+        for working_index in decision.note_indices:
+            by_source[_stable_source_index(working_index, source_note_indices)] = intent
     for measure in project.tracks[0].measures:
         for event in measure.events:
             if not event.score.tie_in:
@@ -98,11 +117,12 @@ def _attach_right_hand(project: GuitarProjectIR, analysis: GuitarTrackAnalysis) 
 def _attach_fretting_digits(
     project: GuitarProjectIR,
     analysis: GuitarTrackAnalysis,
+    source_note_indices: Sequence[int] | None,
 ) -> None:
     if not project.tracks:
         return
     digits = {
-        item.note_index: item.fretting_digit
+        _stable_source_index(item.note_index, source_note_indices): item.fretting_digit
         for item in analysis.fingering.notes
         if item.fretting_digit is not None
     }
@@ -114,11 +134,15 @@ def _attach_fretting_digits(
 def _attach_articulation_parameters(
     project: GuitarProjectIR,
     analysis: GuitarTrackAnalysis,
+    source_note_indices: Sequence[int] | None,
 ) -> None:
     if not project.tracks:
         return
     parameter_map = {
-        (decision.note_index, decision.technique): dict(decision.parameters)
+        (
+            _stable_source_index(decision.note_index, source_note_indices),
+            decision.technique,
+        ): dict(decision.parameters)
         for decision in analysis.articulations.decisions
         if decision.parameters
     }
@@ -134,7 +158,11 @@ def _attach_articulation_parameters(
                     articulation.parameters = dict(parameters)
 
 
-def _attach_harmony(project: GuitarProjectIR, analysis: GuitarTrackAnalysis) -> None:
+def _attach_harmony(
+    project: GuitarProjectIR,
+    analysis: GuitarTrackAnalysis,
+    source_note_indices: Sequence[int] | None,
+) -> None:
     if not project.tracks or analysis.harmony is None:
         return
     project.tracks[0].harmony_regions = [
@@ -144,7 +172,10 @@ def _attach_harmony(project: GuitarProjectIR, analysis: GuitarTrackAnalysis) -> 
             root_pitch_class=item.root_pitch_class,
             quality=item.quality,
             confidence=item.confidence,
-            source_note_indices=list(item.note_indices),
+            source_note_indices=[
+                _stable_source_index(index, source_note_indices)
+                for index in item.note_indices
+            ],
             reason=item.reason,
         )
         for item in analysis.harmony.decisions
@@ -159,6 +190,9 @@ def build_guitar_ir(
     source_stream_id: str | None = None,
     track_id: str = "guitar-1",
     role: str = "unknown",
+    source_note_indices: Sequence[int] | None = None,
+    source_note_origins: Sequence[str] | None = None,
+    rewrite_changes: Sequence[NoteRewriteChange] = (),
 ) -> GuitarProjectIR:
     """Build canonical Guitar IR and retain time-varying guitar knowledge."""
 
@@ -171,11 +205,14 @@ def build_guitar_ir(
         source_stream_id=source_stream_id,
         track_id=track_id,
         role=role,
+        source_note_indices=source_note_indices,
+        source_note_origins=source_note_origins,
+        rewrite_changes=rewrite_changes,
     )
-    _attach_right_hand(project, analysis)
-    _attach_fretting_digits(project, analysis)
-    _attach_articulation_parameters(project, analysis)
-    _attach_harmony(project, analysis)
+    _attach_right_hand(project, analysis, source_note_indices)
+    _attach_fretting_digits(project, analysis, source_note_indices)
+    _attach_articulation_parameters(project, analysis, source_note_indices)
+    _attach_harmony(project, analysis, source_note_indices)
     if not project.tracks:
         return project
 

@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Mapping
 
-from fretpilot.analysis.guitar import GuitarTrackAnalysis
+from fretpilot.analysis.guitar import (
+    GuitarTrackAnalysis,
+    align_track_onsets_to_rhythm,
+)
 from fretpilot.analysis.section_contexts import SectionContextAnalysis
 from fretpilot.analysis.sections import segment_instrument_stream
 from fretpilot.analysis.style_contexts import analyze_style_aware_section_contexts
@@ -126,6 +129,7 @@ def analyze_guitar_track_by_sections(
         raise ValueError("section_contexts must contain at least one section.")
 
     rhythm = analyze_track_rhythm(track)
+    fingering_track = align_track_onsets_to_rhythm(track, rhythm)
     merged_notes: dict[int, FingeredNote] = {}
     diagnostics: list[FingeringDiagnostic] = []
     decisions: list[ArticulationDecision] = []
@@ -171,8 +175,9 @@ def analyze_guitar_track_by_sections(
             else automatic_context
         )
         local_track = _subtrack(track, note_indices)
+        local_fingering_track = _subtrack(fingering_track, note_indices)
         local_fingering = optimize_fingering(
-            local_track,
+            local_fingering_track,
             max_fret=max_fret,
             preferences=context.fingering,
         )
@@ -183,7 +188,7 @@ def analyze_guitar_track_by_sections(
         )
         if carried_from_previous:
             local_fingering = carry_hand_position_into_section(
-                local_track,
+                local_fingering_track,
                 local_fingering,
                 preferred_fret_center=previous_exit_fret_center,
                 preferences=context.fingering,
@@ -196,7 +201,7 @@ def analyze_guitar_track_by_sections(
             technique_scores=context.technique_scores,
         ).score
         local_fingering = apply_chord_voicing_strategy(
-            local_track,
+            local_fingering_track,
             local_fingering,
             preferences=context.fingering,
             score_strategy=score_strategy,

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from typing import TYPE_CHECKING, Any
 
 from fretpilot.articulation import ArticulationPlan, plan_articulations
@@ -36,6 +36,32 @@ class GuitarTrackAnalysis:
         return asdict(self)
 
 
+def align_track_onsets_to_rhythm(
+    track: NormalizedTrack,
+    rhythm: RhythmAnalysis,
+) -> NormalizedTrack:
+    """Expose score-simultaneous notes to hard chord-fingering constraints.
+
+    Humanized MIDI attacks often have slightly different source ticks but snap
+    to the same notation onset. Only the working ``start_tick`` is aligned;
+    original beat/tick timing remains on the source track and later in Guitar
+    IR performance timing.
+    """
+
+    targets = {item.note_index: item.target_start_beat for item in rhythm.suggestions}
+    if len(targets) != len(track.notes):
+        raise ValueError("Rhythm suggestions must cover every track note.")
+    return NormalizedTrack(
+        index=track.index,
+        name=track.name,
+        notes=[
+            replace(note, start_tick=round(targets[index] * 1_000_000))
+            for index, note in enumerate(track.notes)
+        ],
+        instrument_name=track.instrument_name,
+    )
+
+
 def analyze_guitar_track(
     track: NormalizedTrack,
     *,
@@ -45,8 +71,9 @@ def analyze_guitar_track(
     """Run one-context deterministic guitar analysis."""
 
     rhythm = analyze_track_rhythm(track)
+    fingering_track = align_track_onsets_to_rhythm(track, rhythm)
     fingering = optimize_fingering(
-        track,
+        fingering_track,
         max_fret=max_fret,
         preferences=playing_context.fingering if playing_context is not None else None,
     )
