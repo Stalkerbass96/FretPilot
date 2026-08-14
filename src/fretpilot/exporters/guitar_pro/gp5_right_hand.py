@@ -22,26 +22,44 @@ _GP_FRETTING_DIGITS = {
 }
 
 
+def _stroke_value_for_spread(spread_beats: float) -> int:
+    values = (4, 8, 16, 32, 64, 128)
+    return min(values, key=lambda value: abs((4.0 / value) - spread_beats))
+
+
 def _apply_right_hand(ir_measure: GuitarMeasure, gp_measure: gp.Measure) -> None:
-    intents = {
-        round(event.score.start_beat, 9): event.right_hand
-        for event in ir_measure.events
-        if event.right_hand is not None and not event.score.tie_in
-    }
+    grouped = {}
+    for event in ir_measure.events:
+        if event.right_hand is None or event.score.tie_in:
+            continue
+        grouped.setdefault(round(event.score.start_beat, 9), []).append(event)
+
     for beat in gp_measure.voices[0].beats:
         if beat.status != gp.BeatStatus.normal or beat.start is None:
             continue
         start = ir_measure.start_beat + (
             beat.start - gp_measure.start
         ) / gp.Duration.quarterTime
-        intent = intents.get(round(start, 9))
+        events = grouped.get(round(start, 9), [])
+        if not events:
+            continue
+        intent = events[0].right_hand
         if intent is None:
             continue
-        beat.effect.pickStroke = (
+        direction = (
             gp.BeatStrokeDirection.down
             if intent.direction == "down"
             else gp.BeatStrokeDirection.up
         )
+        if intent.technique == "rolled_strum" and len(events) >= 2:
+            starts = [event.performance.source_start_beat for event in events]
+            spread = max(starts) - min(starts)
+            if spread > 1e-6:
+                beat.effect.stroke.direction = direction
+                beat.effect.stroke.value = _stroke_value_for_spread(spread)
+                beat.effect.pickStroke = gp.BeatStrokeDirection.none
+                continue
+        beat.effect.pickStroke = direction
 
 
 def _fretting_digit_map(project: GuitarProjectIR) -> dict[int, int]:
