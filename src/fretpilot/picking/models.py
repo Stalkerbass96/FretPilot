@@ -5,7 +5,7 @@ from dataclasses import asdict, dataclass, field
 class PickingDecision:
     note_indices: tuple[int, ...]
     start_beat: float
-    attack: str
+    motion: str
     direction: str
     confidence: float
     reason: str
