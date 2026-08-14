@@ -154,7 +154,13 @@ def _sanitize_invalid_key_signatures(
     return bytes(data), diagnostics
 
 
-def _load_mido_file(source: Path) -> tuple[mido.MidiFile, list[Diagnostic]]:
+def load_mido_file(source: Path) -> tuple[mido.MidiFile, list[Diagnostic]]:
+    """Decode a MIDI file while preserving notes from invalid key metadata.
+
+    All runtime readers must use this helper instead of opening the source with
+    ``mido.MidiFile`` again; otherwise an ignored metadata defect can reappear
+    in a secondary reader such as pitch-wheel extraction.
+    """
     try:
         return mido.MidiFile(source), []
     except KeySignatureError:
@@ -173,7 +179,7 @@ def load_midi(path: str | Path) -> NormalizedTimeline:
     """
 
     source = Path(path)
-    midi, diagnostics = _load_mido_file(source)
+    midi, diagnostics = load_mido_file(source)
     ticks_per_beat = midi.ticks_per_beat
 
     tempo_events: list[TempoEvent] = []

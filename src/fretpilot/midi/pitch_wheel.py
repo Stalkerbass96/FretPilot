@@ -1,14 +1,15 @@
 from pathlib import Path
 
-import mido
-
 from fretpilot.midi.models import PitchWheelEvent, PitchWheelRangeEvent
-from fretpilot.midi.parser import load_midi as _load_base_midi
+from fretpilot.midi.parser import (
+    load_midi as _load_base_midi,
+    load_mido_file,
+)
 
 
 def load_midi(path: str | Path):
     timeline = _load_base_midi(path)
-    midi = mido.MidiFile(path)
+    midi, _diagnostics = load_mido_file(Path(path))
     wheel_events = []
     range_events = []
 
